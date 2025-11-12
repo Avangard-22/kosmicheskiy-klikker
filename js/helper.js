@@ -40,13 +40,22 @@ function helperAttack() {
     // ---
     currentBlockHealth -= damage;
     gameMetrics.totalClicks++;
+
+    // --- ИСПРАВЛЕНИЕ: Не даём здоровью уйти в отрицательное значение ---
+    if (currentBlockHealth < 0) {
+        currentBlockHealth = 0;
+    }
+    // ---
     createDamageText(damage, currentBlock, false); // <-- helper не наносит крит
-    currentBlock.textContent = currentBlockHealth;
+    currentBlock.textContent = currentBlockHealth; // <-- Обновляем текст *после* корректировки
     updateCracks(currentBlock, currentBlockHealth);
+    // --- ИСПРАВЛЕНИЕ: Проверяем разрушение *после* обновления текста и трещин ---
     if (currentBlockHealth <= 0) {
         destroyBlock(currentBlock, currentLevelOnPlanet);
+        return; // <-- Выйти из функции, чтобы избежать лишних действий
     }
-    updateHUD();
+    // ---
+    updateHUD(); // <-- Обновляем HUD *после* проверки разрушения
 }
 
 function createHelperEffect() {
