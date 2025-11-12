@@ -5,7 +5,7 @@ function activateHelper() {
     helperTimeLeft = helperDuration;
     gameMetrics.upgradesBought++;
     helperInterval = setInterval(() => {
-        if (helperActive && currentBlock && gameActive) { // <-- Убрана проверка !paused
+        if (helperActive && currentBlock && gameActive) {
             helperAttack();
         }
     }, 1500);
@@ -35,27 +35,21 @@ function activateHelper() {
 function helperAttack() {
     if (!currentBlock || !helperActive) return;
     createHelperEffect();
-    // --- НОВАЯ ЛОГИКА: Урон помощника ---
+
+    // --- ТОЧНАЯ ЛОГИКА ИЗ ИСХОДНОГО КОДА ---
     const damage = Math.floor(clickPower * helperDamageMultiplier);
-    // ---
     currentBlockHealth -= damage;
     gameMetrics.totalClicks++;
-
-    // --- ИСПРАВЛЕНИЕ: Не даём здоровью уйти в отрицательное значение ---
-    if (currentBlockHealth < 0) {
-        currentBlockHealth = 0;
-    }
-    // ---
-    createDamageText(damage, currentBlock, false); // <-- helper не наносит крит
-    currentBlock.textContent = currentBlockHealth; // <-- Обновляем текст *после* корректировки
+    createDamageText(damage, currentBlock, false);
+    currentBlock.textContent = currentBlockHealth; // Обновляем текст
     updateCracks(currentBlock, currentBlockHealth);
-    // --- ИСПРАВЛЕНИЕ: Проверяем разрушение *после* обновления текста и трещин ---
+    updateHUD();
+
+    // Проверяем разрушение СРАЗУ после обновления текста
     if (currentBlockHealth <= 0) {
         destroyBlock(currentBlock, currentLevelOnPlanet);
-        return; // <-- Выйти из функции, чтобы избежать лишних действий
     }
     // ---
-    updateHUD(); // <-- Обновляем HUD *после* проверки разрушения
 }
 
 function createHelperEffect() {
