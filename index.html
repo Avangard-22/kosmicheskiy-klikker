@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Космический Кликер</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <!-- Локации с Canvas -->
+  <div id="location-mercury" class="location active">
+    <canvas id="starsCanvas"></canvas>
+  </div>
+  <div id="location-venus" class="location">
+    <canvas id="lavaCanvas"></canvas>
+  </div>
+  <div id="location-earth" class="location">
+    <canvas id="iceCanvas"></canvas>
+  </div>
+  <div id="location-mars" class="location">
+    <canvas id="bioCanvas"></canvas>
+  </div>
+  <div id="location-jupiter" class="location">
+    <div id="cyberGrid"></div>
+  </div>
+  <div id="location-saturn" class="location">
+    <div id="cyberGrid"></div>
+  </div>
+  <div id="location-uranus" class="location">
+    <div id="cyberGrid"></div>
+  </div>
+  <div id="location-neptune" class="location">
+    <div id="cyberGrid"></div>
+  </div>
+  <div id="location-pluto" class="location">
+    <div id="cyberGrid"></div>
+  </div>
+  <!-- UI -->
+  <div id="header">
+    <h2 id="gameTitle">🌌 Меркурий</h2>
+  </div>
+  <div id="coins">Камушки: 0</div>
+  <div id="clickPowerInfo">Сила: 1</div>
+  <div id="critChanceInfo">Шанс крита: 0%</div>
+  <div id="speedInfo">Скорость: 30</div>
+  <div id="blockLevelInfo">Блок: —</div>
+  <div id="blockHealthInfo">Осталось: —</div>
+  <div id="helperTimer">Помощник: —</div>
+  <div id="helperDamageInfo">Урон помощника: —</div>
+  <div id="levelInfo">Уровень: —</div>
+  <!-- УБРАНО: <button id="pauseBtn">⏸ Пауза</button> -->
+  <div id="gameArea"></div>
+  <div id="levelAnnounce"></div>
+  <button id="upgradeClickBtn" class="upgrade-btn btn-unavailable">
+    <i class="fas fa-hammer"></i>
+  </button>
+  <button id="upgradeCritBtn" class="upgrade-btn btn-unavailable">
+    <i class="fas fa-bolt"></i>
+  </button>
+  <button id="upgradeHelperBtn" class="upgrade-btn btn-unavailable">
+    <i class="fas fa-robot"></i>
+  </button>
+  <button id="upgradeHelperDamageBtn" class="upgrade-btn btn-unavailable">
+    <i class="fas fa-fist-raised"></i>
+  </button>
+  <div id="tooltip" class="tooltip"></div>
+  <canvas id="particlesCanvas"></canvas>
+  <!-- Звуковые элементы -->
+  <audio id="clickSound" preload="auto">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+  </audio>
+  <audio id="breakSound" preload="auto">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+  </audio>
+  <audio id="upgradeSound" preload="auto">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+  </audio>
+  <audio id="comboSound" preload="auto">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+  </audio>
+  <audio id="helperSound" preload="auto">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+  </audio>
+  <div id="welcomeScreen">
+    <h2>🌌 КОСМИЧЕСКИЙ КЛИКЕР</h2>
+    <p>Разрушайте восходящие блоки и собирайте <strong>камушки</strong>!</p>
+    <p>Каждый блок требует определённого количества ударов для разрушения.</p>
+    <p><strong>Улучшения:</strong></p>
+    <p>🔨 <strong>Сила удара</strong> — увеличивает урон за удар</p>
+    <p>⚡ <strong>Шанс крита</strong> — наносите критический урон</p>
+    <p>🤖 <strong>Помощник</strong> — автоматически атакует блоки</p>
+    <p>💥 <strong>Сила помощника</strong> — увеличивает урон помощника</p>
+    <p>🔥 <strong>Комбо-система</strong> — разрушайте блоки быстро для бонусов!</p>
+    <button class="btn">Начать добычу</button>
+  </div>
+  <div id="gameOverScreen">
+    <h2>ДОБЫЧА ПРЕРВАНА!</h2>
+    <div id="finalScore">Макс. уровень: —</div>
+    <button id="restartBtn">Новая добыча</button>
+    <button id="shareBtn">Поделиться</button>
+    <button id="dailyRewardBtn">🎁 Ежедневная награда</button>
+  </div>
+  <script src="js/planetData.js"></script>
+  <script src="js/helper.js"></script>
+  <script src="js/planets/mercury.js"></script>
+  <script src="js/planets/venus.js"></script>
+  <script src="js/planets/earth.js"></script>
+  <script src="js/planets/mars.js"></script>
+  <script src="js/planets/jupiter.js"></script>
+  <script src="js/planets/saturn.js"></script>
+  <script src="js/planets/uranus.js"></script>
+  <script src="js/planets/neptune.js"></script>
+  <script src="js/planets/pluto.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
