@@ -1296,12 +1296,10 @@
         setCanvasSize: setCanvasSize
       };
     })();
-
     // === КОД ИГРЫ ===
     document.addEventListener('DOMContentLoaded', function() {
         // Инициализация планетарного фона
         planetBackground.init();
-        
         // === ИСПРАВЛЕНИЕ: Объявление переменной locations ПЕРЕД использованием ===
         const locations = {
             mercury: { name: "☿ Меркурий", color: "#bb86fc", coinColor: "#a0d2ff", borderColor: "#4a55e0", blockColors: ['#2962ff', '#4fc3f7', '#bb86fc', '#f8bbd0'] },
@@ -1314,10 +1312,8 @@
             neptune: { name: "♆ Нептун", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
             pluto: { name: "♇ Плутон", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] }
         };
-
         // Остальной код игры
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
         // === ФАКТИЧЕСКИЕ РАССТОЯНИЯ ПЛАНЕТ В АСТРОНОМИЧЕСКИХ ЕДИНИЦАХ ===
         // 1 а.е. = 149,597,870.691 км
         const astronomicalUnits = {
@@ -1331,10 +1327,8 @@
             neptune: 30.06896,
             pluto: 39.48200
         };
-        
         // ПЕРЕСЧИТАНО на основе фактической астрономической единицы
         const AU_TO_DAMAGE = 149597870.691;
-        
         const locationRequirements = {
             mercury: { 
                 damageRequired: 0, 
@@ -1382,9 +1376,7 @@
                 nextLocation: null
             }
         };
-        
         let blockSpeed = isMobile ? 25 : 20;
-        
         function getCurrentSpeed() {
             const baseSpeed = blockSpeed;
             const locationIndex = Object.keys(locationRequirements).indexOf(currentLocation);
@@ -1393,13 +1385,11 @@
             }
             return baseSpeed;
         }
-        
         const baseClickUpgradeCost = 80;
         const baseHelperUpgradeCost = 1500;
         const baseCritChanceCost = 500;
         const baseCritMultiplierCost = 800;
         const baseHelperDmgCost = 1000;
-        
         const rareBlocks = {
             GOLD: {
                 name: "Золотой",
@@ -1434,7 +1424,6 @@
                 className: "block-mystery"
             }
         };
-        
         const balanceConfig = {
             baseHealth: 80,
             targetClicks: 70,
@@ -1448,9 +1437,7 @@
             comboMultiplier: 0.25,
             randomBonusRange: { min: 0.8, max: 1.5 }
         };
-        
         // === ИСПРАВЛЕНИЕ: Удалены неиспользуемые переменные анимации ===
-        
         // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
         let coins = 0;
         let totalDamageDealt = 0;
@@ -1475,11 +1462,9 @@
         let helperElement = null;
         let helperPosition = { x: 0, y: 0 };
         let bogoCoinBonus = 0; // Бонус к кристаллам от Bobo
-        
         // === ИСПРАВЛЕНИЕ: Добавлены новые переменные для улучшений ===
         let critChanceUpgradeLevel = 0;
         let critMultiplierUpgradeLevel = 0;
-        
         // === СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
         const dailyRewards = [
             { day: 1, reward: 1000, type: "coins" },
@@ -1513,7 +1498,6 @@
             { day: 29, reward: 25000, type: "coins" },
             { day: 30, reward: 10, type: "clickPower" }
         ];
-        
         // ИСПРАВЛЕНИЕ: Переработка инициализации gameMetrics
         let gameMetrics = {
             startTime: Date.now(),
@@ -1525,7 +1509,6 @@
             lastDailyClaim: 0,
             dailyCycleStarted: Date.now()
         };
-        
         // ИСПРАВЛЕНИЕ: Добавление функций для работы с метриками
         function saveGameMetrics() {
             localStorage.setItem('gameMetrics', JSON.stringify({
@@ -1539,7 +1522,6 @@
                 startTime: gameMetrics.startTime // ИСПРАВЛЕНИЕ: Сохраняем startTime
             }));
         }
-        
         function loadGameMetrics() {
             const saved = localStorage.getItem('gameMetrics');
             if (saved) {
@@ -1563,10 +1545,8 @@
             }
             return false;
         }
-        
         // Инициализация метрик при запуске
         loadGameMetrics();
-        
         // === ОБНОВЛЕННЫЕ ФУНКЦИИ БАЛАНСИРОВКИ ===
         function calculateBlockHealth() {
             const currentReq = locationRequirements[currentLocation]; // ИСПРАВЛЕНИЕ: Используем currentReq
@@ -1578,7 +1558,6 @@
                                 Math.random() * (balanceConfig.healthRandomRange.max - balanceConfig.healthRandomRange.min);
             return Math.floor(combinedHealth * randomFactor);
         }
-        
         function calculateClickPower() {
             const basePower = 1;
             const upgradeBonus = clickUpgradeLevel;
@@ -1587,11 +1566,9 @@
             const nonLinearGrowth = Math.sqrt(clickUpgradeLevel + 1);
             return basePower + (upgradeBonus * diminishingEffect * nonLinearGrowth * balanceConfig.damageProgression.baseMultiplier);
         }
-        
         function getExpectedClicks(blockHealth, playerDamage) {
             return Math.ceil(blockHealth / playerDamage);
         }
-        
         function getRareBlockType() {
             const rand = Math.random();
             let cumulativeChance = 0;
@@ -1603,7 +1580,6 @@
             }
             return null;
         }
-        
         function announceRareBlock(blockName) {
             const announce = document.createElement('div');
             announce.className = 'rare-block-announce';
@@ -1627,7 +1603,6 @@
                 }
             }, 2000);
         }
-        
         // === УЛУЧШЕННАЯ СИСТЕМА СОХРАНЕНИЯ ===
         function saveGame() {
           const saveData = {
@@ -1654,8 +1629,8 @@
           showTooltip('Игра сохранена!');
           setTimeout(hideTooltip, 1500);
           updateContinueButton();
+          updateDailyRewardButton();
         }
-        
         function loadGame() {
           const saved = localStorage.getItem('cosmicBlocksSave');
           if (saved) {
@@ -1678,11 +1653,9 @@
                 gameMetrics.currentDailyStreak = data.currentDailyStreak || 0;
                 gameMetrics.lastDailyClaim = data.lastDailyClaim || 0;
                 gameMetrics.dailyCycleStarted = data.dailyCycleStarted || Date.now();
-                
                 // ИСПРАВЛЕНИЕ: Загружаем новые переменные с обратной совместимостью
                 critChanceUpgradeLevel = data.critChanceUpgradeLevel || Math.round((critChance - 0.001) / 0.001);
                 critMultiplierUpgradeLevel = data.critMultiplierUpgradeLevel || Math.round((critMultiplier - 2.0) / 0.2);
-                
                 return true;
               } else {
                 console.log('Сохранение устарело');
@@ -1694,7 +1667,6 @@
           }
           return false;
         }
-        
         function updateContinueButton() {
           const continueBtn = document.getElementById('continueBtn');
           if (continueBtn) {
@@ -1708,7 +1680,24 @@
             }
           }
         }
-        
+        // === ФУНКЦИЯ ОБНОВЛЕНИЯ СОСТОЯНИЯ КНОПКИ ЕЖЕДНЕВНОЙ НАГРАДЫ ===
+        function updateDailyRewardButton() {
+            const now = Date.now();
+            const lastClaim = gameMetrics.lastDailyClaim;
+            const canClaim = !lastClaim || (now - lastClaim >= 24 * 60 * 60 * 1000);
+            
+            if (dailyRewardBtn) {
+                if (canClaim) {
+                    dailyRewardBtn.disabled = false;
+                    dailyRewardBtn.style.opacity = '1';
+                    dailyRewardBtn.style.cursor = 'pointer';
+                } else {
+                    dailyRewardBtn.disabled = true;
+                    dailyRewardBtn.style.opacity = '0.5';
+                    dailyRewardBtn.style.cursor = 'not-allowed';
+                }
+            }
+        }
         // === ОБНОВЛЕННАЯ СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
         function initializeDailyRewards() {
             const container = document.getElementById('dailyRewardsContainer');
@@ -1753,7 +1742,6 @@
                 infoElement.textContent = `Следующая награда доступна через ${hoursLeft} часов.`;
             }
         }
-        
         function getRewardDisplay(reward) {
             switch (reward.type) {
                 case "coins":
@@ -1768,20 +1756,17 @@
                     return `+${reward.reward}`;
             }
         }
-        
         function claimDailyReward(day) {
             const now = Date.now();
             const lastClaimDay = gameMetrics.lastDailyClaim ? 
                 Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
             const currentDay = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1;
-            
             // Проверяем, не получали ли мы уже награду сегодня
             if (gameMetrics.lastDailyClaim && currentDay === lastClaimDay) {
                 showTooltip("Вы уже получили награду сегодня!");
                 setTimeout(hideTooltip, 2000);
                 return;
             }
-            
             const reward = dailyRewards[day - 1];
             // Применяем награду
             switch (reward.type) {
@@ -1819,21 +1804,17 @@
                 document.getElementById('dailyRewardsScreen').style.display = 'none';
             }, 2000);
         }
-        
         function showDailyRewardsScreen() {
             initializeDailyRewards();
             document.getElementById('dailyRewardsScreen').style.display = 'flex';
         }
-        
         function closeDailyRewardsScreen() {
             document.getElementById('dailyRewardsScreen').style.display = 'none';
         }
-        
         // === ФУНКЦИЯ ПРОВЕРКИ ЕЖЕДНЕВНОЙ НАГРАДЫ ===
         function checkDailyReward() {
             const now = Date.now();
             const lastClaim = gameMetrics.lastDailyClaim;
-            
             // Если награда уже получена сегодня
             if (lastClaim && now - lastClaim < 24 * 60 * 60 * 1000) {
                 const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - (now - lastClaim)) / (1000 * 60 * 60));
@@ -1841,12 +1822,10 @@
                 setTimeout(hideTooltip, 2000);
                 return false;
             }
-            
             // Если сегодня еще не получали награду
             showDailyRewardsScreen();
             return true;
         }
-        
         // Получаем элементы DOM
         const DOMElements = {
             coinsDisplay: document.getElementById("coins-value"),
@@ -1885,7 +1864,6 @@
             claimDailyRewardBtn: document.getElementById("claimDailyRewardBtn"),
             closeDailyRewardsBtn: document.getElementById("closeDailyRewardsBtn")
         };
-        
         // Проверяем наличие всех необходимых элементов
         let missingElements = [];
         Object.entries(DOMElements).forEach(([name, element]) => {
@@ -1895,7 +1873,6 @@
             console.error("Отсутствуют элементы:", missingElements.join(", "));
             return;
         }
-        
         // Присваиваем переменные
         const {
             coinsDisplay, clickPowerDisplay, critChanceDisplay, critMultiplierDisplay, progressBar, progressText,
@@ -1906,7 +1883,6 @@
             newGameBtn, cancelSaveBtn, restartBtn, restartFromDevBtn, shareBtn, dailyRewardBtn, saveBtn,
             dailyRewardsBtn, claimDailyRewardBtn, closeDailyRewardsBtn
         } = DOMElements;
-        
         // === ОБНОВЛЕННЫЙ ЭФФЕКТ ВЗРЫВА С УВЕЛИЧЕННОЙ ОБЛАСТЬЮ ===
         function createExplosion(block) {
             const rect = block.getBoundingClientRect();
@@ -1958,7 +1934,6 @@
                 }
             }, 600);
         }
-        
         // === ОБНОВЛЕННАЯ СИСТЕМА ПРОГРЕССА В АСТРОНОМИЧЕСКИХ ЕДИНИЦАХ ===
         function updateProgressBar() {
             const currentReq = locationRequirements[currentLocation];
@@ -1969,7 +1944,6 @@
             progressBar.style.width = percentage + '%';
             progressText.textContent = `Прогресс: ${currentAU.toFixed(5)} / ${targetAU.toFixed(5)} а.е. (${percentage.toFixed(1)}%)`;
         }
-        
         function checkLocationUpgrade() {
             const currentReq = locationRequirements[currentLocation];
             const nextLocation = currentReq.nextLocation;
@@ -1986,14 +1960,12 @@
             }
             updateProgressBar();
         }
-        
         function showDevelopmentScreen() {
             if (developmentScreen) {
                 developmentScreen.style.display = "flex";
                 gameActive = false;
             }
         }
-        
         // === ОБНОВЛЕННЫЕ ФУНКЦИИ ТЕКСТА УРОНА И БОНУСОВ ===
         function createDamageText(damage, block, color = '#ff4444') {
             const rect = block.getBoundingClientRect();
@@ -2027,7 +1999,6 @@
             }
             animate();
         }
-        
         function showComboText(combo, bonus, block) {
             const rect = block.getBoundingClientRect();
             const text = document.createElement('div');
@@ -2048,7 +2019,6 @@
                 }
             }, 1000);
         }
-        
         function showRewardText(reward, block) {
             const rect = block.getBoundingClientRect();
             const text = document.createElement('div');
@@ -2069,7 +2039,6 @@
                 }
             }, 1500);
         }
-        
         // === ФУНКЦИИ РАБОТЫ С ПОМОЩНИКОМ BOBO ===
         function moveHelperToRandomPosition() {
             if (!helperElement) return;
@@ -2111,7 +2080,6 @@
             helperElement.style.left = helperPosition.x + 'px';
             helperElement.style.top = helperPosition.y + 'px';
         }
-        
         function createHelperElement() {
             if (helperElement && helperElement.parentNode) {
                 document.body.removeChild(helperElement);
@@ -2126,7 +2094,6 @@
                 if (helperElement) helperElement.style.opacity = '1';
             }, 100);
         }
-        
         // === ФУНКЦИЯ АКТИВАЦИИ BOBO С БОНУСОМ К КРИСТАЛЛАМ ===
         function activateHelper() {
             if (helperActive) return;
@@ -2172,7 +2139,6 @@
             setTimeout(hideTooltip, 2500);
             saveGame();
         }
-        
         function helperAttack() {
             if (!currentBlock || !helperActive || !helperElement) return;
             // Создаем визуальный эффект атаки
@@ -2191,7 +2157,6 @@
                 updateCracks(currentBlock, currentBlockHealth);
             }
         }
-        
         function createHelperEffect() {
             if (!currentBlock || !helperElement) return;
             const blockRect = currentBlock.getBoundingClientRect();
@@ -2241,7 +2206,6 @@
             };
             requestAnimationFrame(animateBeam);
         }
-        
         // === ОСТАЛЬНЫЕ ФУНКЦИИ ИГРЫ ===
         function setLocation(loc) {
             currentLocation = loc;
@@ -2260,19 +2224,16 @@
             }
             updateProgressBar();
         }
-        
         function updateCoins() {
             if (coinsDisplay) coinsDisplay.textContent = Math.floor(coins).toLocaleString();
             updateUpgradeButtons();
         }
-        
         function updateHUD() {
             if (coinsDisplay) coinsDisplay.textContent = Math.floor(coins).toLocaleString();
             if (clickPowerDisplay) clickPowerDisplay.textContent = Math.round(clickPower);
             if (critChanceDisplay) critChanceDisplay.textContent = `${(critChance * 100).toFixed(1)}%`;
             if (critMultiplierDisplay) critMultiplierDisplay.textContent = `x${critMultiplier.toFixed(1)}`;
         }
-        
         // ОБНОВЛЕННАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ КНОПОК С ПРОПОРЦИОНАЛЬНЫМ РОСТОМ СТОИМОСТИ
         function updateUpgradeButtons() {
             const clickCost = Math.floor(baseClickUpgradeCost * Math.pow(1.5, clickUpgradeLevel));
@@ -2284,7 +2245,6 @@
                     upgradeClickBtn.className = "upgrade-btn btn-unavailable";
                 }
             }
-            
             const helperCost = Math.floor(baseHelperUpgradeCost * Math.pow(1.4, helperUpgradeLevel));
             if (upgradeHelperBtn) {
                 upgradeHelperBtn.querySelector('.upgrade-cost').textContent = helperCost.toLocaleString();
@@ -2294,7 +2254,6 @@
                     upgradeHelperBtn.className = "upgrade-btn btn-unavailable";
                 }
             }
-            
             // ИСПРАВЛЕНИЕ: Используем новые переменные для расчета стоимости
             const critChanceCost = Math.floor(baseCritChanceCost * Math.pow(1.3, critChanceUpgradeLevel));
             if (upgradeCritChanceBtn) {
@@ -2305,7 +2264,6 @@
                     upgradeCritChanceBtn.className = "upgrade-btn btn-unavailable";
                 }
             }
-            
             const critMultiplierCost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, critMultiplierUpgradeLevel));
             if (upgradeCritMultBtn) {
                 upgradeCritMultBtn.querySelector('.upgrade-cost').textContent = critMultiplierCost.toLocaleString();
@@ -2315,7 +2273,6 @@
                     upgradeCritMultBtn.className = "upgrade-btn btn-unavailable";
                 }
             }
-            
             const helperDmgCost = Math.floor(baseHelperDmgCost * Math.pow(helperUpgradeMultiplier, helperUpgradeLevel));
             if (upgradeHelperDmgBtn) {
                 upgradeHelperDmgBtn.querySelector('.upgrade-cost').textContent = helperDmgCost.toLocaleString();
@@ -2326,7 +2283,6 @@
                 }
             }
         }
-        
         function buyClickPower() {
             const cost = Math.floor(baseClickUpgradeCost * Math.pow(1.5, clickUpgradeLevel));
             if (coins >= cost) {
@@ -2342,7 +2298,6 @@
                 saveGame();
             }
         }
-        
         function buyHelper() {
             const cost = Math.floor(baseHelperUpgradeCost * Math.pow(1.4, helperUpgradeLevel));
             if (coins >= cost && !helperActive) {
@@ -2353,7 +2308,6 @@
                 saveGame();
             }
         }
-        
         // === ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОКУПКИ ШАНСА КРИТА ===
         function buyCritChance() {
             const cost = Math.floor(baseCritChanceCost * Math.pow(1.3, critChanceUpgradeLevel));
@@ -2370,7 +2324,6 @@
                 saveGame();
             }
         }
-        
         function buyCritMultiplier() {
             const cost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, critMultiplierUpgradeLevel));
             if (coins >= cost) {
@@ -2386,7 +2339,6 @@
                 saveGame();
             }
         }
-        
         function buyHelperDamage() {
             const cost = Math.floor(baseHelperDmgCost * Math.pow(helperUpgradeMultiplier, helperUpgradeLevel));
             if (coins >= cost) {
@@ -2401,7 +2353,6 @@
                 saveGame();
             }
         }
-        
         function updateCracks(block, health) {
             if (!block) return;
             const existingCrack = block.querySelector('.crack-overlay');
@@ -2418,13 +2369,11 @@
                 addCracks(block, 'crack-1');
             }
         }
-        
         function addCracks(block, crackLevel) {
             const crackOverlay = document.createElement('div');
             crackOverlay.className = `crack-overlay ${crackLevel}`;
             block.appendChild(crackOverlay);
         }
-        
         function playSound(soundId) {
             const sound = document.getElementById(soundId);
             if (sound) {
@@ -2432,7 +2381,6 @@
                 sound.play().catch(e => {});
             }
         }
-        
         function hitBlock(block, damage) {
             if (!gameActive) return;
             if (navigator.vibrate) {
@@ -2461,7 +2409,6 @@
                 updateCracks(block, currentBlockHealth);
             }
         }
-        
         function destroyBlock(block) {
             const now = Date.now();
             if (now - lastDestroyTime < COMBO_TIME_WINDOW) {
@@ -2514,7 +2461,6 @@
                 }
             }, 500);
         }
-        
         function getBlockSize() {
             const baseSize = isMobile ? 80 : 60;
             const locationIndex = Object.keys(locationRequirements).indexOf(currentLocation);
@@ -2523,7 +2469,6 @@
             }
             return baseSize * (1 + locationIndex * 0.15);
         }
-        
         function createMovingBlock() {
             if (currentBlock && gameArea.contains(currentBlock)) {
                 gameArea.removeChild(currentBlock);
@@ -2566,7 +2511,6 @@
             currentBlock = block;
             animateBlock(block);
         }
-        
         function animateBlock(block) {
             if (!gameActive) return;
             const speed = getCurrentSpeed();
@@ -2583,7 +2527,6 @@
             }
             move();
         }
-        
         function gameOver(customMessage = null) {
             gameActive = false;
             helperActive = false;
@@ -2623,7 +2566,6 @@
                 if (h2) h2.textContent = customMessage;
             }
         }
-        
         function shareResult() {
             const shareText = `🎮 Я нанес ${Math.floor(totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(coins)} Кристаллов в Космическом Кликере! 🌌
 Сможешь побить мой рекорд?`;
@@ -2649,18 +2591,15 @@
                 });
             }
         }
-        
         function showTooltip(text) {
             if (tooltip) {
                 tooltip.innerHTML = text;
                 tooltip.style.opacity = "1";
             }
         }
-        
         function hideTooltip() {
             if (tooltip) tooltip.style.opacity = "0";
         }
-        
         // ОБНОВЛЕННАЯ ФУНКЦИЯ СТАРТА ИГРЫ
         function startGame(reset = true) {
             if (reset) {
@@ -2689,8 +2628,8 @@
                 updateHUD();
                 updateProgressBar();
                 updateUpgradeButtons();
+                updateDailyRewardButton();
             }
-            
             // ИСПРАВЛЕНИЕ: Очищаем все интервалы
             if (helperInterval) {
                 clearInterval(helperInterval);
@@ -2700,7 +2639,6 @@
                 document.body.removeChild(helperElement);
                 helperElement = null;
             }
-            
             gameArea.innerHTML = "";
             if (welcomeScreen) {
                 welcomeScreen.style.display = "none";
@@ -2731,7 +2669,6 @@
             setLocation(currentLocation);
             setTimeout(() => createMovingBlock(), 500);
         }
-        
         function continueGame() {
             if (loadGame()) {
                 startGame(false); // Не сбрасываем параметры
@@ -2740,22 +2677,18 @@
                 setTimeout(hideTooltip, 2000);
             }
         }
-        
         function showSaveScreen() {
            if (saveScreen) {
                 saveScreen.style.display = "flex";
             }
         }
-        
         function restartGame() {
             startGame(true); // Полностью сбрасываем игру
         }
-        
         function showStartError() {
             showTooltip("Ошибка при запуске игры. Попробуйте перезагрузить страницу.");
             setTimeout(hideTooltip, 3000);
         }
-        
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
         if (startBtn) {
             startBtn.addEventListener('click', function() {
@@ -2776,7 +2709,6 @@
                 }
             }, { passive: false });
         }
-        
         if (continueBtn) {
             continueBtn.addEventListener('click', function() {
                 try {
@@ -2808,7 +2740,6 @@
                 }
             }, { passive: false });
         }
-        
         if (loadSaveBtn) {
             loadSaveBtn.addEventListener('click', continueGame);
             loadSaveBtn.addEventListener('touchstart', (e) => {
@@ -2816,7 +2747,6 @@
                 continueGame();
             }, { passive: false });
         }
-        
         if (newGameBtn) {
             newGameBtn.addEventListener('click', () => startGame(true));
             newGameBtn.addEventListener('touchstart', (e) => {
@@ -2824,7 +2754,6 @@
                 startGame(true);
             }, { passive: false });
         }
-        
         if (cancelSaveBtn) {
             cancelSaveBtn.addEventListener('click', () => {
                 if (saveScreen) saveScreen.style.display = "none";
@@ -2834,7 +2763,6 @@
                 if (saveScreen) saveScreen.style.display = "none";
             }, { passive: false });
         }
-        
         if (restartFromDevBtn) {
             restartFromDevBtn.addEventListener('click', restartGame);
             restartFromDevBtn.addEventListener('touchstart', (e) => {
@@ -2842,7 +2770,6 @@
                 restartGame();
             }, { passive: false });
         }
-        
         if (dailyRewardsBtn) {
             dailyRewardsBtn.addEventListener('click', checkDailyReward);
             dailyRewardsBtn.addEventListener('touchstart', (e) => {
@@ -2850,15 +2777,17 @@
                 checkDailyReward();
             }, { passive: false });
         }
-        
         if (dailyRewardBtn) {
-            dailyRewardBtn.addEventListener('click', checkDailyReward);
-            dailyRewardBtn.addEventListener('touchstart', (e) => {
+            dailyRewardBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                checkDailyReward();
+            });
+            dailyRewardBtn.addEventListener('touchstart', function(e) {
+                if (this.disabled) return;
                 e.preventDefault();
                 checkDailyReward();
             }, { passive: false });
         }
-        
         if (claimDailyRewardBtn) {
             claimDailyRewardBtn.addEventListener('click', function() {
                 // Определяем текущий день
@@ -2882,7 +2811,6 @@
                 // Обработчик такой же, как для click
             }, { passive: false });
         }
-        
         if (closeDailyRewardsBtn) {
             closeDailyRewardsBtn.addEventListener('click', closeDailyRewardsScreen);
             closeDailyRewardsBtn.addEventListener('touchstart', (e) => {
@@ -2890,7 +2818,6 @@
                 closeDailyRewardsScreen();
             }, { passive: false });
         }
-        
         function addMobileButtonHandlers(button, handler) {
             if (button) {
                 button.addEventListener('click', handler);
@@ -2900,13 +2827,11 @@
                 }, { passive: false });
             }
         }
-        
         addMobileButtonHandlers(upgradeClickBtn, buyClickPower);
         addMobileButtonHandlers(upgradeHelperBtn, buyHelper);
         addMobileButtonHandlers(upgradeCritChanceBtn, buyCritChance);
         addMobileButtonHandlers(upgradeCritMultBtn, buyCritMultiplier);
         addMobileButtonHandlers(upgradeHelperDmgBtn, buyHelperDamage);
-        
         if (upgradeClickBtn) {
             upgradeClickBtn.addEventListener('mouseenter', () => showTooltip('Сила удара<br>Нелинейный рост урона'));
             upgradeClickBtn.addEventListener('mouseleave', hideTooltip);
@@ -2927,10 +2852,8 @@
             upgradeHelperDmgBtn.addEventListener('mouseenter', () => showTooltip('Урон Bobo<br>+20% урона за апгрейд'));
             upgradeHelperDmgBtn.addEventListener('mouseleave', hideTooltip);
         }
-        
         addMobileButtonHandlers(restartBtn, restartGame);
         addMobileButtonHandlers(shareBtn, shareResult);
-        
         if (saveBtn) {
             saveBtn.addEventListener('click', saveGame);
             saveBtn.addEventListener('touchstart', (e) => {
@@ -2938,16 +2861,15 @@
                 saveGame();
             }, { passive: false });
         }
-        
         // ИНИЦИАЛИЗАЦИЯ
         updateCoins();
         updateHUD();
         updateProgressBar();
         setLocation(currentLocation);
-        
         // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
         updateContinueButton();
-        
+        // Обновляем кнопку ежедневной награды при старте
+        updateDailyRewardButton();
         // Слушатель событий для изменения размера окна
         window.addEventListener('resize', function() {
             if (helperElement) {
@@ -2955,7 +2877,6 @@
             }
         });
     });
-    
     // Блокировка жестов масштабирования и выделения
     document.addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) {
