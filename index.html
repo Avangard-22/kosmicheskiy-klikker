@@ -52,10 +52,10 @@
       font-size: clamp(1.1em, 4vw, 1.4em); 
       color: white;
     }
-    /* ОБНОВЛЕННОЕ РАСПОЛОЖЕНИЕ HUD - СЛЕВА ПОД ЗАГОЛОВКОМ */
+    /* ОБНОВЛЕННОЕ РАСПОЛОЖЕНИЕ HUD - ВНИЗУ СЛЕВА */
     #hud-left {
       position: absolute;
-      top: 50px;
+      bottom: 10px;
       left: 10px;
       z-index: 25;
       display: flex;
@@ -81,7 +81,6 @@
     }
     .hud-item#coins { color: #FFD54F; text-shadow: 0 0 4px rgba(255,213,79,0.6); }
     .hud-item#clickPowerInfo { color: #4FC3F7; text-shadow: 0 0 4px rgba(79,195,247,0.6); }
-    .hud-item#helperTimer { color: #69F0AE; text-shadow: 0 0 4px rgba(105,240,174,0.6); }
     .hud-item#critChanceInfo, .hud-item#critMultiplierInfo { color: #FFD700; text-shadow: 0 0 4px rgba(255,215,0,0.6); }
     /* ПРОГРЕСС-БАР В ЦЕНТРЕ ПОД НАЗВАНИЕМ ЛОКАЦИИ */
     #progressContainer {
@@ -382,7 +381,7 @@
         padding: 4px 40px 4px 0;
       }
       #hud-left {
-        top: 40px;
+        bottom: 8px;
         left: 8px;
         gap: 2px;
       }
@@ -646,11 +645,10 @@
   <button id="saveBtn" title="Сохранить игру">
     <i class="fas fa-save"></i>
   </button>
-  <!-- ОБНОВЛЕННЫЙ HUD - СЛЕВА, С ИКОНКАМИ КАК В УЛУЧШЕНИЯХ -->
+  <!-- ОБНОВЛЕННЫЙ HUD - ВНИЗУ СЛЕВА, БЕЗ ИНФОРМАЦИИ О BOBO -->
   <div id="hud-left">
     <div class="hud-item" id="coins"><i class="fas fa-gem"></i> Кристаллы: <span id="coins-value">0</span></div>
     <div class="hud-item" id="clickPowerInfo"><i class="fas fa-fist-raised"></i> Сила: <span id="clickPower-value">1</span></div>
-    <div class="hud-item" id="helperTimer"><i class="fas fa-robot"></i> Bobo: <span id="helperTimer-value">—</span></div>
     <div class="hud-item" id="critChanceInfo"><i class="fas fa-star"></i> Крит: <span id="critChance-value">0.1%</span></div>
     <div class="hud-item" id="critMultiplierInfo"><i class="fas fa-star"></i> Множ: <span id="critMultiplier-value">x2.0</span></div>
   </div>
@@ -686,10 +684,10 @@
   <canvas id="particlesCanvas"></canvas>
   <!-- Звуковые элементы -->
   <audio id="clickSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="breakSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="upgradeSound" preload="auto">
     <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
@@ -1746,7 +1744,6 @@
         const DOMElements = {
             coinsDisplay: document.getElementById("coins-value"),
             clickPowerDisplay: document.getElementById("clickPower-value"),
-            helperTimerDisplay: document.getElementById("helperTimer-value"),
             critChanceDisplay: document.getElementById("critChance-value"),
             critMultiplierDisplay: document.getElementById("critMultiplier-value"),
             progressBar: document.getElementById("progressBar"),
@@ -1792,8 +1789,7 @@
         }
         // Присваиваем переменные
         const {
-            coinsDisplay, clickPowerDisplay, helperTimerDisplay, 
-            critChanceDisplay, critMultiplierDisplay, progressBar, progressText,
+            coinsDisplay, clickPowerDisplay, critChanceDisplay, critMultiplierDisplay, progressBar, progressText,
             levelAnnounce, gameTitle, upgradeClickBtn, upgradeHelperBtn, 
             upgradeCritChanceBtn, upgradeCritMultBtn, upgradeHelperDmgBtn, 
             gameOverScreen, developmentScreen, finalScoreDisplay, tooltip, welcomeScreen, saveScreen,
@@ -2045,7 +2041,6 @@
                     return;
                 }
                 helperTimeLeft -= 1000;
-                updateHelperTimer();
                 if (helperTimeLeft <= 0) {
                     helperActive = false;
                     clearInterval(helperInterval);
@@ -2167,8 +2162,6 @@
             if (clickPowerDisplay) clickPowerDisplay.textContent = Math.round(clickPower);
             if (critChanceDisplay) critChanceDisplay.textContent = `${(critChance * 100).toFixed(1)}%`;
             if (critMultiplierDisplay) critMultiplierDisplay.textContent = `x${critMultiplier.toFixed(1)}`;
-            const helperText = helperActive ? `${Math.ceil(helperTimeLeft / 1000)}с` : "—";
-            if (helperTimerDisplay) helperTimerDisplay.textContent = helperText;
         }
         // ОБНОВЛЕННАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ КНОПОК С ПРОПОРЦИОНАЛЬНЫМ РОСТОМ СТОИМОСТИ
         function updateUpgradeButtons() {
@@ -2284,16 +2277,6 @@
                 showTooltip(`Урон Bobo +20%!<br>Уровень: ${helperUpgradeLevel}`);
                 setTimeout(hideTooltip, 1500);
                 saveGame();
-            }
-        }
-        function updateHelperTimer() {
-            if (helperTimerDisplay) {
-                if (helperActive) {
-                    const seconds = Math.ceil(helperTimeLeft / 1000);
-                    helperTimerDisplay.textContent = `${seconds}с`;
-                } else {
-                    helperTimerDisplay.textContent = `—`;
-                }
             }
         }
         function updateCracks(block, health) {
