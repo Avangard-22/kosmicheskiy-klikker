@@ -743,14 +743,12 @@
     <button id="shareBtn">Поделиться</button>
     <button id="dailyRewardBtn">🎁 Ежедневная награда</button>
   </div>
-
   <script>
     // === ОБНОВЛЕННЫЙ КОД ПЛАНЕТАРНОГО ФОНА С ЭФФЕКТОМ ПАРАЛЛАКСА ===
     (function() {
       const canvas = document.getElementById('planetBackgroundCanvas');
       const ctx = canvas.getContext('2d');
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
       // НАСТРОЙКИ ПАРАЛЛАКСА
       const parallaxSettings = {
         baseSpeed: 0.2,
@@ -763,7 +761,6 @@
           special: 1.0   // Самый быстрый слой
         }
       };
-
       // ИСПРАВЛЕННЫЕ НАСТРОЙКИ
       const fixedSettings = {
         speed: 5,
@@ -773,18 +770,15 @@
         nebulaIntensity: 3,
         starDensity: 2
       };
-      
       // Переменные для анимации
       let animationId = null;
       let currentPlanet = 'mercury';
       let time = 0;
-      
       // Массивы для хранения элементов анимации
       let particles = [];
       let specialElements = [];
       let nebulae = [];
       let stars = [];
-
       // Конфигурация планет
       const planetData = {
         mercury: {
@@ -842,7 +836,6 @@
           type: 'dwarf'
         }
       };
-
       // Установка размеров canvas
       function setCanvasSize() {
         canvas.width = canvas.offsetWidth;
@@ -855,7 +848,6 @@
           ctx.scale(pixelRatio, pixelRatio);
         }
       }
-
       // Класс частиц с поддержкой параллакса
       class Particle {
         constructor(x, y, radius, color, velocity, type, parallaxFactor = 1) {
@@ -875,7 +867,6 @@
           this.maxLifetime = 1;
           this.parallaxFactor = parallaxFactor;
         }
-
         draw() {
           ctx.save();
           if (this.type === 'star') {
@@ -904,9 +895,7 @@
           } else {
             ctx.globalAlpha = this.alpha * this.lifetime;
           }
-
           ctx.translate(this.x, this.y);
-          
           if (this.type === 'ring') {
             ctx.rotate(this.rotation);
             ctx.beginPath();
@@ -940,26 +929,21 @@
           }
           ctx.restore();
         }
-
         update() {
           this.draw();
-          
           // Движение параллакса
           const parallaxSpeed = parallaxSettings.baseSpeed * this.parallaxFactor;
           this.x += parallaxSettings.directionX * parallaxSpeed;
           this.y += parallaxSettings.directionY * parallaxSpeed;
-
           // Оригинальное движение частицы
           const smoothFactor = fixedSettings.smoothness / 10;
           this.velocity.x *= (1 - smoothFactor * 0.05);
           this.velocity.y *= (1 - smoothFactor * 0.05);
           this.x += this.velocity.x;
           this.y += this.velocity.y;
-
           this.rotation += this.rotationSpeed;
           this.pulse += 0.05;
           this.twinkle += this.twinkleSpeed;
-
           // Teleport-ация при выходе за границы
           if (this.x < -this.radius * 2) {
             this.x = canvas.width + this.radius;
@@ -973,7 +957,6 @@
           }
         }
       }
-
       // Функция для рисования градиентного фона
       function drawBackground() {
         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -984,7 +967,6 @@
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
-
       // Генерация звезд с параллаксом
       function generateStars() {
         const starCount = fixedSettings.starDensity * 50;
@@ -1002,7 +984,6 @@
           stars.push(new Particle(x, y, radius, color, velocity, 'star', parallaxSettings.layers.stars));
         }
       }
-
       // Генерация туманностей с параллаксом
       function generateNebulae() {
         const nebulaCount = fixedSettings.nebulaIntensity;
@@ -1021,7 +1002,6 @@
           nebulae.push(new Particle(x, y, radius, color, velocity, 'nebula', parallaxSettings.layers.nebulae));
         }
       }
-
       // ОБНОВЛЕННЫЕ ФУНКЦИИ ГЕНЕРАЦИИ С ПАРАЛЛАКСОМ
       function generateMercury() {
         const particleCount = fixedSettings.density * 15;
@@ -1051,7 +1031,6 @@
           specialElements.push(new Particle(x, y, radius, color, velocity, 'sun', parallaxSettings.layers.special));
         }
       }
-
       function generateVenus() {
         const particleCount = fixedSettings.density * 20;
         particles = [];
@@ -1074,7 +1053,6 @@
           particles.push(new Particle(x, y, radius, color, velocity, 'cloud', parallaxSettings.layers.particles));
         }
       }
-
       function generateEarth() {
         const particleCount = fixedSettings.density * 25;
         particles = [];
@@ -1094,7 +1072,6 @@
           particles.push(new Particle(x, y, radius, color, velocity, 'water', parallaxSettings.layers.particles));
         }
       }
-
       function generateMars() {
         const particleCount = fixedSettings.density * 30;
         particles = [];
@@ -1112,7 +1089,6 @@
           particles.push(new Particle(x, y, radius, color, velocity, 'dust', parallaxSettings.layers.particles));
         }
       }
-
       function generateJupiter() {
         const particleCount = fixedSettings.density * 15;
         particles = [];
@@ -1139,7 +1115,6 @@
         };
         specialElements.push(new Particle(x, y, radius, color, velocity, 'spot', parallaxSettings.layers.special));
       }
-
       function generateSaturn() {
         const particleCount = fixedSettings.density * 10;
         particles = [];
@@ -1172,7 +1147,6 @@
           particles.push(new Particle(x, y, radius, color, velocity, 'cloud', parallaxSettings.layers.particles));
         }
       }
-
       function generateUranus() {
         const particleCount = fixedSettings.density * 20;
         particles = [];
@@ -1190,7 +1164,6 @@
           particles.push(new Particle(x, y, radius, color, velocity, 'ice', parallaxSettings.layers.particles));
         }
       }
-
       function generateNeptune() {
         const particleCount = fixedSettings.density * 25;
         particles = [];
@@ -1224,7 +1197,6 @@
           specialElements.push(new Particle(x, y, radius, color, velocity, 'spot', parallaxSettings.layers.special));
         }
       }
-
       function generatePluto() {
         const particleCount = fixedSettings.density * 20;
         particles = [];
@@ -1259,7 +1231,6 @@
           specialElements.push(new Particle(x, y, radius, color, velocity, 'ice', parallaxSettings.layers.special));
         }
       }
-
       // Анимация частиц
       function animateParticles() {
         drawBackground();
@@ -1276,14 +1247,12 @@
           element.update();
         });
       }
-
       // Основная функция анимации
       function animate() {
         time += 0.01;
         animateParticles();
         animationId = requestAnimationFrame(animate);
       }
-
       // Генерация фона для выбранной планеты
       function generatePlanetBackground() {
         if (animationId) {
@@ -1309,20 +1278,17 @@
         genMap[currentPlanet]();
         animate();
       }
-
       // Смена планеты
       function changePlanet(planet) {
         currentPlanet = planet;
         generatePlanetBackground();
       }
-
       // Инициализация
       function init() {
         setCanvasSize();
         generatePlanetBackground();
         window.addEventListener('resize', setCanvasSize);
       }
-
       // Публичные методы
       window.planetBackground = {
         init: init,
@@ -1336,7 +1302,20 @@
         // Инициализация планетарного фона
         planetBackground.init();
         
-        // Остальной код игры остается без изменений
+        // === ИСПРАВЛЕНИЕ: Объявление переменной locations ПЕРЕД использованием ===
+        const locations = {
+            mercury: { name: "☿ Меркурий", color: "#bb86fc", coinColor: "#a0d2ff", borderColor: "#4a55e0", blockColors: ['#2962ff', '#4fc3f7', '#bb86fc', '#f8bbd0'] },
+            venus: { name: "♀ Венера", color: "#ffab91", coinColor: "#a0d2ff", borderColor: "#ff5722", blockColors: ['#ff5722', '#ff9800', '#ff5722', '#e91e63'] },
+            earth: { name: "♁ Земля", color: "#80deea", coinColor: "#a0d2ff", borderColor: "#0288d1", blockColors: ['#0288d1', '#29b6f6', '#00bcd4', '#00e5ff'] },
+            mars: { name: "♂ Марс", color: "#a5d6a7", coinColor: "#a0d2ff", borderColor: "#388e3c", blockColors: ['#388e3c', '#66bb6a', '#9ccc65', '#d4e157'] },
+            jupiter: { name: "♃ Юпитер", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
+            saturn: { name: "♄ Сатурн", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
+            uranus: { name: "♅ Уран", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
+            neptune: { name: "♆ Нептун", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
+            pluto: { name: "♇ Плутон", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] }
+        };
+
+        // Остальной код игры
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         // === ФАКТИЧЕСКИЕ РАССТОЯНИЯ ПЛАНЕТ В АСТРОНОМИЧЕСКИХ ЕДИНИЦАХ ===
@@ -1355,6 +1334,7 @@
         
         // ПЕРЕСЧИТАНО на основе фактической астрономической единицы
         const AU_TO_DAMAGE = 149597870.691;
+        
         const locationRequirements = {
             mercury: { 
                 damageRequired: 0, 
@@ -1404,6 +1384,7 @@
         };
         
         let blockSpeed = isMobile ? 25 : 20;
+        
         function getCurrentSpeed() {
             const baseSpeed = blockSpeed;
             const locationIndex = Object.keys(locationRequirements).indexOf(currentLocation);
@@ -1468,8 +1449,7 @@
             randomBonusRange: { min: 0.8, max: 1.5 }
         };
         
-        // Объявляем глобальные переменные для анимаций
-        let stars = [], lavaParticles = [], snowflakes = [], bioDots = [];
+        // === ИСПРАВЛЕНИЕ: Удалены неиспользуемые переменные анимации ===
         
         // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
         let coins = 0;
@@ -1486,7 +1466,7 @@
         let helperActive = false;
         let helperTimeLeft = 0;
         const helperDuration = 60000;
-        let helperInterval;
+        let helperInterval = null; // ИСПРАВЛЕНИЕ: Инициализирована переменная
         let helperUpgradeLevel = 0;
         const helperUpgradeMultiplier = 1.8;
         let critChance = 0.001; // Начальное значение 0.1%
@@ -1495,6 +1475,10 @@
         let helperElement = null;
         let helperPosition = { x: 0, y: 0 };
         let bogoCoinBonus = 0; // Бонус к кристаллам от Bobo
+        
+        // === ИСПРАВЛЕНИЕ: Добавлены новые переменные для улучшений ===
+        let critChanceUpgradeLevel = 0;
+        let critMultiplierUpgradeLevel = 0;
         
         // === СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
         const dailyRewards = [
@@ -1530,21 +1514,63 @@
             { day: 30, reward: 10, type: "clickPower" }
         ];
         
-        const gameMetrics = {
+        // ИСПРАВЛЕНИЕ: Переработка инициализации gameMetrics
+        let gameMetrics = {
             startTime: Date.now(),
             blocksDestroyed: 0,
             upgradesBought: 0,
             totalClicks: 0,
-            sessions: parseInt(localStorage.getItem('gameSessions') || '0') + 1,
+            sessions: 1,
             currentDailyStreak: 0,
             lastDailyClaim: 0,
             dailyCycleStarted: Date.now()
         };
         
+        // ИСПРАВЛЕНИЕ: Добавление функций для работы с метриками
+        function saveGameMetrics() {
+            localStorage.setItem('gameMetrics', JSON.stringify({
+                blocksDestroyed: gameMetrics.blocksDestroyed,
+                upgradesBought: gameMetrics.upgradesBought,
+                totalClicks: gameMetrics.totalClicks,
+                sessions: gameMetrics.sessions,
+                currentDailyStreak: gameMetrics.currentDailyStreak,
+                lastDailyClaim: gameMetrics.lastDailyClaim,
+                dailyCycleStarted: gameMetrics.dailyCycleStarted,
+                startTime: gameMetrics.startTime // ИСПРАВЛЕНИЕ: Сохраняем startTime
+            }));
+        }
+        
+        function loadGameMetrics() {
+            const saved = localStorage.getItem('gameMetrics');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    gameMetrics = {
+                        startTime: data.startTime || Date.now(), // ИСПРАВЛЕНИЕ: Загружаем сохраненное время
+                        blocksDestroyed: data.blocksDestroyed || 0,
+                        upgradesBought: data.upgradesBought || 0,
+                        totalClicks: data.totalClicks || 0,
+                        sessions: (data.sessions || 0) + 1,
+                        currentDailyStreak: data.currentDailyStreak || 0,
+                        lastDailyClaim: data.lastDailyClaim || 0,
+                        dailyCycleStarted: data.dailyCycleStarted || Date.now()
+                    };
+                    saveGameMetrics();
+                    return true;
+                } catch (e) {
+                    console.warn('Ошибка загрузки метрик', e);
+                }
+            }
+            return false;
+        }
+        
+        // Инициализация метрик при запуске
+        loadGameMetrics();
+        
         // === ОБНОВЛЕННЫЕ ФУНКЦИИ БАЛАНСИРОВКИ ===
         function calculateBlockHealth() {
-            const location = locationRequirements[currentLocation];
-            const locationBonus = 1 + (location.targetAU * 2);
+            const currentReq = locationRequirements[currentLocation]; // ИСПРАВЛЕНИЕ: Используем currentReq
+            const locationBonus = 1 + (currentReq.targetAU * 2);
             let baseHealth = balanceConfig.baseHealth * locationBonus;
             const targetHealth = clickPower * balanceConfig.targetClicks;
             const combinedHealth = (baseHealth + targetHealth) / 2;
@@ -1619,7 +1645,10 @@
             timestamp: Date.now(),
             currentDailyStreak: gameMetrics.currentDailyStreak,
             lastDailyClaim: gameMetrics.lastDailyClaim,
-            dailyCycleStarted: gameMetrics.dailyCycleStarted
+            dailyCycleStarted: gameMetrics.dailyCycleStarted,
+            // ИСПРАВЛЕНИЕ: Добавляем новые переменные в сохранение
+            critChanceUpgradeLevel,
+            critMultiplierUpgradeLevel
           };
           localStorage.setItem('cosmicBlocksSave', JSON.stringify(saveData));
           showTooltip('Игра сохранена!');
@@ -1645,11 +1674,14 @@
                 totalDamageDealt = data.totalDamageDealt || 0;
                 currentLocation = data.currentLocation || 'mercury';
                 bogoCoinBonus = data.bogoCoinBonus || 0;
-                
                 // Загружаем данные ежедневных наград
                 gameMetrics.currentDailyStreak = data.currentDailyStreak || 0;
                 gameMetrics.lastDailyClaim = data.lastDailyClaim || 0;
                 gameMetrics.dailyCycleStarted = data.dailyCycleStarted || Date.now();
+                
+                // ИСПРАВЛЕНИЕ: Загружаем новые переменные с обратной совместимостью
+                critChanceUpgradeLevel = data.critChanceUpgradeLevel || Math.round((critChance - 0.001) / 0.001);
+                critMultiplierUpgradeLevel = data.critMultiplierUpgradeLevel || Math.round((critMultiplier - 2.0) / 0.2);
                 
                 return true;
               } else {
@@ -1681,13 +1713,12 @@
         function initializeDailyRewards() {
             const container = document.getElementById('dailyRewardsContainer');
             container.innerHTML = '';
-            
             // Определяем текущий день в цикле
             const now = Date.now();
             const daysSinceStart = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000));
             const currentDay = (daysSinceStart % 30) + 1;
-            const lastClaimDay = Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1;
-            
+            const lastClaimDay = gameMetrics.lastDailyClaim ? 
+                Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
             // Создаем ячейки для каждого дня
             for (let i = 0; i < 30; i++) {
                 const day = i + 1;
@@ -1698,7 +1729,6 @@
                     <div class="day-number">День ${day}</div>
                     <div class="reward">${getRewardDisplay(reward)}</div>
                 `;
-                
                 // Определяем статус дня
                 if (day < currentDay && day <= lastClaimDay) {
                     dayElement.classList.add('claimed');
@@ -1709,10 +1739,8 @@
                     // Пропущенные дни
                     dayElement.style.opacity = '0.5';
                 }
-                
                 container.appendChild(dayElement);
             }
-            
             // Обновляем информацию
             const infoElement = document.getElementById('dailyRewardInfo');
             if (currentDay > lastClaimDay + 1) {
@@ -1742,8 +1770,19 @@
         }
         
         function claimDailyReward(day) {
-            const reward = dailyRewards[day - 1];
+            const now = Date.now();
+            const lastClaimDay = gameMetrics.lastDailyClaim ? 
+                Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
+            const currentDay = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1;
             
+            // Проверяем, не получали ли мы уже награду сегодня
+            if (gameMetrics.lastDailyClaim && currentDay === lastClaimDay) {
+                showTooltip("Вы уже получили награду сегодня!");
+                setTimeout(hideTooltip, 2000);
+                return;
+            }
+            
+            const reward = dailyRewards[day - 1];
             // Применяем награду
             switch (reward.type) {
                 case "coins":
@@ -1768,17 +1807,13 @@
                     showTooltip(`Множитель крита увеличен на ${reward.reward}x!`);
                     break;
             }
-            
             // Обновляем статистику
             gameMetrics.currentDailyStreak = day;
-            gameMetrics.lastDailyClaim = Date.now();
-            
+            gameMetrics.lastDailyClaim = now;
             // Сохраняем игру
             saveGame();
-            
             // Обновляем отображение
             initializeDailyRewards();
-            
             // Закрываем через 2 секунды
             setTimeout(() => {
                 document.getElementById('dailyRewardsScreen').style.display = 'none';
@@ -1799,16 +1834,17 @@
             const now = Date.now();
             const lastClaim = gameMetrics.lastDailyClaim;
             
-            // Проверяем, можно ли забрать награду
-            if (!lastClaim || now - lastClaim >= 24 * 60 * 60 * 1000) {
-                showDailyRewardsScreen();
-                return true;
-            } else {
+            // Если награда уже получена сегодня
+            if (lastClaim && now - lastClaim < 24 * 60 * 60 * 1000) {
                 const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - (now - lastClaim)) / (1000 * 60 * 60));
                 showTooltip(`Следующая награда через ${hoursLeft} ч.`);
                 setTimeout(hideTooltip, 2000);
                 return false;
             }
+            
+            // Если сегодня еще не получали награду
+            showDailyRewardsScreen();
+            return true;
         }
         
         // Получаем элементы DOM
@@ -1855,7 +1891,6 @@
         Object.entries(DOMElements).forEach(([name, element]) => {
             if (!element) missingElements.push(name);
         });
-        
         if (missingElements.length > 0) {
             console.error("Отсутствуют элементы:", missingElements.join(", "));
             return;
@@ -1872,18 +1907,13 @@
             dailyRewardsBtn, claimDailyRewardBtn, closeDailyRewardsBtn
         } = DOMElements;
         
-        // ЗАГРУЗКА СОХРАНЕНИЯ ПРИ СТАРТЕ И ОБНОВЛЕНИЕ КНОПКИ ПРОДОЛЖИТЬ
-        updateContinueButton();
-        
         // === ОБНОВЛЕННЫЙ ЭФФЕКТ ВЗРЫВА С УВЕЛИЧЕННОЙ ОБЛАСТЬЮ ===
         function createExplosion(block) {
             const rect = block.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            
             // УВЕЛИЧЕННЫЙ РАЗМЕР ВЗРЫВА
             const explosionSize = isMobile ? 150 : 200;
-            
             // Создаем основной взрыв
             const explosion = document.createElement('div');
             explosion.className = 'explosion';
@@ -1892,7 +1922,6 @@
             explosion.style.width = explosionSize + 'px';
             explosion.style.height = explosionSize + 'px';
             document.body.appendChild(explosion);
-            
             // УВЕЛИЧЕННОЕ КОЛИЧЕСТВО ЧАСТИЦ
             const particleCount = isMobile ? 20 : 25;
             for (let i = 0; i < particleCount; i++) {
@@ -1900,15 +1929,13 @@
                 particle.className = 'explosion-particle';
                 particle.style.left = centerX + 'px';
                 particle.style.top = centerY + 'px';
-                
                 // УВЕЛИЧЕННЫЙ РАЗМЕР ЧАСТИЦ
                 const particleSize = isMobile ? 10 : 12;
                 particle.style.width = particleSize + 'px';
                 particle.style.height = particleSize + 'px';
-                
+                // ИСПРАВЛЕНИЕ: locations теперь доступна
                 const location = locations[currentLocation];
                 particle.style.backgroundColor = location.blockColors[Math.floor(Math.random() * location.blockColors.length)];
-                
                 // УВЕЛИЧЕННОЕ РАССТОЯНИЕ РАЗЛЕТА
                 const angle = Math.random() * Math.PI * 2;
                 const distance = 50 + Math.random() * 100;
@@ -1916,9 +1943,7 @@
                 const ty = Math.sin(angle) * distance;
                 particle.style.setProperty('--tx', tx + 'px');
                 particle.style.setProperty('--ty', ty + 'px');
-                
                 document.body.appendChild(particle);
-                
                 // Удаляем частицы после анимации
                 setTimeout(() => {
                     if (particle.parentNode) {
@@ -1926,7 +1951,6 @@
                     }
                 }, 800);
             }
-            
             // Удаляем основной взрыв после анимации
             setTimeout(() => {
                 if (explosion.parentNode) {
@@ -1934,18 +1958,6 @@
                 }
             }, 600);
         }
-        
-        const locations = {
-            mercury: { name: "☿ Меркурий", color: "#bb86fc", coinColor: "#a0d2ff", borderColor: "#4a55e0", blockColors: ['#2962ff', '#4fc3f7', '#bb86fc', '#f8bbd0'] },
-            venus: { name: "♀ Венера", color: "#ffab91", coinColor: "#a0d2ff", borderColor: "#ff5722", blockColors: ['#ff5722', '#ff9800', '#ff5722', '#e91e63'] },
-            earth: { name: "♁ Земля", color: "#80deea", coinColor: "#a0d2ff", borderColor: "#0288d1", blockColors: ['#0288d1', '#29b6f6', '#00bcd4', '#00e5ff'] },
-            mars: { name: "♂ Марс", color: "#a5d6a7", coinColor: "#a0d2ff", borderColor: "#388e3c", blockColors: ['#388e3c', '#66bb6a', '#9ccc65', '#d4e157'] },
-            jupiter: { name: "♃ Юпитер", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
-            saturn: { name: "♄ Сатурн", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
-            uranus: { name: "♅ Уран", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
-            neptune: { name: "♆ Нептун", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] },
-            pluto: { name: "♇ Плутон", color: "#ce93d8", coinColor: "#a0d2ff", borderColor: "#7b1fa2", blockColors: ['#7b1fa2', '#9c27b0', '#ab47bc', '#e1bee7'] }
-        };
         
         // === ОБНОВЛЕННАЯ СИСТЕМА ПРОГРЕССА В АСТРОНОМИЧЕСКИХ ЕДИНИЦАХ ===
         function updateProgressBar() {
@@ -1963,7 +1975,6 @@
             const nextLocation = currentReq.nextLocation;
             const currentAU = totalDamageDealt / AU_TO_DAMAGE;
             const targetAU = currentReq.targetAU;
-            
             if (nextLocation && currentAU >= targetAU) {
                 if (nextLocation === 'jupiter') {
                     showDevelopmentScreen();
@@ -1990,27 +2001,22 @@
             text.className = 'damage-text';
             text.textContent = `-${damage}`;
             text.style.color = color;
-            
             let left = rect.left + rect.width / 2;
             let top = rect.top;
             const textWidth = 100;
             if (left < textWidth / 2) left = textWidth / 2;
             if (left > window.innerWidth - textWidth / 2) left = window.innerWidth - textWidth / 2;
             if (top < 50) top = 50;
-            
             text.style.left = left + 'px';
             text.style.top = top + 'px';
             document.body.appendChild(text);
-            
             let opacity = 1;
             let yPos = parseInt(text.style.top);
-            
             function animate() {
                 opacity -= 0.02;
                 yPos -= 2;
                 text.style.opacity = opacity;
                 text.style.top = yPos + 'px';
-                
                 if (opacity > 0) {
                     requestAnimationFrame(animate);
                 } else {
@@ -2027,18 +2033,15 @@
             const text = document.createElement('div');
             text.className = 'combo-text';
             text.textContent = `Комбо x${combo}! +${bonus}`;
-            
             let left = rect.left + rect.width / 2;
             let top = rect.top;
             const textWidth = 150;
             if (left < textWidth / 2) left = textWidth / 2;
             if (left > window.innerWidth - textWidth / 2) left = window.innerWidth - textWidth / 2;
             if (top < 50) top = 50;
-            
             text.style.left = left + 'px';
             text.style.top = top + 'px';
             document.body.appendChild(text);
-            
             setTimeout(() => {
                 if (text.parentNode) {
                     document.body.removeChild(text);
@@ -2051,18 +2054,15 @@
             const text = document.createElement('div');
             text.className = 'reward-text';
             text.textContent = `+${reward} 💎`;
-            
             let left = rect.left + rect.width / 2;
             let top = rect.top + rect.height / 2;
             const textWidth = 120;
             if (left < textWidth / 2) left = textWidth / 2;
             if (left > window.innerWidth - textWidth / 2) left = window.innerWidth - textWidth / 2;
             if (top < 50) top = 50;
-            
             text.style.left = left + 'px';
             text.style.top = top + 'px';
             document.body.appendChild(text);
-            
             setTimeout(() => {
                 if (text.parentNode) {
                     document.body.removeChild(text);
@@ -2073,40 +2073,33 @@
         // === ФУНКЦИИ РАБОТЫ С ПОМОЩНИКОМ BOBO ===
         function moveHelperToRandomPosition() {
             if (!helperElement) return;
-            
             // Получаем позицию текущего блока
             let blockRect = { left: window.innerWidth/2, top: window.innerHeight/2 };
             if (currentBlock) {
                 blockRect = currentBlock.getBoundingClientRect();
             }
-            
             // Находим позицию вдали от блока
             let attempts = 0;
             let validPosition = false;
             const safeDistance = 150;
-            
             while (!validPosition && attempts < 20) {
                 attempts++;
                 // Генерируем случайную позицию
                 const randomX = Math.random() * (window.innerWidth - 60) + 30;
                 const randomY = Math.random() * (window.innerHeight - 120) + 60; // Избегаем верхней части с UI
-                
                 // Проверяем расстояние от блока
                 const distance = Math.sqrt(
                     Math.pow(randomX - (blockRect.left + blockRect.width/2), 2) + 
                     Math.pow(randomY - (blockRect.top + blockRect.height/2), 2)
                 );
-                
                 // Проверяем, что позиция не слишком близко к краям и не перекрывает UI
                 const safeFromEdges = randomX > 60 && randomX < window.innerWidth - 60 && 
                                     randomY > 100 && randomY < window.innerHeight - 60;
-                
                 if (distance > safeDistance && safeFromEdges) {
                     helperPosition = { x: randomX, y: randomY };
                     validPosition = true;
                 }
             }
-            
             // Если не нашли хорошую позицию, используем последнюю или центральную
             if (!validPosition) {
                 helperPosition = {
@@ -2114,7 +2107,6 @@
                     y: window.innerHeight * 0.7
                 };
             }
-            
             // Устанавливаем позицию
             helperElement.style.left = helperPosition.x + 'px';
             helperElement.style.top = helperPosition.y + 'px';
@@ -2124,13 +2116,10 @@
             if (helperElement && helperElement.parentNode) {
                 document.body.removeChild(helperElement);
             }
-            
             helperElement = document.createElement('div');
             helperElement.className = 'helper';
             document.body.appendChild(helperElement);
-            
             moveHelperToRandomPosition();
-            
             // Добавляем плавное появление
             helperElement.style.opacity = '0';
             setTimeout(() => {
@@ -2141,34 +2130,27 @@
         // === ФУНКЦИЯ АКТИВАЦИИ BOBO С БОНУСОМ К КРИСТАЛЛАМ ===
         function activateHelper() {
             if (helperActive) return;
-            
             helperActive = true;
             helperTimeLeft = helperDuration;
             bogoCoinBonus = 0.2; // +20% к кристаллам
-            
             // Создаем элемент помощника
             createHelperElement();
-            
             helperInterval = setInterval(() => {
                 if (helperActive && currentBlock && gameActive) {
                     helperAttack();
                 }
             }, 1500);
-            
             const helperTimer = setInterval(() => {
                 if (!helperActive) {
                     clearInterval(helperTimer);
                     return;
                 }
-                
                 helperTimeLeft -= 1000;
-                
                 if (helperTimeLeft <= 0) {
                     helperActive = false;
                     clearInterval(helperInterval);
                     clearInterval(helperTimer);
                     bogoCoinBonus = 0; // Сбрасываем бонус к кристаллам
-                    
                     // Плавное исчезание помощника
                     if (helperElement) {
                         helperElement.style.opacity = '0';
@@ -2179,13 +2161,11 @@
                             }
                         }, 300);
                     }
-                    
                     updateUpgradeButtons();
                     showTooltip('Bobo закончил работу!');
                     setTimeout(hideTooltip, 1500);
                 }
             }, 1000);
-            
             updateUpgradeButtons();
             updateHUD();
             showTooltip('Bobo активирован на 1 минуту!<br>Бонус к кристаллам: +20%');
@@ -2195,20 +2175,15 @@
         
         function helperAttack() {
             if (!currentBlock || !helperActive || !helperElement) return;
-            
             // Создаем визуальный эффект атаки
             createHelperEffect();
-            
             const baseHelperDmg = clickPower * (1 + helperDamageBonus);
             const upgradedHelperDmg = baseHelperDmg * (1 + helperUpgradeLevel * 0.2);
-            
             currentBlockHealth -= upgradedHelperDmg;
             totalDamageDealt += upgradedHelperDmg;
             gameMetrics.totalClicks++;
-            
             createDamageText(Math.round(upgradedHelperDmg), currentBlock, '#69f0ae');
             checkLocationUpgrade();
-            
             if (currentBlockHealth <= 0) {
                 destroyBlock(currentBlock);
             } else {
@@ -2219,10 +2194,8 @@
         
         function createHelperEffect() {
             if (!currentBlock || !helperElement) return;
-            
             const blockRect = currentBlock.getBoundingClientRect();
             const helperRect = helperElement.getBoundingClientRect();
-            
             const beam = document.createElement('div');
             beam.className = 'helper-beam';
             beam.style.left = helperRect.left + 15 + 'px';
@@ -2230,12 +2203,10 @@
             beam.style.width = '2px';
             beam.style.height = '0';
             document.body.appendChild(beam);
-            
             // Анимация луча
             const animateBeam = () => {
                 const currentHeight = parseInt(beam.style.height) || 0;
                 const targetHeight = blockRect.top - (helperRect.top + 30);
-                
                 if (currentHeight < targetHeight) {
                     beam.style.height = (currentHeight + 5) + 'px';
                     requestAnimationFrame(animateBeam);
@@ -2252,7 +2223,6 @@
                     hitEffect.style.zIndex = '15';
                     hitEffect.style.opacity = '0.8';
                     document.body.appendChild(hitEffect);
-                    
                     // Затухание эффекта
                     let opacity = 0.8;
                     const fadeOut = setInterval(() => {
@@ -2263,14 +2233,12 @@
                             if (hitEffect.parentNode) document.body.removeChild(hitEffect);
                         }
                     }, 30);
-                    
                     // Удаляем луч
                     setTimeout(() => {
                         if (beam.parentNode) document.body.removeChild(beam);
                     }, 300);
                 }
             };
-            
             requestAnimationFrame(animateBeam);
         }
         
@@ -2278,13 +2246,10 @@
         function setLocation(loc) {
             currentLocation = loc;
             const theme = locations[loc];
-            
             if (gameTitle) gameTitle.textContent = theme.name;
             if (header) header.style.borderColor = theme.borderColor;
-            
             // Обновляем планетарный фон
             planetBackground.setPlanet(loc);
-            
             if (levelAnnounce) {
                 levelAnnounce.textContent = theme.name;
                 levelAnnounce.style.color = theme.color;
@@ -2293,7 +2258,6 @@
                     levelAnnounce.style.opacity = "0";
                 }, 2000);
             }
-            
             updateProgressBar();
         }
         
@@ -2331,7 +2295,8 @@
                 }
             }
             
-            const critChanceCost = Math.floor(baseCritChanceCost * Math.pow(1.3, Math.floor(critChance * 1000)));
+            // ИСПРАВЛЕНИЕ: Используем новые переменные для расчета стоимости
+            const critChanceCost = Math.floor(baseCritChanceCost * Math.pow(1.3, critChanceUpgradeLevel));
             if (upgradeCritChanceBtn) {
                 upgradeCritChanceBtn.querySelector('.upgrade-cost').textContent = critChanceCost.toLocaleString();
                 if (coins >= critChanceCost) {
@@ -2341,7 +2306,7 @@
                 }
             }
             
-            const critMultiplierCost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, Math.floor((critMultiplier - 2) * 5)));
+            const critMultiplierCost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, critMultiplierUpgradeLevel));
             if (upgradeCritMultBtn) {
                 upgradeCritMultBtn.querySelector('.upgrade-cost').textContent = critMultiplierCost.toLocaleString();
                 if (coins >= critMultiplierCost) {
@@ -2389,12 +2354,13 @@
             }
         }
         
-        // === ОБНОВЛЕННАЯ ФУНКЦИЯ ПОКУПКИ ШАНСА КРИТА (0.1%) ===
+        // === ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОКУПКИ ШАНСА КРИТА ===
         function buyCritChance() {
-            const cost = Math.floor(baseCritChanceCost * Math.pow(1.3, Math.floor(critChance * 1000)));
+            const cost = Math.floor(baseCritChanceCost * Math.pow(1.3, critChanceUpgradeLevel));
             if (coins >= cost) {
                 coins -= cost;
                 critChance = Math.min(1.0, critChance + 0.001);
+                critChanceUpgradeLevel++; // ИСПРАВЛЕНИЕ: Увеличиваем уровень улучшения
                 gameMetrics.upgradesBought++;
                 updateCoins();
                 updateHUD();
@@ -2406,10 +2372,11 @@
         }
         
         function buyCritMultiplier() {
-            const cost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, Math.floor((critMultiplier - 2) * 5)));
+            const cost = Math.floor(baseCritMultiplierCost * Math.pow(1.25, critMultiplierUpgradeLevel));
             if (coins >= cost) {
                 coins -= cost;
                 critMultiplier += 0.2;
+                critMultiplierUpgradeLevel++; // ИСПРАВЛЕНИЕ: Увеличиваем уровень улучшения
                 gameMetrics.upgradesBought++;
                 updateCoins();
                 updateHUD();
@@ -2437,15 +2404,12 @@
         
         function updateCracks(block, health) {
             if (!block) return;
-            
             const existingCrack = block.querySelector('.crack-overlay');
             if (existingCrack) {
                 block.removeChild(existingCrack);
             }
-            
             const maxHealth = parseInt(block.dataset.maxHealth);
             const damageRatio = 1 - (health / maxHealth);
-            
             if (damageRatio > 0.7) {
                 addCracks(block, 'crack-3');
             } else if (damageRatio > 0.4) {
@@ -2471,33 +2435,25 @@
         
         function hitBlock(block, damage) {
             if (!gameActive) return;
-            
             if (navigator.vibrate) {
                 navigator.vibrate(50);
             }
-            
             playSound('clickSound');
-            
             block.style.transform = 'translateX(-50%) scale(0.85)';
             setTimeout(() => {
                 block.style.transform = 'translateX(-50%) scale(1)';
             }, 100);
-            
             let finalDamage = Math.round(damage);
             let isCrit = false;
-            
             if (Math.random() < critChance) {
                 finalDamage = Math.round(damage * critMultiplier);
                 isCrit = true;
             }
-            
             currentBlockHealth -= finalDamage;
             totalDamageDealt += finalDamage;
             gameMetrics.totalClicks++;
-            
             createDamageText(finalDamage, block, isCrit ? '#FFD700' : '#ff4444');
             checkLocationUpgrade();
-            
             if (currentBlockHealth <= 0) {
                 destroyBlock(block);
             } else {
@@ -2514,18 +2470,15 @@
                 comboCount = 1;
             }
             lastDestroyTime = now;
-            
             const baseReward = 25 + (locationRequirements[currentLocation].targetAU * 100);
             let reward = Math.floor(baseReward * balanceConfig.rewardMultiplier);
             const randomBonus = balanceConfig.randomBonusRange.min + 
                                Math.random() * (balanceConfig.randomBonusRange.max - balanceConfig.randomBonusRange.min);
             reward = Math.floor(reward * randomBonus);
-            
             // Применяем бонус от Bobo
             if (bogoCoinBonus > 0) {
                 reward = Math.floor(reward * (1 + bogoCoinBonus));
             }
-            
             let isRare = false;
             let rareType = null;
             for (const type in rareBlocks) {
@@ -2536,31 +2489,25 @@
                     break;
                 }
             }
-            
             if (comboCount > 1) {
                 const comboBonus = Math.floor(reward * (comboCount * balanceConfig.comboMultiplier));
                 reward += comboBonus;
                 showComboText(comboCount, comboBonus, block);
                 playSound('comboSound');
             }
-            
             coins += reward;
             gameMetrics.blocksDestroyed++;
             updateCoins();
             updateHUD();
             playSound('breakSound');
             showRewardText(reward, block);
-            
             // Создаем эффект взрыва в центре блока
             createExplosion(block);
-            
             if (gameArea.contains(block)) {
                 gameArea.removeChild(block);
             }
-            
             currentBlock = null;
             currentBlockHealth = 0;
-            
             setTimeout(() => {
                 if (gameActive) {
                     createMovingBlock();
@@ -2581,10 +2528,8 @@
             if (currentBlock && gameArea.contains(currentBlock)) {
                 gameArea.removeChild(currentBlock);
             }
-            
             const blockHealth = calculateBlockHealth();
             currentBlockHealth = blockHealth;
-            
             const block = document.createElement("div");
             block.className = "moving-block";
             const size = getBlockSize();
@@ -2592,14 +2537,11 @@
             block.style.height = size + "px";
             block.style.bottom = "0px";
             block.dataset.maxHealth = blockHealth;
-            
             const theme = locations[currentLocation];
             const colorIndex = Math.floor(Math.random() * theme.blockColors.length);
-            
             let isRare = false;
             let rareType = null;
             const potentialRareType = getRareBlockType();
-            
             if (potentialRareType) {
                 isRare = true;
                 rareType = potentialRareType;
@@ -2614,15 +2556,12 @@
                 block.style.border = `2px solid ${theme.borderColor}`;
                 block.textContent = blockHealth;
             }
-            
             const expectedClicks = getExpectedClicks(currentBlockHealth, clickPower);
-            
             block.addEventListener('click', () => hitBlock(block, clickPower));
             block.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 hitBlock(block, clickPower);
             }, { passive: false });
-            
             gameArea.appendChild(block);
             currentBlock = block;
             animateBlock(block);
@@ -2630,37 +2569,33 @@
         
         function animateBlock(block) {
             if (!gameActive) return;
-            
             const speed = getCurrentSpeed();
             let position = parseInt(block.style.bottom) || 0;
-            
             function move() {
                 if (!gameActive || currentBlock !== block) return;
-                
                 position += speed / 30;
                 block.style.bottom = position + "px";
-                
                 if (position > window.innerHeight) {
                     gameOver();
                     return;
                 }
-                
                 requestAnimationFrame(move);
             }
-            
             move();
         }
         
         function gameOver(customMessage = null) {
             gameActive = false;
             helperActive = false;
-            
-            if (helperInterval) clearInterval(helperInterval);
+            // ИСПРАВЛЕНИЕ: Очищаем все интервалы
+            if (helperInterval) {
+                clearInterval(helperInterval);
+                helperInterval = null;
+            }
             if (helperElement && helperElement.parentNode) {
                 document.body.removeChild(helperElement);
                 helperElement = null;
             }
-            
             const sessionTime = Date.now() - gameMetrics.startTime;
             console.log('🎮 [Космический Кликер] Сессия завершена:', {
                 session: gameMetrics.sessions,
@@ -2672,22 +2607,17 @@
                 upgrades_bought: gameMetrics.upgradesBought,
                 total_clicks: gameMetrics.totalClicks
             });
-            
             localStorage.setItem('gameSessions', gameMetrics.sessions.toString());
-            
             if (currentBlock && gameArea.contains(currentBlock)) {
                 gameArea.removeChild(currentBlock);
                 currentBlock = null;
             }
-            
             if (finalScoreDisplay) {
                 finalScoreDisplay.textContent = `Всего урона: ${Math.floor(totalDamageDealt).toLocaleString()}`;
             }
-            
             if (gameOverScreen) {
                 gameOverScreen.style.display = "flex";
             }
-            
             if (customMessage) {
                 const h2 = gameOverScreen.querySelector('h2');
                 if (h2) h2.textContent = customMessage;
@@ -2697,7 +2627,6 @@
         function shareResult() {
             const shareText = `🎮 Я нанес ${Math.floor(totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(coins)} Кристаллов в Космическом Кликере! 🌌
 Сможешь побить мой рекорд?`;
-            
             if (navigator.share) {
                 navigator.share({
                     title: 'Мой рекорд в Космическом Кликере!',
@@ -2748,25 +2677,31 @@
                 helperActive = false;
                 helperTimeLeft = 0;
                 bogoCoinBonus = 0;
+                // ИСПРАВЛЕНИЕ: Сбрасываем новые переменные
+                critChanceUpgradeLevel = 0;
+                critMultiplierUpgradeLevel = 0;
                 // Очищаем сохранение при начале новой игры
                 localStorage.removeItem('cosmicBlocksSave');
             } else {
                 // Если не сбрасываем, пересчитываем урон по новой формуле
                 clickPower = calculateClickPower();
+                // ИСПРАВЛЕНИЕ: добавляем обновление UI при загрузке сохранения
+                updateHUD();
+                updateProgressBar();
+                updateUpgradeButtons();
             }
             
+            // ИСПРАВЛЕНИЕ: Очищаем все интервалы
             if (helperInterval) {
                 clearInterval(helperInterval);
                 helperInterval = null;
             }
-            
             if (helperElement && helperElement.parentNode) {
                 document.body.removeChild(helperElement);
                 helperElement = null;
             }
             
             gameArea.innerHTML = "";
-            
             if (welcomeScreen) {
                 welcomeScreen.style.display = "none";
             }
@@ -2782,7 +2717,6 @@
             if (document.getElementById('dailyRewardsScreen')) {
                 document.getElementById('dailyRewardsScreen').style.display = "none";
             }
-            
             gameActive = true;
             comboCount = 0;
             lastDestroyTime = 0;
@@ -2790,13 +2724,11 @@
             gameMetrics.blocksDestroyed = 0;
             gameMetrics.upgradesBought = 0;
             gameMetrics.totalClicks = 0;
-            
             updateCoins();
             updateHUD();
             updateProgressBar();
             updateUpgradeButtons();
             setLocation(currentLocation);
-            
             setTimeout(() => createMovingBlock(), 500);
         }
         
@@ -2814,13 +2746,16 @@
                 saveScreen.style.display = "flex";
             }
         }
+        
         function restartGame() {
             startGame(true); // Полностью сбрасываем игру
         }
+        
         function showStartError() {
             showTooltip("Ошибка при запуске игры. Попробуйте перезагрузить страницу.");
             setTimeout(hideTooltip, 3000);
         }
+        
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
         if (startBtn) {
             startBtn.addEventListener('click', function() {
@@ -2841,6 +2776,7 @@
                 }
             }, { passive: false });
         }
+        
         if (continueBtn) {
             continueBtn.addEventListener('click', function() {
                 try {
@@ -2872,6 +2808,7 @@
                 }
             }, { passive: false });
         }
+        
         if (loadSaveBtn) {
             loadSaveBtn.addEventListener('click', continueGame);
             loadSaveBtn.addEventListener('touchstart', (e) => {
@@ -2879,6 +2816,7 @@
                 continueGame();
             }, { passive: false });
         }
+        
         if (newGameBtn) {
             newGameBtn.addEventListener('click', () => startGame(true));
             newGameBtn.addEventListener('touchstart', (e) => {
@@ -2886,6 +2824,7 @@
                 startGame(true);
             }, { passive: false });
         }
+        
         if (cancelSaveBtn) {
             cancelSaveBtn.addEventListener('click', () => {
                 if (saveScreen) saveScreen.style.display = "none";
@@ -2895,6 +2834,7 @@
                 if (saveScreen) saveScreen.style.display = "none";
             }, { passive: false });
         }
+        
         if (restartFromDevBtn) {
             restartFromDevBtn.addEventListener('click', restartGame);
             restartFromDevBtn.addEventListener('touchstart', (e) => {
@@ -2902,6 +2842,7 @@
                 restartGame();
             }, { passive: false });
         }
+        
         if (dailyRewardsBtn) {
             dailyRewardsBtn.addEventListener('click', checkDailyReward);
             dailyRewardsBtn.addEventListener('touchstart', (e) => {
@@ -2909,6 +2850,7 @@
                 checkDailyReward();
             }, { passive: false });
         }
+        
         if (dailyRewardBtn) {
             dailyRewardBtn.addEventListener('click', checkDailyReward);
             dailyRewardBtn.addEventListener('touchstart', (e) => {
@@ -2916,14 +2858,15 @@
                 checkDailyReward();
             }, { passive: false });
         }
+        
         if (claimDailyRewardBtn) {
             claimDailyRewardBtn.addEventListener('click', function() {
                 // Определяем текущий день
                 const now = Date.now();
                 const daysSinceStart = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000));
                 const currentDay = (daysSinceStart % 30) + 1;
-                const lastClaimDay = Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1;
-                
+                const lastClaimDay = gameMetrics.lastDailyClaim ? 
+                    Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
                 if (currentDay === lastClaimDay + 1) {
                     claimDailyReward(currentDay);
                 } else if (currentDay > lastClaimDay + 1) {
@@ -2939,6 +2882,7 @@
                 // Обработчик такой же, как для click
             }, { passive: false });
         }
+        
         if (closeDailyRewardsBtn) {
             closeDailyRewardsBtn.addEventListener('click', closeDailyRewardsScreen);
             closeDailyRewardsBtn.addEventListener('touchstart', (e) => {
@@ -2946,6 +2890,7 @@
                 closeDailyRewardsScreen();
             }, { passive: false });
         }
+        
         function addMobileButtonHandlers(button, handler) {
             if (button) {
                 button.addEventListener('click', handler);
@@ -2955,11 +2900,13 @@
                 }, { passive: false });
             }
         }
+        
         addMobileButtonHandlers(upgradeClickBtn, buyClickPower);
         addMobileButtonHandlers(upgradeHelperBtn, buyHelper);
         addMobileButtonHandlers(upgradeCritChanceBtn, buyCritChance);
         addMobileButtonHandlers(upgradeCritMultBtn, buyCritMultiplier);
         addMobileButtonHandlers(upgradeHelperDmgBtn, buyHelperDamage);
+        
         if (upgradeClickBtn) {
             upgradeClickBtn.addEventListener('mouseenter', () => showTooltip('Сила удара<br>Нелинейный рост урона'));
             upgradeClickBtn.addEventListener('mouseleave', hideTooltip);
@@ -2980,8 +2927,10 @@
             upgradeHelperDmgBtn.addEventListener('mouseenter', () => showTooltip('Урон Bobo<br>+20% урона за апгрейд'));
             upgradeHelperDmgBtn.addEventListener('mouseleave', hideTooltip);
         }
+        
         addMobileButtonHandlers(restartBtn, restartGame);
         addMobileButtonHandlers(shareBtn, shareResult);
+        
         if (saveBtn) {
             saveBtn.addEventListener('click', saveGame);
             saveBtn.addEventListener('touchstart', (e) => {
@@ -2989,11 +2938,16 @@
                 saveGame();
             }, { passive: false });
         }
+        
         // ИНИЦИАЛИЗАЦИЯ
         updateCoins();
         updateHUD();
         updateProgressBar();
         setLocation(currentLocation);
+        
+        // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
+        updateContinueButton();
+        
         // Слушатель событий для изменения размера окна
         window.addEventListener('resize', function() {
             if (helperElement) {
@@ -3001,6 +2955,7 @@
             }
         });
     });
+    
     // Блокировка жестов масштабирования и выделения
     document.addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) {
