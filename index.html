@@ -1629,7 +1629,6 @@
           showTooltip('Игра сохранена!');
           setTimeout(hideTooltip, 1500);
           updateContinueButton();
-          updateDailyRewardButton();
         }
         function loadGame() {
           const saved = localStorage.getItem('cosmicBlocksSave');
@@ -1684,10 +1683,34 @@
         function updateDailyRewardButton() {
             const now = Date.now();
             const lastClaim = gameMetrics.lastDailyClaim;
-            const canClaim = !lastClaim || (now - lastClaim >= 24 * 60 * 60 * 1000);
+            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
             
+            if (dailyRewardsBtn) {
+                if (!lastClaim || (now - lastClaim >= dailyBonusInterval)) {
+                    dailyRewardsBtn.disabled = false;
+                    dailyRewardsBtn.style.opacity = '1';
+                    dailyRewardsBtn.style.cursor = 'pointer';
+                } else {
+                    dailyRewardsBtn.disabled = true;
+                    dailyRewardsBtn.style.opacity = '0.5';
+                    dailyRewardsBtn.style.cursor = 'not-allowed';
+                }
+                
+                // Обновление текста кнопки с таймером
+                if (lastClaim && (now - lastClaim < dailyBonusInterval)) {
+                    const timeLeft = dailyBonusInterval - (now - lastClaim);
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    dailyRewardsBtn.textContent = `🎁 Ежедневные награды (${hours}ч ${minutes}м ${seconds}с)`;
+                } else {
+                    dailyRewardsBtn.textContent = '🎁 Ежедневные награды';
+                }
+            }
+            
+            // Аналогичные изменения для кнопки на экране Game Over
             if (dailyRewardBtn) {
-                if (canClaim) {
+                if (!lastClaim || (now - lastClaim >= dailyBonusInterval)) {
                     dailyRewardBtn.disabled = false;
                     dailyRewardBtn.style.opacity = '1';
                     dailyRewardBtn.style.cursor = 'pointer';
@@ -1695,8 +1718,34 @@
                     dailyRewardBtn.disabled = true;
                     dailyRewardBtn.style.opacity = '0.5';
                     dailyRewardBtn.style.cursor = 'not-allowed';
+                    
+                    const timeLeft = dailyBonusInterval - (now - lastClaim);
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    dailyRewardBtn.textContent = `🎁 Ежедневная награда (${hours}ч ${minutes}м ${seconds}с)`;
                 }
             }
+        }
+        // === ПРОВЕРКА ДОСТУПНОСТИ БОНУСА НА ГЛАВНОМ ЭКРАНЕ ===
+        function checkBonusAvailability() {
+            const now = Date.now();
+            const lastBonusTime = gameMetrics.lastDailyClaim;
+            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+            
+            if (!lastBonusTime) {
+                return true;
+            }
+            
+            return (now - lastBonusTime) >= dailyBonusInterval;
+        }
+        // === АКТИВАЦИЯ БОНУСА ===
+        function activateBonus() {
+            const now = Date.now();
+            gameMetrics.lastDailyClaim = now;
+            saveGame();
+            showTooltip('Вы получили ежедневный бонус!');
+            setTimeout(hideTooltip, 2000);
         }
         // === ОБНОВЛЕННАЯ СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
         function initializeDailyRewards() {
@@ -1815,11 +1864,16 @@
         function checkDailyReward() {
             const now = Date.now();
             const lastClaim = gameMetrics.lastDailyClaim;
+            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+            
             // Если награда уже получена сегодня
-            if (lastClaim && now - lastClaim < 24 * 60 * 60 * 1000) {
-                const hoursLeft = Math.ceil((24 * 60 * 60 * 1000 - (now - lastClaim)) / (1000 * 60 * 60));
-                showTooltip(`Следующая награда через ${hoursLeft} ч.`);
-                setTimeout(hideTooltip, 2000);
+            if (lastClaim && now - lastClaim < dailyBonusInterval) {
+                const timeLeft = dailyBonusInterval - (now - lastClaim);
+                const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                showTooltip(`Следующая награда через ${hours}ч ${minutes}м ${seconds}с`);
+                setTimeout(hideTooltip, 3000);
                 return false;
             }
             // Если сегодня еще не получали награду
@@ -2628,7 +2682,6 @@
                 updateHUD();
                 updateProgressBar();
                 updateUpgradeButtons();
-                updateDailyRewardButton();
             }
             // ИСПРАВЛЕНИЕ: Очищаем все интервалы
             if (helperInterval) {
@@ -2771,9 +2824,13 @@
             }, { passive: false });
         }
         if (dailyRewardsBtn) {
-            dailyRewardsBtn.addEventListener('click', checkDailyReward);
-            dailyRewardsBtn.addEventListener('touchstart', (e) => {
+            dailyRewardsBtn.addEventListener('click', function() {
+                if (this.disabled) return;
+                checkDailyReward();
+            });
+            dailyRewardsBtn.addEventListener('touchstart', function(e) {
                 e.preventDefault();
+                if (this.disabled) return;
                 checkDailyReward();
             }, { passive: false });
         }
@@ -2783,8 +2840,8 @@
                 checkDailyReward();
             });
             dailyRewardBtn.addEventListener('touchstart', function(e) {
-                if (this.disabled) return;
                 e.preventDefault();
+                if (this.disabled) return;
                 checkDailyReward();
             }, { passive: false });
         }
@@ -2868,8 +2925,11 @@
         setLocation(currentLocation);
         // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
         updateContinueButton();
-        // Обновляем кнопку ежедневной награды при старте
-        updateDailyRewardButton();
+        
+        // Запускаем обновление состояния кнопок ежедневного бонуса каждую секунду
+        setInterval(updateDailyRewardButton, 1000);
+        updateDailyRewardButton(); // Вызываем сразу при загрузке
+        
         // Слушатель событий для изменения размера окна
         window.addEventListener('resize', function() {
             if (helperElement) {
