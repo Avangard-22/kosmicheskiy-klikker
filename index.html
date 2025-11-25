@@ -184,7 +184,7 @@
       min-height: 60px;
     }
     /* Адаптивные экраны */
-    #welcomeScreen, #gameOverScreen, #saveScreen, #developmentScreen, #dailyRewardsScreen {
+    #welcomeScreen, #gameOverScreen, #saveScreen {
       position: absolute;
       top: 0;
       left: 0;
@@ -239,7 +239,7 @@
       margin-bottom: 15px;
     }
     #finalScore { font-size: clamp(1.1em, 4vw, 1.4em); margin-bottom: 15px; }
-    #restartBtn, #shareBtn, #dailyRewardBtn, #claimDailyRewardBtn, #closeDailyRewardsBtn {
+    #restartBtn, #shareBtn {
       padding: clamp(8px, 2.5vw, 10px) clamp(20px, 5vw, 24px);
       margin: 6px;
       font-size: clamp(0.9em, 3.5vw, 1em);
@@ -264,73 +264,6 @@
       max-width: 90%;
       margin-bottom: 20px;
       line-height: 1.5;
-    }
-    /* Экран разработки */
-    #developmentScreen {
-      background: rgba(0, 0, 0, 0.95);
-      backdrop-filter: blur(15px);
-      display: none;
-    }
-    #developmentScreen h2 {
-      font-size: clamp(1.5em, 6vw, 2.2em);
-      margin-bottom: 20px;
-      color: #ff9800;
-    }
-    #developmentScreen p {
-      max-width: 90%;
-      margin-bottom: 20px;
-      line-height: 1.5;
-      font-size: clamp(1em, 4vw, 1.2em);
-    }
-    /* Экран ежедневных наград */
-    #dailyRewardsScreen {
-      background: rgba(0, 0, 0, 0.9);
-      backdrop-filter: blur(10px);
-      display: none;
-    }
-    #dailyRewardsScreen h2 {
-      font-size: clamp(1.5em, 6vw, 2em);
-      margin-bottom: 20px;
-      color: #ffc107;
-    }
-    .daily-rewards-container {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
-      max-width: 90%;
-      margin-bottom: 20px;
-    }
-    .daily-reward-day {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 10px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .daily-reward-day.available {
-      background: rgba(76, 175, 80, 0.3);
-      border-color: #4CAF50;
-    }
-    .daily-reward-day.claimed {
-      background: rgba(158, 158, 158, 0.3);
-      border-color: #9e9e9e;
-      cursor: not-allowed;
-      opacity: 0.7;
-    }
-    .daily-reward-day.current {
-      border: 2px solid #ffc107;
-      box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
-    }
-    .daily-reward-day .day-number {
-      font-size: clamp(0.9em, 3.5vw, 1em);
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .daily-reward-day .reward {
-      font-size: clamp(0.8em, 3vw, 0.9em);
-      color: #ffc107;
     }
     /* Адаптивные тексты урона - ОБНОВЛЕНО: улучшена читаемость */
     .damage-text {
@@ -534,9 +467,6 @@
     }
     #restartBtn { background: #4CAF50; color: white; }
     #shareBtn { background: #00c853; color: white; }
-    #dailyRewardBtn { background: #ffc107; color: #000; }
-    #claimDailyRewardBtn { background: #4CAF50; color: white; }
-    #closeDailyRewardsBtn { background: #6c757d; color: white; }
     /* Стили для редких блоков */
     .block-gold {
         background: linear-gradient(135deg, #ffd700, #ff6b00) !important;
@@ -709,7 +639,6 @@
     <p>✨ <strong>Редкие блоки</strong> — дают бонусы и огромные награды!</p>
     <button id="continueBtn" class="btn no-save">Продолжить</button>
     <button id="startBtn" class="btn">Новая игра</button>
-    <button id="dailyRewardsBtn" class="btn" style="background: #ffc107; margin-top: 5px;">🎁 Ежедневные награды</button>
   </div>
   <!-- Экран сохранения -->
   <div id="saveScreen">
@@ -719,29 +648,11 @@
     <button id="newGameBtn" class="btn">Начать новую игру</button>
     <button id="cancelSaveBtn" class="btn" style="background: #666;">Отмена</button>
   </div>
-  <!-- Экран разработки -->
-  <div id="developmentScreen">
-    <h2>🚧 ЛОКАЦИЯ ЮПИТЕР НАХОДИТСЯ В РАЗРАБОТКЕ</h2>
-    <p>Вы достигли границы исследованного космоса!</p>
-    <p>Следующая локация будет доступна в будущем обновлении.</p>
-    <button id="restartFromDevBtn" class="btn">Начать добычу заново</button>
-  </div>
-  <!-- Экран ежедневных наград -->
-  <div id="dailyRewardsScreen">
-    <h2>🌟 ЕЖЕДНЕВНЫЕ НАГРАДЫ</h2>
-    <div class="daily-rewards-container" id="dailyRewardsContainer">
-      <!-- Дни будут генерироваться динамически -->
-    </div>
-    <p id="dailyRewardInfo" style="margin-bottom: 20px;">Возвращайтесь каждый день для получения уникальных наград!</p>
-    <button id="claimDailyRewardBtn" class="btn">Забрать награду</button>
-    <button id="closeDailyRewardsBtn" class="btn">Закрыть</button>
-  </div>
   <div id="gameOverScreen">
     <h2>ДОБЫЧА ПРЕРВАНА!</h2>
     <div id="finalScore">Всего урона: 0</div>
     <button id="restartBtn">Новая добыча</button>
     <button id="shareBtn">Поделиться</button>
-    <button id="dailyRewardBtn">🎁 Ежедневная награда</button>
   </div>
   <script>
     // === ОБНОВЛЕННЫЙ КОД ПЛАНЕТАРНОГО ФОНА С ЭФФЕКТОМ ПАРАЛЛАКСА ===
@@ -1465,49 +1376,13 @@
         // === ИСПРАВЛЕНИЕ: Добавлены новые переменные для улучшений ===
         let critChanceUpgradeLevel = 0;
         let critMultiplierUpgradeLevel = 0;
-        // === СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
-        const dailyRewards = [
-            { day: 1, reward: 1000, type: "coins" },
-            { day: 2, reward: 1, type: "clickPower" },
-            { day: 3, reward: 2000, type: "coins" },
-            { day: 4, reward: 0.001, type: "critChance" },
-            { day: 5, reward: 3000, type: "coins" },
-            { day: 6, reward: 0.1, type: "critMultiplier" },
-            { day: 7, reward: 5000, type: "coins" },
-            { day: 8, reward: 2, type: "clickPower" },
-            { day: 9, reward: 4000, type: "coins" },
-            { day: 10, reward: 0.001, type: "critChance" },
-            { day: 11, reward: 6000, type: "coins" },
-            { day: 12, reward: 0.1, type: "critMultiplier" },
-            { day: 13, reward: 7000, type: "coins" },
-            { day: 14, reward: 3, type: "clickPower" },
-            { day: 15, reward: 10000, type: "coins" },
-            { day: 16, reward: 0.002, type: "critChance" },
-            { day: 17, reward: 8000, type: "coins" },
-            { day: 18, reward: 0.2, type: "critMultiplier" },
-            { day: 19, reward: 9000, type: "coins" },
-            { day: 20, reward: 4, type: "clickPower" },
-            { day: 21, reward: 12000, type: "coins" },
-            { day: 22, reward: 0.003, type: "critChance" },
-            { day: 23, reward: 15000, type: "coins" },
-            { day: 24, reward: 0.3, type: "critMultiplier" },
-            { day: 25, reward: 18000, type: "coins" },
-            { day: 26, reward: 5, type: "clickPower" },
-            { day: 27, reward: 20000, type: "coins" },
-            { day: 28, reward: 0.004, type: "critChance" },
-            { day: 29, reward: 25000, type: "coins" },
-            { day: 30, reward: 10, type: "clickPower" }
-        ];
         // ИСПРАВЛЕНИЕ: Переработка инициализации gameMetrics
         let gameMetrics = {
             startTime: Date.now(),
             blocksDestroyed: 0,
             upgradesBought: 0,
             totalClicks: 0,
-            sessions: 1,
-            currentDailyStreak: 0,
-            lastDailyClaim: 0,
-            dailyCycleStarted: Date.now()
+            sessions: 1
         };
         // ИСПРАВЛЕНИЕ: Добавление функций для работы с метриками
         function saveGameMetrics() {
@@ -1516,9 +1391,6 @@
                 upgradesBought: gameMetrics.upgradesBought,
                 totalClicks: gameMetrics.totalClicks,
                 sessions: gameMetrics.sessions,
-                currentDailyStreak: gameMetrics.currentDailyStreak,
-                lastDailyClaim: gameMetrics.lastDailyClaim,
-                dailyCycleStarted: gameMetrics.dailyCycleStarted,
                 startTime: gameMetrics.startTime // ИСПРАВЛЕНИЕ: Сохраняем startTime
             }));
         }
@@ -1532,10 +1404,7 @@
                         blocksDestroyed: data.blocksDestroyed || 0,
                         upgradesBought: data.upgradesBought || 0,
                         totalClicks: data.totalClicks || 0,
-                        sessions: (data.sessions || 0) + 1,
-                        currentDailyStreak: data.currentDailyStreak || 0,
-                        lastDailyClaim: data.lastDailyClaim || 0,
-                        dailyCycleStarted: data.dailyCycleStarted || Date.now()
+                        sessions: (data.sessions || 0) + 1
                     };
                     saveGameMetrics();
                     return true;
@@ -1618,9 +1487,6 @@
             bogoCoinBonus,
             gameActive: true,
             timestamp: Date.now(),
-            currentDailyStreak: gameMetrics.currentDailyStreak,
-            lastDailyClaim: gameMetrics.lastDailyClaim,
-            dailyCycleStarted: gameMetrics.dailyCycleStarted,
             // ИСПРАВЛЕНИЕ: Добавляем новые переменные в сохранение
             critChanceUpgradeLevel,
             critMultiplierUpgradeLevel
@@ -1648,10 +1514,6 @@
                 totalDamageDealt = data.totalDamageDealt || 0;
                 currentLocation = data.currentLocation || 'mercury';
                 bogoCoinBonus = data.bogoCoinBonus || 0;
-                // Загружаем данные ежедневных наград
-                gameMetrics.currentDailyStreak = data.currentDailyStreak || 0;
-                gameMetrics.lastDailyClaim = data.lastDailyClaim || 0;
-                gameMetrics.dailyCycleStarted = data.dailyCycleStarted || Date.now();
                 // ИСПРАВЛЕНИЕ: Загружаем новые переменные с обратной совместимостью
                 critChanceUpgradeLevel = data.critChanceUpgradeLevel || Math.round((critChance - 0.001) / 0.001);
                 critMultiplierUpgradeLevel = data.critMultiplierUpgradeLevel || Math.round((critMultiplier - 2.0) / 0.2);
@@ -1679,207 +1541,6 @@
             }
           }
         }
-        // === ФУНКЦИЯ ОБНОВЛЕНИЯ СОСТОЯНИЯ КНОПКИ ЕЖЕДНЕВНОЙ НАГРАДЫ ===
-        function updateDailyRewardButton() {
-            const now = Date.now();
-            const lastClaim = gameMetrics.lastDailyClaim;
-            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
-            
-            if (dailyRewardsBtn) {
-                if (!lastClaim || (now - lastClaim >= dailyBonusInterval)) {
-                    dailyRewardsBtn.disabled = false;
-                    dailyRewardsBtn.style.opacity = '1';
-                    dailyRewardsBtn.style.cursor = 'pointer';
-                } else {
-                    dailyRewardsBtn.disabled = true;
-                    dailyRewardsBtn.style.opacity = '0.5';
-                    dailyRewardsBtn.style.cursor = 'not-allowed';
-                }
-                
-                // Обновление текста кнопки с таймером
-                if (lastClaim && (now - lastClaim < dailyBonusInterval)) {
-                    const timeLeft = dailyBonusInterval - (now - lastClaim);
-                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                    dailyRewardsBtn.textContent = `🎁 Ежедневные награды (${hours}ч ${minutes}м ${seconds}с)`;
-                } else {
-                    dailyRewardsBtn.textContent = '🎁 Ежедневные награды';
-                }
-            }
-            
-            // Аналогичные изменения для кнопки на экране Game Over
-            if (dailyRewardBtn) {
-                if (!lastClaim || (now - lastClaim >= dailyBonusInterval)) {
-                    dailyRewardBtn.disabled = false;
-                    dailyRewardBtn.style.opacity = '1';
-                    dailyRewardBtn.style.cursor = 'pointer';
-                } else {
-                    dailyRewardBtn.disabled = true;
-                    dailyRewardBtn.style.opacity = '0.5';
-                    dailyRewardBtn.style.cursor = 'not-allowed';
-                    
-                    const timeLeft = dailyBonusInterval - (now - lastClaim);
-                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                    dailyRewardBtn.textContent = `🎁 Ежедневная награда (${hours}ч ${minutes}м ${seconds}с)`;
-                }
-            }
-        }
-        // === ПРОВЕРКА ДОСТУПНОСТИ БОНУСА НА ГЛАВНОМ ЭКРАНЕ ===
-        function checkBonusAvailability() {
-            const now = Date.now();
-            const lastBonusTime = gameMetrics.lastDailyClaim;
-            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
-            
-            if (!lastBonusTime) {
-                return true;
-            }
-            
-            return (now - lastBonusTime) >= dailyBonusInterval;
-        }
-        // === АКТИВАЦИЯ БОНУСА ===
-        function activateBonus() {
-            const now = Date.now();
-            gameMetrics.lastDailyClaim = now;
-            saveGame();
-            showTooltip('Вы получили ежедневный бонус!');
-            setTimeout(hideTooltip, 2000);
-        }
-        // === ОБНОВЛЕННАЯ СИСТЕМА ЕЖЕДНЕВНЫХ НАГРАД ===
-        function initializeDailyRewards() {
-            const container = document.getElementById('dailyRewardsContainer');
-            container.innerHTML = '';
-            // Определяем текущий день в цикле
-            const now = Date.now();
-            const daysSinceStart = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000));
-            const currentDay = (daysSinceStart % 30) + 1;
-            const lastClaimDay = gameMetrics.lastDailyClaim ? 
-                Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
-            // Создаем ячейки для каждого дня
-            for (let i = 0; i < 30; i++) {
-                const day = i + 1;
-                const reward = dailyRewards[i];
-                const dayElement = document.createElement('div');
-                dayElement.className = 'daily-reward-day';
-                dayElement.innerHTML = `
-                    <div class="day-number">День ${day}</div>
-                    <div class="reward">${getRewardDisplay(reward)}</div>
-                `;
-                // Определяем статус дня
-                if (day < currentDay && day <= lastClaimDay) {
-                    dayElement.classList.add('claimed');
-                } else if (day === currentDay && day > lastClaimDay) {
-                    dayElement.classList.add('available', 'current');
-                    dayElement.addEventListener('click', () => claimDailyReward(day));
-                } else if (day < currentDay && day > lastClaimDay) {
-                    // Пропущенные дни
-                    dayElement.style.opacity = '0.5';
-                }
-                container.appendChild(dayElement);
-            }
-            // Обновляем информацию
-            const infoElement = document.getElementById('dailyRewardInfo');
-            if (currentDay > lastClaimDay + 1) {
-                infoElement.textContent = `Вы пропустили несколько дней. Следующая награда доступна сегодня!`;
-            } else if (currentDay === lastClaimDay + 1) {
-                infoElement.textContent = `Сегодня доступна награда за день ${currentDay}!`;
-            } else {
-                const nextClaimTime = gameMetrics.lastDailyClaim + 24 * 60 * 60 * 1000;
-                const hoursLeft = Math.ceil((nextClaimTime - now) / (1000 * 60 * 60));
-                infoElement.textContent = `Следующая награда доступна через ${hoursLeft} часов.`;
-            }
-        }
-        function getRewardDisplay(reward) {
-            switch (reward.type) {
-                case "coins":
-                    return `+${reward.reward.toLocaleString()} 💎`;
-                case "clickPower":
-                    return `+${reward.reward} 💪`;
-                case "critChance":
-                    return `+${(reward.reward * 100).toFixed(1)}% ⭐`;
-                case "critMultiplier":
-                    return `+${reward.reward}x ⭐`;
-                default:
-                    return `+${reward.reward}`;
-            }
-        }
-        function claimDailyReward(day) {
-            const now = Date.now();
-            const lastClaimDay = gameMetrics.lastDailyClaim ? 
-                Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
-            const currentDay = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1;
-            // Проверяем, не получали ли мы уже награду сегодня
-            if (gameMetrics.lastDailyClaim && currentDay === lastClaimDay) {
-                showTooltip("Вы уже получили награду сегодня!");
-                setTimeout(hideTooltip, 2000);
-                return;
-            }
-            const reward = dailyRewards[day - 1];
-            // Применяем награду
-            switch (reward.type) {
-                case "coins":
-                    coins += reward.reward;
-                    updateCoins();
-                    showTooltip(`Получено ${reward.reward.toLocaleString()} Кристаллов!`);
-                    break;
-                case "clickPower":
-                    clickPower += reward.reward;
-                    clickUpgradeLevel += Math.floor(reward.reward);
-                    updateHUD();
-                    showTooltip(`Сила увеличена на ${reward.reward}!`);
-                    break;
-                case "critChance":
-                    critChance = Math.min(1.0, critChance + reward.reward);
-                    updateHUD();
-                    showTooltip(`Шанс крита увеличен на ${(reward.reward * 100).toFixed(1)}%!`);
-                    break;
-                case "critMultiplier":
-                    critMultiplier += reward.reward;
-                    updateHUD();
-                    showTooltip(`Множитель крита увеличен на ${reward.reward}x!`);
-                    break;
-            }
-            // Обновляем статистику
-            gameMetrics.currentDailyStreak = day;
-            gameMetrics.lastDailyClaim = now;
-            // Сохраняем игру
-            saveGame();
-            // Обновляем отображение
-            initializeDailyRewards();
-            // Закрываем через 2 секунды
-            setTimeout(() => {
-                document.getElementById('dailyRewardsScreen').style.display = 'none';
-            }, 2000);
-        }
-        function showDailyRewardsScreen() {
-            initializeDailyRewards();
-            document.getElementById('dailyRewardsScreen').style.display = 'flex';
-        }
-        function closeDailyRewardsScreen() {
-            document.getElementById('dailyRewardsScreen').style.display = 'none';
-        }
-        // === ФУНКЦИЯ ПРОВЕРКИ ЕЖЕДНЕВНОЙ НАГРАДЫ ===
-        function checkDailyReward() {
-            const now = Date.now();
-            const lastClaim = gameMetrics.lastDailyClaim;
-            const dailyBonusInterval = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
-            
-            // Если награда уже получена сегодня
-            if (lastClaim && now - lastClaim < dailyBonusInterval) {
-                const timeLeft = dailyBonusInterval - (now - lastClaim);
-                const hours = Math.floor(timeLeft / (1000 * 60 * 60));
-                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                showTooltip(`Следующая награда через ${hours}ч ${minutes}м ${seconds}с`);
-                setTimeout(hideTooltip, 3000);
-                return false;
-            }
-            // Если сегодня еще не получали награду
-            showDailyRewardsScreen();
-            return true;
-        }
         // Получаем элементы DOM
         const DOMElements = {
             coinsDisplay: document.getElementById("coins-value"),
@@ -1896,7 +1557,6 @@
             upgradeCritMultBtn: document.getElementById("upgradeCritMultBtn"),
             upgradeHelperDmgBtn: document.getElementById("upgradeHelperDmgBtn"),
             gameOverScreen: document.getElementById("gameOverScreen"),
-            developmentScreen: document.getElementById("developmentScreen"),
             finalScoreDisplay: document.getElementById("finalScore"),
             tooltip: document.getElementById("tooltip"),
             welcomeScreen: document.getElementById("welcomeScreen"),
@@ -1910,13 +1570,8 @@
             newGameBtn: document.getElementById("newGameBtn"),
             cancelSaveBtn: document.getElementById("cancelSaveBtn"),
             restartBtn: document.getElementById("restartBtn"),
-            restartFromDevBtn: document.getElementById("restartFromDevBtn"),
             shareBtn: document.getElementById("shareBtn"),
-            dailyRewardBtn: document.getElementById("dailyRewardBtn"),
-            saveBtn: document.getElementById("saveBtn"),
-            dailyRewardsBtn: document.getElementById("dailyRewardsBtn"),
-            claimDailyRewardBtn: document.getElementById("claimDailyRewardBtn"),
-            closeDailyRewardsBtn: document.getElementById("closeDailyRewardsBtn")
+            saveBtn: document.getElementById("saveBtn")
         };
         // Проверяем наличие всех необходимых элементов
         let missingElements = [];
@@ -1932,10 +1587,9 @@
             coinsDisplay, clickPowerDisplay, critChanceDisplay, critMultiplierDisplay, progressBar, progressText,
             levelAnnounce, gameTitle, upgradeClickBtn, upgradeHelperBtn, 
             upgradeCritChanceBtn, upgradeCritMultBtn, upgradeHelperDmgBtn, 
-            gameOverScreen, developmentScreen, finalScoreDisplay, tooltip, welcomeScreen, saveScreen,
+            gameOverScreen, finalScoreDisplay, tooltip, welcomeScreen, saveScreen,
             header, gameArea, particlesCanvas, startBtn, continueBtn, loadSaveBtn,
-            newGameBtn, cancelSaveBtn, restartBtn, restartFromDevBtn, shareBtn, dailyRewardBtn, saveBtn,
-            dailyRewardsBtn, claimDailyRewardBtn, closeDailyRewardsBtn
+            newGameBtn, cancelSaveBtn, restartBtn, shareBtn, saveBtn
         } = DOMElements;
         // === ОБНОВЛЕННЫЙ ЭФФЕКТ ВЗРЫВА С УВЕЛИЧЕННОЙ ОБЛАСТЬЮ ===
         function createExplosion(block) {
@@ -2004,21 +1658,12 @@
             const currentAU = totalDamageDealt / AU_TO_DAMAGE;
             const targetAU = currentReq.targetAU;
             if (nextLocation && currentAU >= targetAU) {
-                if (nextLocation === 'jupiter') {
-                    showDevelopmentScreen();
-                    return;
-                }
+                // ПОЛНОСТЬЮ РАЗБЛОКИРОВАНЫ ВСЕ ЛОКАЦИИ
                 setLocation(nextLocation);
                 showTooltip(`Открыта локация: ${locations[nextLocation].name}!`);
                 setTimeout(hideTooltip, 3000);
             }
             updateProgressBar();
-        }
-        function showDevelopmentScreen() {
-            if (developmentScreen) {
-                developmentScreen.style.display = "flex";
-                gameActive = false;
-            }
         }
         // === ОБНОВЛЕННЫЕ ФУНКЦИИ ТЕКСТА УРОНА И БОНУСОВ ===
         function createDamageText(damage, block, color = '#ff4444') {
@@ -2699,14 +2344,8 @@
             if (saveScreen) {
                 saveScreen.style.display = "none";
             }
-            if (developmentScreen) {
-                developmentScreen.style.display = "none";
-            }
             if (gameOverScreen) {
                 gameOverScreen.style.display = "none";
-            }
-            if (document.getElementById('dailyRewardsScreen')) {
-                document.getElementById('dailyRewardsScreen').style.display = "none";
             }
             gameActive = true;
             comboCount = 0;
@@ -2816,65 +2455,6 @@
                 if (saveScreen) saveScreen.style.display = "none";
             }, { passive: false });
         }
-        if (restartFromDevBtn) {
-            restartFromDevBtn.addEventListener('click', restartGame);
-            restartFromDevBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                restartGame();
-            }, { passive: false });
-        }
-        if (dailyRewardsBtn) {
-            dailyRewardsBtn.addEventListener('click', function() {
-                if (this.disabled) return;
-                checkDailyReward();
-            });
-            dailyRewardsBtn.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                if (this.disabled) return;
-                checkDailyReward();
-            }, { passive: false });
-        }
-        if (dailyRewardBtn) {
-            dailyRewardBtn.addEventListener('click', function() {
-                if (this.disabled) return;
-                checkDailyReward();
-            });
-            dailyRewardBtn.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                if (this.disabled) return;
-                checkDailyReward();
-            }, { passive: false });
-        }
-        if (claimDailyRewardBtn) {
-            claimDailyRewardBtn.addEventListener('click', function() {
-                // Определяем текущий день
-                const now = Date.now();
-                const daysSinceStart = Math.floor((now - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000));
-                const currentDay = (daysSinceStart % 30) + 1;
-                const lastClaimDay = gameMetrics.lastDailyClaim ? 
-                    Math.floor((gameMetrics.lastDailyClaim - gameMetrics.dailyCycleStarted) / (24 * 60 * 60 * 1000)) + 1 : 0;
-                if (currentDay === lastClaimDay + 1) {
-                    claimDailyReward(currentDay);
-                } else if (currentDay > lastClaimDay + 1) {
-                    showTooltip("Выберите доступный день в календаре!");
-                    setTimeout(hideTooltip, 2000);
-                } else {
-                    showTooltip("Награда уже получена сегодня!");
-                    setTimeout(hideTooltip, 2000);
-                }
-            });
-            claimDailyRewardBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                // Обработчик такой же, как для click
-            }, { passive: false });
-        }
-        if (closeDailyRewardsBtn) {
-            closeDailyRewardsBtn.addEventListener('click', closeDailyRewardsScreen);
-            closeDailyRewardsBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                closeDailyRewardsScreen();
-            }, { passive: false });
-        }
         function addMobileButtonHandlers(button, handler) {
             if (button) {
                 button.addEventListener('click', handler);
@@ -2925,11 +2505,6 @@
         setLocation(currentLocation);
         // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
         updateContinueButton();
-        
-        // Запускаем обновление состояния кнопок ежедневного бонуса каждую секунду
-        setInterval(updateDailyRewardButton, 1000);
-        updateDailyRewardButton(); // Вызываем сразу при загрузке
-        
         // Слушатель событий для изменения размера окна
         window.addEventListener('resize', function() {
             if (helperElement) {
