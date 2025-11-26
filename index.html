@@ -265,6 +265,26 @@
       margin-bottom: 20px;
       line-height: 1.5;
     }
+    /* Кнопка выбора языка с флагами */
+    #langBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.5em;
+      cursor: pointer;
+      z-index: 35;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      transition: transform 0.1s;
+    }
+    #langBtn:active { transform: scale(0.92); }
     /* Адаптивные тексты урона - ОБНОВЛЕНО: улучшена читаемость */
     .damage-text {
       font-size: clamp(1em, 4vw, 1.1em);
@@ -614,19 +634,19 @@
   <canvas id="particlesCanvas"></canvas>
   <!-- Звуковые элементы -->
   <audio id="clickSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="breakSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="upgradeSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="comboSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <audio id="helperSound" preload="auto">
-    <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
+    <source src="audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav">
   </audio>
   <div id="welcomeScreen">
     <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
@@ -639,6 +659,10 @@
     <p>✨ <strong>Редкие блоки</strong> — дают бонусы и огромные награды!</p>
     <button id="continueBtn" class="btn no-save">Продолжить</button>
     <button id="startBtn" class="btn">Новая игра</button>
+    <!-- Кнопка выбора языка с флагом -->
+    <button id="langBtn" title="Сменить язык">
+      <span id="currentLangFlag">🇷🇺</span>
+    </button>
   </div>
   <!-- Экран сохранения -->
   <div id="saveScreen">
@@ -1209,6 +1233,400 @@
     })();
     // === КОД ИГРЫ ===
     document.addEventListener('DOMContentLoaded', function() {
+        // Переводы для трех языков
+        const translations = {
+            ru: {
+                // UI элементы
+                gameTitle: {
+                    mercury: "☿ Меркурий",
+                    venus: "♀ Венера",
+                    earth: "♁ Земля",
+                    mars: "♂ Марс",
+                    jupiter: "♃ Юпитер",
+                    saturn: "♄ Сатурн",
+                    uranus: "♅ Уран",
+                    neptune: "♆ Нептун",
+                    pluto: "♇ Плутон"
+                },
+                hud: {
+                    coins: "Кристаллы: ",
+                    clickPower: "Сила: ",
+                    critChance: "Крит: ",
+                    critMultiplier: "Множ: "
+                },
+                progressText: "Прогресс: {current} / {target} а.е. ({percent}%)",
+                // Кнопки
+                buttons: {
+                    save: "Сохранить игру",
+                    continue: "Продолжить",
+                    noSave: "Нет сохранения",
+                    start: "Новая игра",
+                    loadSave: "Продолжить сохраненную игру",
+                    newGame: "Начать новую игру",
+                    cancel: "Отмена",
+                    restart: "Новая добыча",
+                    share: "Поделиться",
+                    lang: "Сменить язык"
+                },
+                // Экраны
+                welcome: {
+                    title: "🚀 КОСМИЧЕСКИЙ КЛИКЕР",
+                    text1: "Разрушайте восходящие блоки и собирайте <strong>космические Кристаллы</strong>!",
+                    text2: "Каждый блок требует определённого количества ударов для разрушения.",
+                    text3: "<strong>Реалистичная система прогресса:</strong>",
+                    text4: "🌌 <strong>Астрономические единицы</strong> — перемещайтесь по Солнечной системе",
+                    text5: "🪐 <strong>9 реальных планет</strong> — от Меркурия до Плутон",
+                    text6: "🚀 <strong>Улучшения</strong> — увеличивайте силу, криты и активируйте помощника",
+                    text7: "✨ <strong>Редкие блоки</strong> — дают бонусы и огромные награды!"
+                },
+                saveScreen: {
+                    title: "СОХРАНЕНИЕ ИГРЫ",
+                    text: "Хотите продолжить с сохраненной игры или начать новую?"
+                },
+                gameOver: {
+                    title: "ДОБЫЧА ПРЕРВАНА!",
+                    score: "Всего урона: {damage}",
+                    newGame: "Новая игра"
+                },
+                tooltips: {
+                    saveSuccess: "Игра сохранена!",
+                    upgradeClick: "Сила удара<br>Нелинейный рост урона",
+                    upgradeHelper: "Bobo<br>Авто-атака на 1 минуту<br>+30% урона<br>+20% к кристаллам",
+                    upgradeCritChance: "Шанс крита<br>+0.1% шанс крит. урона",
+                    upgradeCritMult: "Множитель крита<br>+0.2x крит. урона",
+                    upgradeHelperDmg: "Урон Bobo<br>+20% урона за апгрейд",
+                    combo: "Комбо x{count}! +{bonus}",
+                    reward: "+{reward} 💎",
+                    helperAvailable: "Bobo активирован на 1 минуту!<br>Бонус к кристаллам: +20%",
+                    helperEnd: "Bobo закончил работу!",
+                    critChanceUpgrade: "Шанс крита +0.1%!<br>Теперь: {chance}%",
+                    critMultUpgrade: "Множитель крита +0.2x!<br>Теперь: x{mult}",
+                    helperDmgUpgrade: "Урон Bobo +20%!<br>Уровень: {level}",
+                    clickPowerUpgrade: "Сила увеличена!<br>Теперь: {power}",
+                    noSave: "Нет сохраненной игры!",
+                    shareSuccess: "+50 Кристаллов за распространение!"
+                },
+                rareBlocks: {
+                    gold: "Золотой",
+                    rainbow: "Радужный",
+                    crystal: "Кристальный",
+                    mystery: "Загадочный"
+                },
+                locationProgress: {
+                    unlocked: "Открыта локация: {location}!"
+                }
+            },
+            en: {
+                // UI elements
+                gameTitle: {
+                    mercury: "☿ Mercury",
+                    venus: "♀ Venus",
+                    earth: "♁ Earth",
+                    mars: "♂ Mars",
+                    jupiter: "♃ Jupiter",
+                    saturn: "♄ Saturn",
+                    uranus: "♅ Uranus",
+                    neptune: "♆ Neptune",
+                    pluto: "♇ Pluto"
+                },
+                hud: {
+                    coins: "Crystals: ",
+                    clickPower: "Power: ",
+                    critChance: "Crit: ",
+                    critMultiplier: "Mult: "
+                },
+                progressText: "Progress: {current} / {target} a.u. ({percent}%)",
+                // Buttons
+                buttons: {
+                    save: "Save game",
+                    continue: "Continue",
+                    noSave: "No save",
+                    start: "New game",
+                    loadSave: "Continue saved game",
+                    newGame: "Start new game",
+                    cancel: "Cancel",
+                    restart: "New game",
+                    share: "Share",
+                    lang: "Change language"
+                },
+                // Screens
+                welcome: {
+                    title: "🚀 SPACE CLICKER",
+                    text1: "Destroy rising blocks and collect <strong>cosmic Crystals</strong>!",
+                    text2: "Each block requires a specific number of hits to destroy.",
+                    text3: "<strong>Realistic progress system:</strong>",
+                    text4: "🌌 <strong>Astronomical units</strong> - travel through the Solar System",
+                    text5: "🪐 <strong>9 real planets</strong> - from Mercury to Pluto",
+                    text6: "🚀 <strong>Upgrades</strong> - increase power, crits and activate assistant",
+                    text7: "✨ <strong>Rare blocks</strong> - provide bonuses and huge rewards!"
+                },
+                saveScreen: {
+                    title: "GAME SAVE",
+                    text: "Do you want to continue with the saved game or start a new one?"
+                },
+                gameOver: {
+                    title: "MINING INTERRUPTED!",
+                    score: "Total damage: {damage}",
+                    newGame: "New Game"
+                },
+                tooltips: {
+                    saveSuccess: "Game saved!",
+                    upgradeClick: "Click power<br>Non-linear damage growth",
+                    upgradeHelper: "Bobo<br>Auto-attack for 1 minute<br>+30% damage<br>+20% to crystals",
+                    upgradeCritChance: "Crit chance<br>+0.1% crit hit chance",
+                    upgradeCritMult: "Crit multiplier<br>+0.2x crit damage",
+                    upgradeHelperDmg: "Bobo damage<br>+20% damage per upgrade",
+                    combo: "Combo x{count}! +{bonus}",
+                    reward: "+{reward} 💎",
+                    helperAvailable: "Bobo activated for 1 minute!<br>Crystals bonus: +20%",
+                    helperEnd: "Bobo has finished working!",
+                    critChanceUpgrade: "Crit chance +0.1%!<br>Now: {chance}%",
+                    critMultUpgrade: "Crit multiplier +0.2x!<br>Now: x{mult}",
+                    helperDmgUpgrade: "Bobo damage +20%!<br>Level: {level}",
+                    clickPowerUpgrade: "Power increased!<br>Now: {power}",
+                    noSave: "No saved game!",
+                    shareSuccess: "+50 Crystals for sharing!"
+                },
+                rareBlocks: {
+                    gold: "Gold",
+                    rainbow: "Rainbow",
+                    crystal: "Crystal",
+                    mystery: "Mystery"
+                },
+                locationProgress: {
+                    unlocked: "Unlocked location: {location}!"
+                }
+            },
+            zh: {
+                // UI elements
+                gameTitle: {
+                    mercury: "☿ 水星",
+                    venus: "♀ 金星",
+                    earth: "♁ 地球",
+                    mars: "♂ 火星",
+                    jupiter: "♃ 木星",
+                    saturn: "♄ 土星",
+                    uranus: "♅ 天王星",
+                    neptune: "♆ 海王星",
+                    pluto: "♇ 冥王星"
+                },
+                hud: {
+                    coins: "水晶: ",
+                    clickPower: "力量: ",
+                    critChance: "暴击: ",
+                    critMultiplier: "倍数: "
+                },
+                progressText: "进度: {current} / {target} 天文单位 ({percent}%)",
+                // Buttons
+                buttons: {
+                    save: "保存游戏",
+                    continue: "继续",
+                    noSave: "没有保存",
+                    start: "新游戏",
+                    loadSave: "继续保存的游戏",
+                    newGame: "开始新游戏",
+                    cancel: "取消",
+                    restart: "新游戏",
+                    share: "分享",
+                    lang: "更改语言"
+                },
+                // Screens
+                welcome: {
+                    title: "🚀 太空点击器",
+                    text1: "摧毁上升的方块并收集<strong>宇宙水晶</strong>!",
+                    text2: "每个方块需要特定次数的点击才能摧毁。",
+                    text3: "<strong>真实的进度系统:</strong>",
+                    text4: "🌌 <strong>天文单位</strong> - 在太阳系中旅行",
+                    text5: "🪐 <strong>9颗真实行星</strong> - 从水星到冥王星",
+                    text6: "🚀 <strong>升级</strong> - 增加力量, 暴击和激活助手",
+                    text7: "✨ <strong>稀有方块</strong> - 提供奖励和巨大奖励!"
+                },
+                saveScreen: {
+                    title: "游戏保存",
+                    text: "您想继续保存的游戏还是开始新游戏？"
+                },
+                gameOver: {
+                    title: "开采中断!",
+                    score: "总伤害: {damage}",
+                    newGame: "新游戏"
+                },
+                tooltips: {
+                    saveSuccess: "游戏已保存!",
+                    upgradeClick: "点击力量<br>非线性伤害增长",
+                    upgradeHelper: "Bobo<br>自动攻击1分钟<br>+30%伤害<br>+20%水晶",
+                    upgradeCritChance: "暴击几率<br>+0.1%暴击命中几率",
+                    upgradeCritMult: "暴击倍数<br>+0.2x暴击伤害",
+                    upgradeHelperDmg: "Bobo伤害<br>+20%每次升级伤害",
+                    combo: "连击 x{count}! +{bonus}",
+                    reward: "+{reward} 💎",
+                    helperAvailable: "Bobo已激活1分钟!<br>水晶奖励: +20%",
+                    helperEnd: "Bobo已完成工作!",
+                    critChanceUpgrade: "暴击几率 +0.1%!<br>现在: {chance}%",
+                    critMultUpgrade: "暴击倍数 +0.2x!<br>现在: x{mult}",
+                    helperDmgUpgrade: "Bobo伤害 +20%!<br>等级: {level}",
+                    clickPowerUpgrade: "力量增加!<br>现在: {power}",
+                    noSave: "没有保存的游戏!",
+                    shareSuccess: "分享获得+50水晶!"
+                },
+                rareBlocks: {
+                    gold: "金色",
+                    rainbow: "彩虹",
+                    crystal: "水晶",
+                    mystery: "神秘"
+                },
+                locationProgress: {
+                    unlocked: "解锁位置: {location}!"
+                }
+            }
+        };
+        
+        // Текущий язык
+        let currentLanguage = localStorage.getItem('gameLanguage') || 'ru';
+        
+        // Функция для форматирования строк с параметрами
+        function formatString(template, params) {
+            return template.replace(/{(\w+)}/g, (match, key) => {
+                return params.hasOwnProperty(key) ? params[key] : match;
+            });
+        }
+        
+        // Функция для применения перевода к элементу
+        function applyTranslation(element, keyPath, params = {}) {
+            if (!element) return;
+            const keys = keyPath.split('.');
+            let translation = translations[currentLanguage];
+            for (const key of keys) {
+                if (translation && translation[key]) {
+                    translation = translation[key];
+                } else {
+                    translation = undefined;
+                    break;
+                }
+            }
+            if (translation === undefined) {
+                console.warn(`Translation not found for ${keyPath} in ${currentLanguage}`);
+                return;
+            }
+            element.innerHTML = formatString(translation, params);
+        }
+        
+        // Функция для обновления всего UI в соответствии с текущим языком
+        function updateAllTranslations() {
+            // Экран приветствия
+            applyTranslation(document.querySelector('#welcomeScreen h2'), 'welcome.title');
+            const welcomeTexts = document.querySelectorAll('#welcomeScreen p');
+            if (welcomeTexts.length >= 7) {
+                applyTranslation(welcomeTexts[0], 'welcome.text1');
+                applyTranslation(welcomeTexts[1], 'welcome.text2');
+                applyTranslation(welcomeTexts[2], 'welcome.text3');
+                applyTranslation(welcomeTexts[3], 'welcome.text4');
+                applyTranslation(welcomeTexts[4], 'welcome.text5');
+                applyTranslation(welcomeTexts[5], 'welcome.text6');
+                applyTranslation(welcomeTexts[6], 'welcome.text7');
+            }
+            
+            // Кнопки на экране приветствия
+            applyTranslation(document.getElementById('continueBtn'), 'buttons.continue');
+            applyTranslation(document.getElementById('startBtn'), 'buttons.start');
+            updateLangButtonTooltip();
+            
+            // Экран сохранения
+            applyTranslation(document.querySelector('#saveScreen h2'), 'saveScreen.title');
+            applyTranslation(document.querySelector('#saveScreen p'), 'saveScreen.text');
+            applyTranslation(document.getElementById('loadSaveBtn'), 'buttons.loadSave');
+            applyTranslation(document.getElementById('newGameBtn'), 'buttons.newGame');
+            applyTranslation(document.getElementById('cancelSaveBtn'), 'buttons.cancel');
+            
+            // Экран Game Over
+            applyTranslation(document.querySelector('#gameOverScreen h2'), 'gameOver.title');
+            applyTranslation(document.getElementById('restartBtn'), 'buttons.restart');
+            applyTranslation(document.getElementById('shareBtn'), 'buttons.share');
+            
+            // HUD
+            applyTranslation(document.querySelector('.hud-item#coins i + span'), 'hud.coins', { value: coinsDisplay.textContent });
+            applyTranslation(document.querySelector('.hud-item#clickPowerInfo i + span'), 'hud.clickPower', { value: clickPowerDisplay.textContent });
+            applyTranslation(document.querySelector('.hud-item#critChanceInfo i + span'), 'hud.critChance', { value: critChanceDisplay.textContent });
+            applyTranslation(document.querySelector('.hud-item#critMultiplierInfo i + span'), 'hud.critMultiplier', { value: critMultiplierDisplay.textContent });
+            
+            // Название текущей локации
+            applyTranslation(document.getElementById('gameTitle'), `gameTitle.${currentLocation}`);
+            
+            // Обновляем кнопки улучшений
+            if (document.getElementById('upgradeClickBtn')) {
+                document.getElementById('upgradeClickBtn').title = translations[currentLanguage].tooltips.upgradeClick;
+            }
+            if (document.getElementById('upgradeHelperBtn')) {
+                document.getElementById('upgradeHelperBtn').title = translations[currentLanguage].tooltips.upgradeHelper;
+            }
+            if (document.getElementById('upgradeCritChanceBtn')) {
+                document.getElementById('upgradeCritChanceBtn').title = translations[currentLanguage].tooltips.upgradeCritChance;
+            }
+            if (document.getElementById('upgradeCritMultBtn')) {
+                document.getElementById('upgradeCritMultBtn').title = translations[currentLanguage].tooltips.upgradeCritMult;
+            }
+            if (document.getElementById('upgradeHelperDmgBtn')) {
+                document.getElementById('upgradeHelperDmgBtn').title = translations[currentLanguage].tooltips.upgradeHelperDmg;
+            }
+            
+            // Сохраняем текущий язык
+            localStorage.setItem('gameLanguage', currentLanguage);
+            
+            // Обновляем прогресс-бар текст
+            const currentAU = totalDamageDealt / AU_TO_DAMAGE;
+            const targetAU = locationRequirements[currentLocation].targetAU;
+            const percentage = Math.min(100, (currentAU / targetAU) * 100);
+            applyTranslation(document.getElementById('progressText'), 'progressText', {
+                current: currentAU.toFixed(5),
+                target: targetAU.toFixed(5),
+                percent: percentage.toFixed(1)
+            });
+        }
+        
+        // Функция обновления tooltip для кнопки выбора языка
+        function updateLangButtonTooltip() {
+            const langBtn = document.getElementById('langBtn');
+            let tooltipText = '';
+            
+            switch(currentLanguage) {
+                case 'ru':
+                    tooltipText = 'Текущий язык: Русский (🇷🇺) - Нажмите для смены языка';
+                    break;
+                case 'en':
+                    tooltipText = 'Current language: English (🇬🇧) - Click to change language';
+                    break;
+                case 'zh':
+                    tooltipText = '当前语言: 中文 (🇨🇳) - 点击更改语言';
+                    break;
+            }
+            
+            if (langBtn) {
+                langBtn.title = tooltipText;
+            }
+        }
+        
+        // Функция для обновления отображения флага текущего языка
+        function updateLanguageFlag() {
+            const flagElement = document.getElementById('currentLangFlag');
+            if (flagElement) {
+                switch(currentLanguage) {
+                    case 'ru': flagElement.textContent = '🇷🇺'; break; // Флаг России
+                    case 'en': flagElement.textContent = '🇬🇧'; break; // Флаг Великобритании
+                    case 'zh': flagElement.textContent = '🇨🇳'; break; // Флаг Китая
+                }
+            }
+        }
+        
+        // Функция переключения языка
+        function switchLanguage() {
+            const languages = ['ru', 'en', 'zh'];
+            const currentIndex = languages.indexOf(currentLanguage);
+            const nextIndex = (currentIndex + 1) % languages.length;
+            currentLanguage = languages[nextIndex];
+            updateLanguageFlag();
+            updateLangButtonTooltip();
+            updateAllTranslations();
+        }
+        
         // Инициализация планетарного фона
         planetBackground.init();
         // === ИСПРАВЛЕНИЕ: Объявление переменной locations ПЕРЕД использованием ===
@@ -1492,7 +1910,7 @@
             critMultiplierUpgradeLevel
           };
           localStorage.setItem('cosmicBlocksSave', JSON.stringify(saveData));
-          showTooltip('Игра сохранена!');
+          showTooltip(translations[currentLanguage].tooltips.saveSuccess);
           setTimeout(hideTooltip, 1500);
           updateContinueButton();
         }
@@ -1534,10 +1952,10 @@
             const hasSave = localStorage.getItem('cosmicBlocksSave') !== null;
             if (hasSave) {
               continueBtn.className = 'btn save-available';
-              continueBtn.textContent = 'Продолжить';
+              continueBtn.textContent = translations[currentLanguage].buttons.continue;
             } else {
               continueBtn.className = 'btn no-save';
-              continueBtn.textContent = 'Нет сохранения';
+              continueBtn.textContent = translations[currentLanguage].buttons.noSave;
             }
           }
         }
@@ -1571,7 +1989,8 @@
             cancelSaveBtn: document.getElementById("cancelSaveBtn"),
             restartBtn: document.getElementById("restartBtn"),
             shareBtn: document.getElementById("shareBtn"),
-            saveBtn: document.getElementById("saveBtn")
+            saveBtn: document.getElementById("saveBtn"),
+            langBtn: document.getElementById("langBtn")
         };
         // Проверяем наличие всех необходимых элементов
         let missingElements = [];
@@ -1589,7 +2008,7 @@
             upgradeCritChanceBtn, upgradeCritMultBtn, upgradeHelperDmgBtn, 
             gameOverScreen, finalScoreDisplay, tooltip, welcomeScreen, saveScreen,
             header, gameArea, particlesCanvas, startBtn, continueBtn, loadSaveBtn,
-            newGameBtn, cancelSaveBtn, restartBtn, shareBtn, saveBtn
+            newGameBtn, cancelSaveBtn, restartBtn, shareBtn, saveBtn, langBtn
         } = DOMElements;
         // === ОБНОВЛЕННЫЙ ЭФФЕКТ ВЗРЫВА С УВЕЛИЧЕННОЙ ОБЛАСТЬЮ ===
         function createExplosion(block) {
@@ -1650,7 +2069,11 @@
             const targetAU = currentReq.targetAU;
             const percentage = Math.min(100, (currentAU / targetAU) * 100);
             progressBar.style.width = percentage + '%';
-            progressText.textContent = `Прогресс: ${currentAU.toFixed(5)} / ${targetAU.toFixed(5)} а.е. (${percentage.toFixed(1)}%)`;
+            applyTranslation(progressText, 'progressText', {
+                current: currentAU.toFixed(5),
+                target: targetAU.toFixed(5),
+                percent: percentage.toFixed(1)
+            });
         }
         function checkLocationUpgrade() {
             const currentReq = locationRequirements[currentLocation];
@@ -1660,7 +2083,7 @@
             if (nextLocation && currentAU >= targetAU) {
                 // ПОЛНОСТЬЮ РАЗБЛОКИРОВАНЫ ВСЕ ЛОКАЦИИ
                 setLocation(nextLocation);
-                showTooltip(`Открыта локация: ${locations[nextLocation].name}!`);
+                showTooltip(formatString(translations[currentLanguage].locationProgress.unlocked, { location: locations[nextLocation].name }));
                 setTimeout(hideTooltip, 3000);
             }
             updateProgressBar();
@@ -1702,7 +2125,7 @@
             const rect = block.getBoundingClientRect();
             const text = document.createElement('div');
             text.className = 'combo-text';
-            text.textContent = `Комбо x${combo}! +${bonus}`;
+            text.textContent = formatString(translations[currentLanguage].tooltips.combo, { count: combo, bonus: bonus });
             let left = rect.left + rect.width / 2;
             let top = rect.top;
             const textWidth = 150;
@@ -1722,7 +2145,7 @@
             const rect = block.getBoundingClientRect();
             const text = document.createElement('div');
             text.className = 'reward-text';
-            text.textContent = `+${reward} 💎`;
+            text.textContent = formatString(translations[currentLanguage].tooltips.reward, { reward: reward });
             let left = rect.left + rect.width / 2;
             let top = rect.top + rect.height / 2;
             const textWidth = 120;
@@ -1828,13 +2251,13 @@
                         }, 300);
                     }
                     updateUpgradeButtons();
-                    showTooltip('Bobo закончил работу!');
+                    showTooltip(translations[currentLanguage].tooltips.helperEnd);
                     setTimeout(hideTooltip, 1500);
                 }
             }, 1000);
             updateUpgradeButtons();
             updateHUD();
-            showTooltip('Bobo активирован на 1 минуту!<br>Бонус к кристаллам: +20%');
+            showTooltip(translations[currentLanguage].tooltips.helperAvailable);
             setTimeout(hideTooltip, 2500);
             saveGame();
         }
@@ -1908,14 +2331,13 @@
         // === ОСТАЛЬНЫЕ ФУНКЦИИ ИГРЫ ===
         function setLocation(loc) {
             currentLocation = loc;
-            const theme = locations[loc];
-            if (gameTitle) gameTitle.textContent = theme.name;
-            if (header) header.style.borderColor = theme.borderColor;
+            applyTranslation(gameTitle, `gameTitle.${loc}`);
+            if (header) header.style.borderColor = locations[loc].borderColor;
             // Обновляем планетарный фон
             planetBackground.setPlanet(loc);
             if (levelAnnounce) {
-                levelAnnounce.textContent = theme.name;
-                levelAnnounce.style.color = theme.color;
+                levelAnnounce.textContent = locations[loc].name;
+                levelAnnounce.style.color = locations[loc].color;
                 levelAnnounce.style.opacity = "1";
                 setTimeout(() => {
                     levelAnnounce.style.opacity = "0";
@@ -1992,7 +2414,7 @@
                 updateCoins();
                 updateHUD();
                 playSound('upgradeSound');
-                showTooltip(`Сила увеличена!<br>Теперь: ${Math.round(clickPower)}`);
+                showTooltip(formatString(translations[currentLanguage].tooltips.clickPowerUpgrade, { power: Math.round(clickPower) }));
                 setTimeout(hideTooltip, 1500);
                 saveGame();
             }
@@ -2018,7 +2440,7 @@
                 updateCoins();
                 updateHUD();
                 playSound('upgradeSound');
-                showTooltip(`Шанс крита +0.1%!<br>Теперь: ${(critChance * 100).toFixed(1)}%`);
+                showTooltip(formatString(translations[currentLanguage].tooltips.critChanceUpgrade, { chance: (critChance * 100).toFixed(1) }));
                 setTimeout(hideTooltip, 1500);
                 saveGame();
             }
@@ -2033,7 +2455,7 @@
                 updateCoins();
                 updateHUD();
                 playSound('upgradeSound');
-                showTooltip(`Множитель крита +0.2x!<br>Теперь: x${critMultiplier.toFixed(1)}`);
+                showTooltip(formatString(translations[currentLanguage].tooltips.critMultUpgrade, { mult: critMultiplier.toFixed(1) }));
                 setTimeout(hideTooltip, 1500);
                 saveGame();
             }
@@ -2047,7 +2469,7 @@
                 updateCoins();
                 updateHUD();
                 playSound('upgradeSound');
-                showTooltip(`Урон Bobo +20%!<br>Уровень: ${helperUpgradeLevel}`);
+                showTooltip(formatString(translations[currentLanguage].tooltips.helperDmgUpgrade, { level: helperUpgradeLevel }));
                 setTimeout(hideTooltip, 1500);
                 saveGame();
             }
@@ -2255,7 +2677,7 @@
                 currentBlock = null;
             }
             if (finalScoreDisplay) {
-                finalScoreDisplay.textContent = `Всего урона: ${Math.floor(totalDamageDealt).toLocaleString()}`;
+                applyTranslation(finalScoreDisplay, 'gameOver.score', { damage: Math.floor(totalDamageDealt).toLocaleString() });
             }
             if (gameOverScreen) {
                 gameOverScreen.style.display = "flex";
@@ -2276,7 +2698,7 @@
                     coins += 50;
                     updateCoins();
                     updateHUD();
-                    showTooltip('+50 Кристаллов за распространение!');
+                    showTooltip(translations[currentLanguage].tooltips.shareSuccess);
                     setTimeout(hideTooltip, 2000);
                     saveGame();
                 });
@@ -2365,7 +2787,7 @@
             if (loadGame()) {
                 startGame(false); // Не сбрасываем параметры
             } else {
-                showTooltip("Нет сохраненной игры!");
+                showTooltip(translations[currentLanguage].tooltips.noSave);
                 setTimeout(hideTooltip, 2000);
             }
         }
@@ -2382,6 +2804,13 @@
             setTimeout(hideTooltip, 3000);
         }
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
+        if (langBtn) {
+            langBtn.addEventListener('click', switchLanguage);
+            langBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                switchLanguage();
+            }, { passive: false });
+        }
         if (startBtn) {
             startBtn.addEventListener('click', function() {
                 try {
@@ -2408,7 +2837,7 @@
                     if (hasSave) {
                         showSaveScreen();
                     } else {
-                        showTooltip("Нет сохраненной игры!");
+                        showTooltip(translations[currentLanguage].tooltips.noSave);
                         setTimeout(hideTooltip, 2000);
                     }
                 } catch (error) {
@@ -2423,7 +2852,7 @@
                     if (hasSave) {
                         showSaveScreen();
                     } else {
-                        showTooltip("Нет сохраненной игры!");
+                        showTooltip(translations[currentLanguage].tooltips.noSave);
                         setTimeout(hideTooltip, 2000);
                     }
                 } catch (error) {
@@ -2470,23 +2899,23 @@
         addMobileButtonHandlers(upgradeCritMultBtn, buyCritMultiplier);
         addMobileButtonHandlers(upgradeHelperDmgBtn, buyHelperDamage);
         if (upgradeClickBtn) {
-            upgradeClickBtn.addEventListener('mouseenter', () => showTooltip('Сила удара<br>Нелинейный рост урона'));
+            upgradeClickBtn.addEventListener('mouseenter', () => showTooltip(translations[currentLanguage].tooltips.upgradeClick));
             upgradeClickBtn.addEventListener('mouseleave', hideTooltip);
         }
         if (upgradeHelperBtn) {
-            upgradeHelperBtn.addEventListener('mouseenter', () => showTooltip('Bobo<br>Авто-атака на 1 минуту<br>+30% урона<br>+20% к кристаллам'));
+            upgradeHelperBtn.addEventListener('mouseenter', () => showTooltip(translations[currentLanguage].tooltips.upgradeHelper));
             upgradeHelperBtn.addEventListener('mouseleave', hideTooltip);
         }
         if (upgradeCritChanceBtn) {
-            upgradeCritChanceBtn.addEventListener('mouseenter', () => showTooltip('Шанс крита<br>+0.1% шанс крит. урона'));
+            upgradeCritChanceBtn.addEventListener('mouseenter', () => showTooltip(translations[currentLanguage].tooltips.upgradeCritChance));
             upgradeCritChanceBtn.addEventListener('mouseleave', hideTooltip);
         }
         if (upgradeCritMultBtn) {
-            upgradeCritMultBtn.addEventListener('mouseenter', () => showTooltip('Множитель крита<br>+0.2x крит. урона'));
+            upgradeCritMultBtn.addEventListener('mouseenter', () => showTooltip(translations[currentLanguage].tooltips.upgradeCritMult));
             upgradeCritMultBtn.addEventListener('mouseleave', hideTooltip);
         }
         if (upgradeHelperDmgBtn) {
-            upgradeHelperDmgBtn.addEventListener('mouseenter', () => showTooltip('Урон Bobo<br>+20% урона за апгрейд'));
+            upgradeHelperDmgBtn.addEventListener('mouseenter', () => showTooltip(translations[currentLanguage].tooltips.upgradeHelperDmg));
             upgradeHelperDmgBtn.addEventListener('mouseleave', hideTooltip);
         }
         addMobileButtonHandlers(restartBtn, restartGame);
@@ -2503,8 +2932,13 @@
         updateHUD();
         updateProgressBar();
         setLocation(currentLocation);
+        // ИНЦИАЛИЗАЦИЯ КНОПКИ СМЕНЫ ЯЗЫКА
+        updateLanguageFlag();
+        updateLangButtonTooltip();
         // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
         updateContinueButton();
+        // Применяем переводы после инициализации
+        updateAllTranslations();
         // Слушатель событий для изменения размера окна
         window.addEventListener('resize', function() {
             if (helperElement) {
