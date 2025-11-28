@@ -265,26 +265,6 @@
       margin-bottom: 20px;
       line-height: 1.5;
     }
-    /* Кнопка выбора языка с флагами */
-    #langBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 40px;
-      height: 40px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.5em;
-      cursor: pointer;
-      z-index: 35;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      transition: transform 0.1s;
-    }
-    #langBtn:active { transform: scale(0.92); }
     /* Адаптивные тексты урона - ОБНОВЛЕНО: улучшена читаемость */
     .damage-text {
       font-size: clamp(1em, 4vw, 1.1em);
@@ -465,17 +445,11 @@
       0%, 100% { transform: translateY(0px); }
       50% { transform: translateY(-10px); }
     }
+    /* Визуальный эффект луча Bobo */
     .helper-beam {
       position: absolute;
-      width: 3px;
-      background: linear-gradient(to top, transparent, #69f0ae);
-      z-index: 11;
+      z-index: 13;
       pointer-events: none;
-      animation: beamPulse 0.5s ease-out;
-    }
-    @keyframes beamPulse {
-      0% { height: 0; opacity: 1; }
-      100% { height: 100px; opacity: 0; }
     }
     #welcomeScreen { 
       background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
@@ -581,6 +555,26 @@
         0%, 100% { background-position: 0% 50%; filter: hue-rotate(0deg); }
         50% { background-position: 100% 50%; filter: hue-rotate(180deg); }
     }
+    /* Кнопка выбора языка на экране приветствия */
+    #langBtn-welcome {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.5em;
+      cursor: pointer;
+      z-index: 35;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      transition: transform 0.1s;
+    }
+    #langBtn-welcome:active { transform: scale(0.92); }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -659,8 +653,8 @@
     <p>✨ <strong>Редкие блоки</strong> — дают бонусы и огромные награды!</p>
     <button id="continueBtn" class="btn no-save">Продолжить</button>
     <button id="startBtn" class="btn">Новая игра</button>
-    <!-- Кнопка выбора языка с флагом -->
-    <button id="langBtn" title="Сменить язык">
+    <!-- Кнопка выбора языка в правом верхнем углу экрана приветствия -->
+    <button id="langBtn-welcome" title="Сменить язык">
       <span id="currentLangFlag">🇷🇺</span>
     </button>
   </div>
@@ -1275,7 +1269,7 @@
                     text2: "Каждый блок требует определённого количества ударов для разрушения.",
                     text3: "<strong>Реалистичная система прогресса:</strong>",
                     text4: "🌌 <strong>Астрономические единицы</strong> — перемещайтесь по Солнечной системе",
-                    text5: "🪐 <strong>9 реальных планет</strong> — от Меркурия до Плутон",
+                    text5: "🪐 <strong>9 реальных планет</strong> — от Меркурия до Плутона",
                     text6: "🚀 <strong>Улучшения</strong> — увеличивайте силу, криты и активируйте помощника",
                     text7: "✨ <strong>Редкие блоки</strong> — дают бонусы и огромные награды!"
                 },
@@ -1584,7 +1578,7 @@
         
         // Функция обновления tooltip для кнопки выбора языка
         function updateLangButtonTooltip() {
-            const langBtn = document.getElementById('langBtn');
+            const langBtn = document.getElementById('langBtn-welcome');
             let tooltipText = '';
             
             switch(currentLanguage) {
@@ -1990,7 +1984,7 @@
             restartBtn: document.getElementById("restartBtn"),
             shareBtn: document.getElementById("shareBtn"),
             saveBtn: document.getElementById("saveBtn"),
-            langBtn: document.getElementById("langBtn")
+            langBtnWelcome: document.getElementById("langBtn-welcome")
         };
         // Проверяем наличие всех необходимых элементов
         let missingElements = [];
@@ -2008,7 +2002,7 @@
             upgradeCritChanceBtn, upgradeCritMultBtn, upgradeHelperDmgBtn, 
             gameOverScreen, finalScoreDisplay, tooltip, welcomeScreen, saveScreen,
             header, gameArea, particlesCanvas, startBtn, continueBtn, loadSaveBtn,
-            newGameBtn, cancelSaveBtn, restartBtn, shareBtn, saveBtn, langBtn
+            newGameBtn, cancelSaveBtn, restartBtn, shareBtn, saveBtn, langBtnWelcome
         } = DOMElements;
         // === ОБНОВЛЕННЫЙ ЭФФЕКТ ВЗРЫВА С УВЕЛИЧЕННОЙ ОБЛАСТЬЮ ===
         function createExplosion(block) {
@@ -2216,6 +2210,122 @@
                 if (helperElement) helperElement.style.opacity = '1';
             }, 100);
         }
+        // === ФУНКЦИЯ ВИЗУАЛИЗАЦИИ ЛУЧА BOBO ===
+        function createHelperEffect() {
+            if (!currentBlock || !helperElement) return;
+            
+            const blockRect = currentBlock.getBoundingClientRect();
+            const helperRect = helperElement.getBoundingClientRect();
+            
+            // Создаем контейнер для анимации луча
+            const beamContainer = document.createElement('div');
+            beamContainer.className = 'helper-beam';
+            beamContainer.style.position = 'absolute';
+            beamContainer.style.zIndex = '13';
+            document.body.appendChild(beamContainer);
+            
+            // Рассчитываем начальную и конечную точки луча
+            const startX = helperRect.left + helperRect.width / 2;
+            const startY = helperRect.top + helperRect.height / 2;
+            const endX = blockRect.left + blockRect.width / 2;
+            const endY = blockRect.top + blockRect.height / 2;
+            
+            // Создаем canvas для рисования луча
+            const canvas = document.createElement('canvas');
+            const maxSize = Math.max(window.innerWidth, window.innerHeight);
+            canvas.width = maxSize;
+            canvas.height = maxSize;
+            beamContainer.appendChild(canvas);
+            
+            // Позиционируем контейнер
+            beamContainer.style.left = '0px';
+            beamContainer.style.top = '0px';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Анимация луча с использованием requestAnimationFrame
+            let progress = 0;
+            const animationDuration = 300; // Длительность анимации в миллисекундах
+            const startTime = Date.now();
+            
+            function animateBeam() {
+                const currentTime = Date.now();
+                const elapsed = currentTime - startTime;
+                progress = Math.min(elapsed / animationDuration, 1);
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (progress > 0) {
+                    // Рассчитываем текущую позицию луча
+                    const currentX = startX + (endX - startX) * progress;
+                    const currentY = startY + (endY - startY) * progress;
+                    
+                    // Создаем градиент для луча
+                    const gradient = ctx.createLinearGradient(startX, startY, currentX, currentY);
+                    gradient.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
+                    gradient.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
+                    gradient.addColorStop(1, 'rgba(105, 240, 174, 0)');
+                    
+                    // Рисуем луч
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(currentX, currentY);
+                    ctx.lineWidth = 4 + (4 * (1 - progress)); // Луч сужается к концу
+                    ctx.strokeStyle = gradient;
+                    ctx.stroke();
+                    
+                    // Добавляем светящийся эффект
+                    ctx.beginPath();
+                    ctx.arc(currentX, currentY, 8 * (1 - progress), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - progress)})`;
+                    ctx.fill();
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateBeam);
+                } else {
+                    // Удаляем контейнер после окончания анимации
+                    setTimeout(() => {
+                        if (beamContainer.parentNode) {
+                            document.body.removeChild(beamContainer);
+                        }
+                    }, 200);
+                }
+            }
+            
+            // Запускаем анимацию
+            animateBeam();
+            
+            // Воспроизводим звук атаки
+            playSound('helperSound');
+            
+            // Эффект попадания
+            setTimeout(() => {
+                const hitEffect = document.createElement('div');
+                hitEffect.style.position = 'absolute';
+                hitEffect.style.left = (endX - 10) + 'px';
+                hitEffect.style.top = (endY - 10) + 'px';
+                hitEffect.style.width = '20px';
+                hitEffect.style.height = '20px';
+                hitEffect.style.background = 'radial-gradient(circle, #69f0ae, transparent)';
+                hitEffect.style.borderRadius = '50%';
+                hitEffect.style.zIndex = '15';
+                hitEffect.style.opacity = '0.8';
+                document.body.appendChild(hitEffect);
+                
+                // Затухание эффекта
+                let opacity = 0.8;
+                const fadeOut = setInterval(() => {
+                    opacity -= 0.1;
+                    hitEffect.style.opacity = opacity;
+                    if (opacity <= 0) {
+                        clearInterval(fadeOut);
+                        if (hitEffect.parentNode) document.body.removeChild(hitEffect);
+                    }
+                }, 30);
+            }, animationDuration);
+        }
+        
         // === ФУНКЦИЯ АКТИВАЦИИ BOBO С БОНУСОМ К КРИСТАЛЛАМ ===
         function activateHelper() {
             if (helperActive) return;
@@ -2278,55 +2388,6 @@
                 currentBlock.textContent = Math.floor(currentBlockHealth);
                 updateCracks(currentBlock, currentBlockHealth);
             }
-        }
-        function createHelperEffect() {
-            if (!currentBlock || !helperElement) return;
-            const blockRect = currentBlock.getBoundingClientRect();
-            const helperRect = helperElement.getBoundingClientRect();
-            const beam = document.createElement('div');
-            beam.className = 'helper-beam';
-            beam.style.left = helperRect.left + 15 + 'px';
-            beam.style.top = helperRect.top + 30 + 'px';
-            beam.style.width = '2px';
-            beam.style.height = '0';
-            document.body.appendChild(beam);
-            // Анимация луча
-            const animateBeam = () => {
-                const currentHeight = parseInt(beam.style.height) || 0;
-                const targetHeight = blockRect.top - (helperRect.top + 30);
-                if (currentHeight < targetHeight) {
-                    beam.style.height = (currentHeight + 5) + 'px';
-                    requestAnimationFrame(animateBeam);
-                } else {
-                    // Эффект попадания
-                    const hitEffect = document.createElement('div');
-                    hitEffect.style.position = 'absolute';
-                    hitEffect.style.left = blockRect.left + blockRect.width/2 + 'px';
-                    hitEffect.style.top = blockRect.top + 'px';
-                    hitEffect.style.width = '20px';
-                    hitEffect.style.height = '20px';
-                    hitEffect.style.background = 'radial-gradient(circle, #69f0ae, transparent)';
-                    hitEffect.style.borderRadius = '50%';
-                    hitEffect.style.zIndex = '15';
-                    hitEffect.style.opacity = '0.8';
-                    document.body.appendChild(hitEffect);
-                    // Затухание эффекта
-                    let opacity = 0.8;
-                    const fadeOut = setInterval(() => {
-                        opacity -= 0.1;
-                        hitEffect.style.opacity = opacity;
-                        if (opacity <= 0) {
-                            clearInterval(fadeOut);
-                            if (hitEffect.parentNode) document.body.removeChild(hitEffect);
-                        }
-                    }, 30);
-                    // Удаляем луч
-                    setTimeout(() => {
-                        if (beam.parentNode) document.body.removeChild(beam);
-                    }, 300);
-                }
-            };
-            requestAnimationFrame(animateBeam);
         }
         // === ОСТАЛЬНЫЕ ФУНКЦИИ ИГРЫ ===
         function setLocation(loc) {
@@ -2804,9 +2865,9 @@
             setTimeout(hideTooltip, 3000);
         }
         // === ОБРАБОТЧИКИ СОБЫТИЙ ===
-        if (langBtn) {
-            langBtn.addEventListener('click', switchLanguage);
-            langBtn.addEventListener('touchstart', function(e) {
+        if (langBtnWelcome) {
+            langBtnWelcome.addEventListener('click', switchLanguage);
+            langBtnWelcome.addEventListener('touchstart', function(e) {
                 e.preventDefault();
                 switchLanguage();
             }, { passive: false });
@@ -2932,7 +2993,7 @@
         updateHUD();
         updateProgressBar();
         setLocation(currentLocation);
-        // ИНЦИАЛИЗАЦИЯ КНОПКИ СМЕНЫ ЯЗЫКА
+        // ИНИЦИАЛИЗАЦИЯ КНОПКИ СМЕНЫ ЯЗЫКА
         updateLanguageFlag();
         updateLangButtonTooltip();
         // ИСПРАВЛЕНИЕ: Вызов updateContinueButton после инициализации всех функций
