@@ -125,10 +125,10 @@
   
   // Покупка предмета
   function purchaseItem(itemId) {
-    const item = shopItems[itemId];
-    if (!item) return;
-    
-    const gameState = window.gameState;
+  const item = shopItems[itemId];
+  if (!item) return;
+  const gameState = window.gameState;
+  if (!gameState) return; // защита
     
     // Инициализируем shopItems если их нет
     if (!gameState.shopItems) {
@@ -137,7 +137,17 @@
     if (!gameState.shopItems[itemId]) {
       gameState.shopItems[itemId] = { purchased: false, active: false, timeLeft: 0 };
     }
-    
+    // Добавляем экспорт pause/resume
+window.shopSystem = {
+  init,
+  toggleShopPanel,
+  showShopPanel,
+  hideShopPanel,
+  updateShopDisplay,
+  updateTranslations,
+  getSpeedMultiplier,
+  getItemName
+};
     // Проверяем, активен ли уже этот бонус
     if (gameState.shopItems[itemId].active) {
       showItemTooltip(`Бонус "${getItemName(itemId)}" уже активен!`);
