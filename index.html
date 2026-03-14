@@ -11,7 +11,7 @@
     
     <title>Космический Кликер</title>
     
-    <!-- Telegram WebApp Script -->
+    <!-- ✅ Telegram WebApp Script (ПЕРВЫМ!) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <!-- Font Awesome для иконок -->
@@ -43,13 +43,25 @@
         <i class="fas fa-save"></i>
     </button>
     
-  <!-- ✅ Левая панель статистики (HUD) -->
-   <div id="hud-left">
-    <div class="hud-item" id="coins"><i class="fas fa-gem"></i> Кристаллы: <span id="coins-value">0</span></div>
-    <div class="hud-item" id="clickPowerInfo"><i class="fas fa-fist-raised"></i> Сила: <span id="clickPower-value">1</span></div>
-    <div class="hud-item" id="critChanceInfo"><i class="fas fa-star"></i> Крит: <span id="critChance-value">0.1%</span></div>
-    <div class="hud-item" id="critMultiplierInfo"><i class="fas fa-star"></i> Множ: <span id="critMultiplier-value">x2.0</span></div>
-  </div>
+    <!-- Левая панель статистики (HUD) -->
+    <div id="hud-left">
+        <div class="hud-item">
+            <i class="fas fa-gem" style="color: #FFD54F;"></i>
+            Кристаллы: <span id="coins-value">0</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-fist-raised" style="color: #4FC3F7;"></i>
+            Сила: <span id="clickPower-value">1</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-star" style="color: #FFD700;"></i>
+            Крит: <span id="critChance-value">0.1%</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-bolt" style="color: #FFD700;"></i>
+            Множ: <span id="critMultiplier-value">x2.0</span>
+        </div>
+    </div>
     
     <!-- Прогресс-бар астрономических единиц -->
     <div id="progressContainer">
@@ -137,7 +149,7 @@
         </div>
     </div>
     
-    <!-- ✅ Экран приветствия (ЕДИНСТВЕННЫЙ экран меню) -->
+    <!-- Экран приветствия (ЕДИНСТВЕННЫЙ экран меню) -->
     <div id="welcomeScreen">
         <button id="langBtn-welcome">
             <span id="currentLangFlag">🇷🇺</span>
@@ -155,9 +167,6 @@
         <button id="startBtn" class="btn">Новая игра</button>
     </div>
     
-    <!-- ✅ УБРАНО: Экран сохранения (saveScreen) -->
-    <!-- ✅ УБРАНО: Экран Game Over (gameOverScreen) -->
-    
     <!-- Аудио файлы -->
     <audio id="clickSound" src="audio/click.mp3" preload="auto"></audio>
     <audio id="breakSound" src="audio/break.mp3" preload="auto"></audio>
@@ -166,7 +175,7 @@
     <audio id="helperSound" src="audio/helper.mp3" preload="auto"></audio>
     <audio id="penaltySound" src="audio/penalty.mp3" preload="auto"></audio>
     
-    <!-- СКРИПТЫ (ВАЖНЫЙ ПОРЯДОК ЗАГРУЗКИ!) -->
+    <!-- ✅ СКРИПТЫ (ВАЖНЫЙ ПОРЯДОК ЗАГРУЗКИ!) -->
     
     <!-- 1. Система переводов -->
     <script src="js/translations.js"></script>
@@ -174,7 +183,7 @@
     <!-- 2. Система сохранений -->
     <script src="js/save-system.js"></script>
     
-    <!-- 3. Telegram интеграция -->
+    <!-- 3. Telegram интеграция (ПОСЛЕ save-system) -->
     <script src="js/telegram-integration.js"></script>
     
     <!-- 4. Система достижений -->

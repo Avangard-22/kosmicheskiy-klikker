@@ -736,14 +736,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #ff9800, #ff5722);
-    color: white;
-    transition: transform 0.2s;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
-.achievements-btn:active {
-    transform: scale(0.92);
+…        width: 45px;
+        height: 45px;
+        font-size: 1.2em;
+    }
 }
 
 .achievements-panel {

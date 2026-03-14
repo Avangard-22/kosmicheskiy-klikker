@@ -1,8 +1,11 @@
-// Система достижений с прогрессивной шкалой
+// Система достижений с прогрессивной шкалой (80+ достижений)
 (function() {
     'use strict';
     
     const achievements = {
+        // ═══════════════════════════════════════════════════════════
+        // 📦 РАЗРУШЕНИЕ БЛОКОВ (10 уровней)
+        // ═══════════════════════════════════════════════════════════
         blockBreaker: {
             levels: [
                 { id: 'novice', target: 10, reward: 100, name: 'Новичок' },
@@ -11,84 +14,241 @@
                 { id: 'expert', target: 1000, reward: 1000, name: 'Эксперт' },
                 { id: 'master', target: 5000, reward: 2500, name: 'Мастер' },
                 { id: 'grandmaster', target: 20000, reward: 5000, name: 'Гроссмейстер' },
-                { id: 'legend', target: 100000, reward: 10000, name: 'Легенда' }
+                { id: 'legend', target: 100000, reward: 10000, name: 'Легенда' },
+                { id: 'mythical', target: 500000, reward: 25000, name: 'Мифический' },
+                { id: 'divine', target: 1000000, reward: 50000, name: 'Божественный' },
+                { id: 'cosmic', target: 5000000, reward: 100000, name: 'Космический' }
             ],
             icon: 'fas fa-hammer',
             description: 'Разрушить блоков'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 💎 СБОР КРИСТАЛЛОВ (10 уровней)
+        // ═══════════════════════════════════════════════════════════
         crystalCollector: {
             levels: [
                 { id: 'rich', target: 1000, reward: 500, name: 'Богач' },
                 { id: 'wealthy', target: 10000, reward: 2500, name: 'Состоятельный' },
                 { id: 'millionaire', target: 100000, reward: 10000, name: 'Миллионер' },
                 { id: 'tycoon', target: 1000000, reward: 25000, name: 'Магнат' },
-                { id: 'crystalKing', target: 10000000, reward: 100000, name: 'Король кристаллов' }
+                { id: 'crystalKing', target: 10000000, reward: 100000, name: 'Король кристаллов' },
+                { id: 'crystalEmperor', target: 50000000, reward: 250000, name: 'Император' },
+                { id: 'crystalGod', target: 100000000, reward: 500000, name: 'Бог кристаллов' },
+                { id: 'crystalUniverse', target: 500000000, reward: 1000000, name: 'Вселенная' },
+                { id: 'crystalInfinity', target: 1000000000, reward: 2500000, name: 'Бесконечность' },
+                { id: 'crystalOmnipotent', target: 5000000000, reward: 5000000, name: 'Всемогущий' }
             ],
             icon: 'fas fa-gem',
             description: 'Собрать кристаллов'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // ⚡ КРИТИЧЕСКИЕ УДАРЫ (8 уровней)
+        // ═══════════════════════════════════════════════════════════
         critSpecialist: {
             levels: [
                 { id: 'critMaster', target: 50, reward: 300, name: 'Мастер крита' },
                 { id: 'critExpert', target: 500, reward: 1500, name: 'Эксперт крита' },
                 { id: 'critChampion', target: 2500, reward: 5000, name: 'Чемпион крита' },
-                { id: 'critGod', target: 10000, reward: 20000, name: 'Бог крита' }
+                { id: 'critGod', target: 10000, reward: 20000, name: 'Бог крита' },
+                { id: 'critLegend', target: 50000, reward: 50000, name: 'Легенда крита' },
+                { id: 'critMythical', target: 200000, reward: 100000, name: 'Мифический' },
+                { id: 'critDivine', target: 1000000, reward: 250000, name: 'Божественный' },
+                { id: 'critCosmic', target: 5000000, reward: 500000, name: 'Космический' }
             ],
             icon: 'fas fa-star',
             description: 'Нанести критических ударов'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🔧 УЛУЧШЕНИЯ (8 уровней)
+        // ═══════════════════════════════════════════════════════════
         upgrader: {
             levels: [
-                { id: 'upgradeStarter', target: 5, reward: 200, name: 'Начинающий улучшатель' },
-                { id: 'upgradeEnthusiast', target: 15, reward: 500, name: 'Энтузиаст улучшений' },
-                { id: 'upgradeMaster', target: 30, reward: 1000, name: 'Мастер улучшений' },
-                { id: 'upgradePerfectionist', target: 50, reward: 2500, name: 'Перфекционист улучшений' }
+                { id: 'upgradeStarter', target: 5, reward: 200, name: 'Начинающий' },
+                { id: 'upgradeEnthusiast', target: 15, reward: 500, name: 'Энтузиаст' },
+                { id: 'upgradeMaster', target: 30, reward: 1000, name: 'Мастер' },
+                { id: 'upgradePerfectionist', target: 50, reward: 2500, name: 'Перфекционист' },
+                { id: 'upgradeGenius', target: 100, reward: 5000, name: 'Гений' },
+                { id: 'upgradeVisionary', target: 200, reward: 10000, name: 'Визионер' },
+                { id: 'upgradeArchitect', target: 500, reward: 25000, name: 'Архитектор' },
+                { id: 'upgradeTranscendent', target: 1000, reward: 50000, name: 'Трансцендент' }
             ],
             icon: 'fas fa-chart-line',
             description: 'Купить улучшений'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🤖 ПОМОЩНИКИ (6 уровней)
+        // ═══════════════════════════════════════════════════════════
         helperExpert: {
             levels: [
-                { id: 'helperNovice', target: 1, reward: 300, name: 'Новичок помощников' },
-                { id: 'helperSpecialist', target: 5, reward: 1000, name: 'Специалист помощников' },
-                { id: 'helperMaster', target: 10, reward: 2500, name: 'Мастер помощников' }
+                { id: 'helperNovice', target: 1, reward: 300, name: 'Новичок' },
+                { id: 'helperSpecialist', target: 5, reward: 1000, name: 'Специалист' },
+                { id: 'helperMaster', target: 10, reward: 2500, name: 'Мастер' },
+                { id: 'helperCommander', target: 25, reward: 5000, name: 'Командир' },
+                { id: 'helperLegend', target: 50, reward: 10000, name: 'Легенда' },
+                { id: 'helperCosmic', target: 100, reward: 25000, name: 'Космический' }
             ],
             icon: 'fas fa-robot',
             description: 'Нанять помощников'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // ⚡ БУСТЫ ИЗ МАГАЗИНА (6 уровней)
+        // ═══════════════════════════════════════════════════════════
         boosterUser: {
             levels: [
-                { id: 'boosterBeginner', target: 3, reward: 200, name: 'Начинающий бустер' },
-                { id: 'boosterRegular', target: 10, reward: 600, name: 'Регулярный бустер' },
-                { id: 'boosterAddict', target: 25, reward: 1500, name: 'Зависимый от бустов' }
+                { id: 'boosterBeginner', target: 3, reward: 200, name: 'Новичок' },
+                { id: 'boosterRegular', target: 10, reward: 600, name: 'Регулярный' },
+                { id: 'boosterAddict', target: 25, reward: 1500, name: 'Зависимый' },
+                { id: 'boosterMaster', target: 50, reward: 3000, name: 'Мастер' },
+                { id: 'boosterLegend', target: 100, reward: 7500, name: 'Легенда' },
+                { id: 'boosterCosmic', target: 250, reward: 15000, name: 'Космический' }
             ],
             icon: 'fas fa-bolt',
             description: 'Использовать бустов'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🪐 ИССЛЕДОВАНИЕ ПЛАНЕТ (12 уровней)
+        // ═══════════════════════════════════════════════════════════
         planetExplorer: {
             levels: [
-                { id: 'mercuryExplorer', target: 1, reward: 100, name: 'Исследователь Меркурия' },
-                { id: 'venusExplorer', target: 2, reward: 200, name: 'Исследователь Венеры' },
-                { id: 'earthExplorer', target: 3, reward: 300, name: 'Исследователь Земли' },
-                { id: 'marsExplorer', target: 4, reward: 400, name: 'Исследователь Марса' },
-                { id: 'jupiterExplorer', target: 5, reward: 500, name: 'Исследователь Юпитера' },
-                { id: 'saturnExplorer', target: 6, reward: 600, name: 'Исследователь Сатурна' },
-                { id: 'uranusExplorer', target: 7, reward: 700, name: 'Исследователь Урана' },
-                { id: 'neptuneExplorer', target: 8, reward: 800, name: 'Исследователь Нептуна' },
-                { id: 'plutoExplorer', target: 9, reward: 900, name: 'Исследователь Плутона' }
+                { id: 'mercuryExplorer', target: 1, reward: 100, name: 'Меркурий' },
+                { id: 'venusExplorer', target: 2, reward: 200, name: 'Венера' },
+                { id: 'earthExplorer', target: 3, reward: 300, name: 'Земля' },
+                { id: 'marsExplorer', target: 4, reward: 400, name: 'Марс' },
+                { id: 'jupiterExplorer', target: 5, reward: 500, name: 'Юпитер' },
+                { id: 'saturnExplorer', target: 6, reward: 600, name: 'Сатурн' },
+                { id: 'uranusExplorer', target: 7, reward: 700, name: 'Уран' },
+                { id: 'neptuneExplorer', target: 8, reward: 800, name: 'Нептун' },
+                { id: 'plutoExplorer', target: 9, reward: 900, name: 'Плутон' },
+                { id: 'solarSystemMaster', target: 9, reward: 5000, name: 'Мастер СС' },
+                { id: 'galaxyExplorer', target: 9, reward: 10000, name: 'Исследователь галактики' },
+                { id: 'universeConqueror', target: 9, reward: 25000, name: 'Покоритель вселенной' }
             ],
             icon: 'fas fa-globe-americas',
             description: 'Исследовать планет'
         },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🔥 КОМБО (8 уровней)
+        // ═══════════════════════════════════════════════════════════
         comboMaster: {
             levels: [
-                { id: 'comboApprentice', target: 10, reward: 200, name: 'Ученик комбо' },
-                { id: 'comboExpert', target: 25, reward: 500, name: 'Эксперт комбо' },
-                { id: 'comboMaster', target: 50, reward: 1000, name: 'Мастер комбо' },
-                { id: 'comboGod', target: 100, reward: 2500, name: 'Бог комбо' }
+                { id: 'comboApprentice', target: 10, reward: 200, name: 'Ученик' },
+                { id: 'comboExpert', target: 25, reward: 500, name: 'Эксперт' },
+                { id: 'comboMaster', target: 50, reward: 1000, name: 'Мастер' },
+                { id: 'comboGod', target: 100, reward: 2500, name: 'Бог комбо' },
+                { id: 'comboLegend', target: 200, reward: 5000, name: 'Легенда' },
+                { id: 'comboMythical', target: 500, reward: 10000, name: 'Мифический' },
+                { id: 'comboDivine', target: 1000, reward: 25000, name: 'Божественный' },
+                { id: 'comboCosmic', target: 2500, reward: 50000, name: 'Космический' }
             ],
             icon: 'fas fa-fire',
             description: 'Достигнуть комбо'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 💥 ОБЩИЙ УРОН (8 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        totalDamage: {
+            levels: [
+                { id: 'damage1k', target: 1000, reward: 500, name: '1K урона' },
+                { id: 'damage10k', target: 10000, reward: 2000, name: '10K урона' },
+                { id: 'damage100k', target: 100000, reward: 5000, name: '100K урона' },
+                { id: 'damage1m', target: 1000000, reward: 15000, name: '1M урона' },
+                { id: 'damage10m', target: 10000000, reward: 50000, name: '10M урона' },
+                { id: 'damage100m', target: 100000000, reward: 150000, name: '100M урона' },
+                { id: 'damage1b', target: 1000000000, reward: 500000, name: '1B урона' },
+                { id: 'damageCosmic', target: 10000000000, reward: 1000000, name: 'Космический урон' }
+            ],
+            icon: 'fas fa-bomb',
+            description: 'Нанести общего урона'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // ⏱️ ВРЕМЯ В ИГРЕ (8 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        playTime: {
+            levels: [
+                { id: 'time1min', target: 60, reward: 100, name: '1 минута' },
+                { id: 'time5min', target: 300, reward: 500, name: '5 минут' },
+                { id: 'time15min', target: 900, reward: 1500, name: '15 минут' },
+                { id: 'time30min', target: 1800, reward: 3000, name: '30 минут' },
+                { id: 'time1hour', target: 3600, reward: 7500, name: '1 час' },
+                { id: 'time5hours', target: 18000, reward: 20000, name: '5 часов' },
+                { id: 'time10hours', target: 36000, reward: 50000, name: '10 часов' },
+                { id: 'timeLegend', target: 86400, reward: 100000, name: '24 часа' }
+            ],
+            icon: 'fas fa-clock',
+            description: 'Провести времени в игре (сек)'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🎲 РЕДКИЕ БЛОКИ (6 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        rareBlocks: {
+            levels: [
+                { id: 'rare1', target: 1, reward: 500, name: 'Первый редкий' },
+                { id: 'rare10', target: 10, reward: 2000, name: '10 редких' },
+                { id: 'rare50', target: 50, reward: 5000, name: '50 редких' },
+                { id: 'rare100', target: 100, reward: 10000, name: '100 редких' },
+                { id: 'rare500', target: 500, reward: 25000, name: '500 редких' },
+                { id: 'rare1000', target: 1000, reward: 50000, name: '1000 редких' }
+            ],
+            icon: 'fas fa-star',
+            description: 'Разрушить редких блоков'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 👆 ВСЕГО КЛИКОВ (6 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        totalClicks: {
+            levels: [
+                { id: 'clicks100', target: 100, reward: 100, name: '100 кликов' },
+                { id: 'clicks1k', target: 1000, reward: 500, name: '1K кликов' },
+                { id: 'clicks10k', target: 10000, reward: 2000, name: '10K кликов' },
+                { id: 'clicks100k', target: 100000, reward: 7500, name: '100K кликов' },
+                { id: 'clicks1m', target: 1000000, reward: 25000, name: '1M кликов' },
+                { id: 'clicksLegend', target: 10000000, reward: 100000, name: 'Легенда кликов' }
+            ],
+            icon: 'fas fa-hand-pointer',
+            description: 'Совершить кликов'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🎯 ТОЧНОСТЬ (6 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        accuracy: {
+            levels: [
+                { id: 'accuracy10', target: 10, reward: 500, name: '10% точность' },
+                { id: 'accuracy25', target: 25, reward: 1500, name: '25% точность' },
+                { id: 'accuracy50', target: 50, reward: 5000, name: '50% точность' },
+                { id: 'accuracy75', target: 75, reward: 15000, name: '75% точность' },
+                { id: 'accuracy90', target: 90, reward: 50000, name: '90% точность' },
+                { id: 'accuracyPerfect', target: 95, reward: 100000, name: 'Идеальная' }
+            ],
+            icon: 'fas fa-bullseye',
+            description: 'Точность критов (%)'
+        },
+        
+        // ═══════════════════════════════════════════════════════════
+        // 🎮 СЕССИИ (6 уровней) — НОВОЕ!
+        // ═══════════════════════════════════════════════════════════
+        sessions: {
+            levels: [
+                { id: 'sessions10', target: 10, reward: 200, name: '10 сессий' },
+                { id: 'sessions50', target: 50, reward: 1000, name: '50 сессий' },
+                { id: 'sessions100', target: 100, reward: 2500, name: '100 сессий' },
+                { id: 'sessions500', target: 500, reward: 7500, name: '500 сессий' },
+                { id: 'sessions1000', target: 1000, reward: 20000, name: '1000 сессий' },
+                { id: 'sessionsLegend', target: 5000, reward: 50000, name: 'Легенда' }
+            ],
+            icon: 'fas fa-play-circle',
+            description: 'Завершить сессий'
         }
     };
     
@@ -109,6 +269,7 @@
         Object.values(achievements).forEach(category => {
             totalAchievements += category.levels.length;
         });
+        console.log('🏆 Total achievements:', totalAchievements);
     }
     
     function createAchievementsPanel() {
@@ -207,7 +368,8 @@
         
         achievementsPanel.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; max-height: 70vh; background: linear-gradient(135deg, rgba(20, 20, 40, 0.95), rgba(10, 10, 30, 0.98)); border: 3px solid #FFD700; border-radius: 15px; padding: 20px; z-index: 1000; display: none; flex-direction: column; overflow-y: auto; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);';
         
-        achievementsBtn.innerHTML = '<i class="fas fa-trophy"></i> <span id="achievementsCount" style="font-size: 0.8em; margin-left: 5px;">0/' + totalAchievements + '</span>';
+        // ✅ ИСПРАВЛЕНО: Счётчик с уменьшенным шрифтом
+        achievementsBtn.innerHTML = '<i class="fas fa-trophy"></i><span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/' + totalAchievements + '</span>';
     }
     
     function setupEventHandlers() {
@@ -270,7 +432,7 @@
         
         gameState.achievements[category].progress = value;
         
-        categoryData.levels.forEach(level => {
+        categoryData.levels.forEach(function(level) {
             const achievementId = category + '_' + level.id;
             const achievementState = gameState.achievements[category].levels[level.id];
             
@@ -391,7 +553,7 @@
             const categoryState = gameState.achievements[categoryId];
             if (!categoryState) return;
             
-            category.levels.forEach(level => {
+            category.levels.forEach(function(level) {
                 const achievementId = categoryId + '_' + level.id;
                 const achievementState = categoryState.levels[level.id];
                 
@@ -438,7 +600,7 @@
                 gameState.achievements[categoryId] = { progress: 0, levels: {} };
             }
             
-            category.levels.forEach(level => {
+            category.levels.forEach(function(level) {
                 const levelId = level.id;
                 if (!gameState.achievements[categoryId].levels[levelId]) {
                     gameState.achievements[categoryId].levels[levelId] = { unlocked: false, progress: 0 };
@@ -471,6 +633,15 @@
         }
         if (gameMetrics.maxCombo !== undefined) {
             updateProgress('comboMaster', gameMetrics.maxCombo);
+        }
+        if (gameState.totalDamageDealt !== undefined) {
+            updateProgress('totalDamage', gameState.totalDamageDealt);
+        }
+        if (gameMetrics.totalClicks !== undefined) {
+            updateProgress('totalClicks', gameMetrics.totalClicks);
+        }
+        if (gameMetrics.sessions !== undefined) {
+            updateProgress('sessions', gameMetrics.sessions);
         }
         
         updateAchievementsDisplay();
@@ -558,6 +729,13 @@
                 window.gameMetrics.maxCombo = combo;
                 updateProgress('comboMaster', combo);
             }
+        },
+        
+        incrementRareBlocks: function(count) {
+            if (count === undefined) count = 1;
+            if (!window.gameMetrics) window.gameMetrics = {};
+            window.gameMetrics.rareBlocksDestroyed = (window.gameMetrics.rareBlocksDestroyed || 0) + count;
+            updateProgress('rareBlocks', window.gameMetrics.rareBlocksDestroyed);
         }
     };
     

@@ -3,6 +3,8 @@
     'use strict';
     
     let isInitialized = false;
+    let autoSaveInterval = null;
+    const AUTO_SAVE_INTERVAL = 30000; // 30 секунд
     
     const defaultGameState = {
         coins: 0,
@@ -56,12 +58,29 @@
                 resetGame();
             }
         } else {
-            window.gameState = Object.assign({}, defaultGameState);
-            window.gameMetrics = Object.assign({}, defaultGameMetrics);
+            window.gameState = JSON.parse(JSON.stringify(defaultGameState));
+            window.gameMetrics = JSON.parse(JSON.stringify(defaultGameMetrics));
         }
         
         isInitialized = true;
         console.log('✅ Система сохранения инициализирована');
+        
+        // ✅ Запуск автосохранения
+        startAutoSave();
+        
+        // ✅ Обработчик закрытия страницы
+        window.addEventListener('beforeunload', function() {
+            if (window.gameState && window.gameState.gameActive) {
+                window.saveGame();
+            }
+        });
+        
+        // ✅ Обработчик видимости вкладки
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && window.gameState && window.gameState.gameActive) {
+                window.saveGame();
+            }
+        });
     }
     
     function loadGameFromStorage() {
@@ -79,10 +98,12 @@
         }
         
         if (data.gameState) {
-            window.gameState = Object.assign({}, defaultGameState);
+            window.gameState = JSON.parse(JSON.stringify(defaultGameState));
             for (const key in data.gameState) {
                 if (key === 'shopItems' || key === 'achievements') {
-                    window.gameState[key] = JSON.parse(JSON.stringify(data.gameState[key] || defaultGameState[key]));
+                    window.gameState[key] = JSON.parse(JSON.stringify(
+                        data.gameState[key] || defaultGameState[key]
+                    ));
                 } else if (data.gameState.hasOwnProperty(key)) {
                     window.gameState[key] = data.gameState[key];
                 }
@@ -90,10 +111,11 @@
         }
         
         if (data.gameMetrics) {
-            window.gameMetrics = Object.assign({}, defaultGameMetrics, data.gameMetrics);
+            window.gameMetrics = JSON.parse(JSON.stringify(defaultGameMetrics));
+            Object.assign(window.gameMetrics, data.gameMetrics);
             window.gameMetrics.sessions = (window.gameMetrics.sessions || 0) + 1;
         } else {
-            window.gameMetrics = Object.assign({}, defaultGameMetrics);
+            window.gameMetrics = JSON.parse(JSON.stringify(defaultGameMetrics));
         }
         
         console.log('✅ Игра загружена:', {
@@ -131,9 +153,13 @@
                 window.updateContinueButton();
             }
             
+            // ✅ Показываем индикатор сохранения
+            showSaveIndicator('saved');
+            
             return true;
         } catch (e) {
             console.error('❌ Ошибка сохранения:', e);
+            showSaveIndicator('error');
             return false;
         }
     };
@@ -148,8 +174,8 @@
     };
     
     window.resetGame = function() {
-        window.gameState = Object.assign({}, defaultGameState);
-        window.gameMetrics = Object.assign({}, defaultGameMetrics);
+        window.gameState = JSON.parse(JSON.stringify(defaultGameState));
+        window.gameMetrics = JSON.parse(JSON.stringify(defaultGameMetrics));
         window.gameMetrics.startTime = Date.now();
         window.gameMetrics.sessions = 1;
         localStorage.removeItem('cosmicBlocksSave');
@@ -175,11 +201,11 @@
                     let timeText;
                     
                     if (timeAgo < 1) timeText = 'только что';
-                    else if (timeAgo < 60) timeText = `${timeAgo} мин назад`;
-                    else if (timeAgo < 1440) timeText = `${Math.floor(timeAgo / 60)} ч назад`;
-                    else timeText = `${Math.floor(timeAgo / 1440)} д назад`;
+                    else if (timeAgo < 60) timeText = timeAgo + ' мин назад';
+                    else if (timeAgo < 1440) timeText = Math.floor(timeAgo / 60) + ' ч назад';
+                    else timeText = Math.floor(timeAgo / 1440) + ' д назад';
                     
-                    continueBtn.title = `Продолжить игру (${timeText})`;
+                    continueBtn.title = 'Продолжить игру (' + timeText + ')';
                 }
             } catch (e) {}
         } else {
@@ -188,12 +214,56 @@
         }
     };
     
+    // ✅ Автосохранение каждые 30 секунд
+    function startAutoSave() {
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
+        
+        autoSaveInterval = setInterval(function() {
+            if (window.gameState && window.gameState.gameActive) {
+                window.saveGame();
+                console.log('🔄 Автосохранение выполнено');
+            }
+        }, AUTO_SAVE_INTERVAL);
+        
+        console.log('⏱️ Автосохранение запущено (каждые 30 сек)');
+    }
+    
+    // ✅ Индикатор сохранения
+    function showSaveIndicator(status) {
+        let indicator = document.getElementById('saveIndicator');
+        
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'saveIndicator';
+            indicator.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 8px 16px; background: rgba(0, 0, 0, 0.8); color: #4CAF50; border-radius: 8px; font-size: 0.9em; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none;';
+            document.body.appendChild(indicator);
+        }
+        
+        const messages = {
+            saving: '💾 Сохранение...',
+            saved: '✅ Сохранено',
+            error: '❌ Ошибка сохранения'
+        };
+        
+        indicator.textContent = messages[status] || '';
+        indicator.style.opacity = '1';
+        indicator.style.color = status === 'error' ? '#f44336' : '#4CAF50';
+        
+        if (status !== 'saving') {
+            setTimeout(function() {
+                indicator.style.opacity = '0';
+            }, 2000);
+        }
+    }
+    
+    // ✅ Инициализация при загрузке
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         setTimeout(init, 100);
     }
     
+    // ✅ Debug интерфейс
     window.debugSaveSystem = {
         checkSave: function() {
             const saved = localStorage.getItem('cosmicBlocksSave');
@@ -209,7 +279,7 @@
                         кристаллы: data.gameState?.coins,
                         урон: data.gameState?.totalDamageDealt,
                         планета: data.gameState?.currentLocation,
-                        размер: `${saved.length} байт`
+                        размер: saved.length + ' байт'
                     });
                 } catch (e) {
                     console.error('Ошибка парсинга сохранения:', e);
