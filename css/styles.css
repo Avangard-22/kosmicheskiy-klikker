@@ -48,33 +48,37 @@ body {
     color: white;
 }
 
+/* ✅ HUD - ИСПРАВЛЕНО для мобильных */
 #hud-left {
     position: absolute;
-    bottom: 10px;
+    top: 70px;
     left: 10px;
     z-index: 25;
     display: flex;
     flex-direction: column;
     gap: 3px;
     background: rgba(0, 0, 0, 0.6);
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 8px;
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255,255,255,0.1);
+    min-width: 120px;
+    max-width: 150px;
 }
 
 .hud-item {
-    font-size: clamp(0.7em, 3vw, 0.8em);
+    font-size: clamp(0.65em, 2.5vw, 0.8em);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     color: white;
     white-space: nowrap;
 }
 
 .hud-item i {
-    width: 20px;
+    width: 18px;
     text-align: center;
+    font-size: 0.9em;
 }
 
 #coins-value {
@@ -144,23 +148,24 @@ body {
     transform: scale(0.92);
 }
 
+/* ✅ Кнопки улучшений - ИСПРАВЛЕНО для мобильных */
 .upgrade-btn {
     position: absolute;
-    right: 10px;
-    width: clamp(48px, 12vw, 52px);
-    height: clamp(48px, 12vw, 52px);
+    right: 8px;
+    width: clamp(44px, 11vw, 52px);
+    height: clamp(44px, 11vw, 52px);
     border: none;
     border-radius: 8px;
-    font-size: clamp(1.1em, 4vw, 1.3em);
+    font-size: clamp(1em, 3.5vw, 1.3em);
     cursor: pointer;
     z-index: 30;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s;
+    transition: all 0.2s ease;
     box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-    padding: 3px;
+    padding: 2px;
     overflow: hidden;
 }
 
@@ -168,17 +173,23 @@ body {
     transform: scale(0.92);
 }
 
-#upgradeClickBtn { bottom: 75px; }
-#upgradeHelperBtn { bottom: 135px; }
-#upgradeCritChanceBtn { bottom: 195px; }
-#upgradeCritMultBtn { bottom: 255px; }
-#upgradeHelperDmgBtn { bottom: 315px; }
+.upgrade-btn.btn-available:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+#upgradeClickBtn { bottom: 70px; }
+#upgradeHelperBtn { bottom: 130px; }
+#upgradeCritChanceBtn { bottom: 190px; }
+#upgradeCritMultBtn { bottom: 250px; }
+#upgradeHelperDmgBtn { bottom: 310px; }
 
 .upgrade-cost {
-    font-size: clamp(0.5em, 2.5vw, 0.55em);
+    font-size: clamp(0.45em, 2vw, 0.55em);
     margin-top: 1px;
     font-weight: bold;
     text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    line-height: 1.1;
 }
 
 .moving-block {
@@ -341,40 +352,6 @@ body {
     font-weight: bold;
     color: #FFFFFF;
     -webkit-text-stroke: 1px #000000;
-}
-
-@media (max-height: 500px) and (orientation: landscape) {
-    #header {
-        padding: 4px 40px 4px 0;
-    }
-    
-    #hud-left {
-        bottom: 8px;
-        left: 8px;
-        gap: 2px;
-    }
-    
-    .upgrade-btn {
-        width: 40px;
-        height: 40px;
-        right: 8px;
-    }
-    
-    #upgradeClickBtn { bottom: 60px; }
-    #upgradeHelperBtn { bottom: 110px; }
-    #upgradeCritChanceBtn { bottom: 160px; }
-    #upgradeCritMultBtn { bottom: 210px; }
-    #upgradeHelperDmgBtn { bottom: 260px; }
-    
-    #progressContainer {
-        top: 35px;
-        height: 6px;
-    }
-    
-    #progressText {
-        top: 48px;
-        font-size: 0.6em;
-    }
 }
 
 #progressBar {
@@ -833,23 +810,6 @@ body {
     color: #4CAF50;
 }
 
-.achievement-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #f44336;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7em;
-    font-weight: bold;
-}
-
-/* Стили для прогрессивной системы достижений */
 .achievement-category {
     margin-bottom: 20px;
 }
@@ -895,7 +855,6 @@ body {
     font-weight: bold;
 }
 
-/* Анимации уведомлений */
 @keyframes achievementSlideDown {
     from { top: -100px; opacity: 0; transform: translateX(-50%) scale(0.8); }
     to { top: 20%; opacity: 1; transform: translateX(-50%) scale(1); }
@@ -906,14 +865,12 @@ body {
     to { top: -100px; opacity: 0; transform: translateX(-50%) scale(0.8); }
 }
 
-/* Анимация тряски при недостатке кристаллов */
 @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
     20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
-/* Эффект при покупке улучшения */
 .upgrade-btn.btn-available:active {
     animation: pulse 0.3s;
 }
@@ -924,7 +881,6 @@ body {
     100% { transform: scale(1); }
 }
 
-/* Анимация появления кристаллов */
 @keyframes coinBounce {
     0% { transform: scale(1); }
     50% { transform: scale(1.2); }
@@ -935,7 +891,6 @@ body {
     animation: coinBounce 0.5s;
 }
 
-/* Анимация для редких блоков */
 @keyframes fadeInOut {
     0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
     50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
@@ -946,7 +901,6 @@ body {
     animation: fadeInOut 2s ease-in-out;
 }
 
-/* Улучшенные стили для кнопок улучшений */
 .upgrade-btn {
     transition: all 0.2s ease;
 }
@@ -956,7 +910,6 @@ body {
     box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
 }
 
-/* Стили для прогресса достижений */
 #achievementsProgressBar {
     transition: width 0.5s ease;
 }
@@ -970,13 +923,11 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
-/* Анимация уведомления о достижении */
 .achievement-notification {
     z-index: 2000;
     animation: achievementSlideDown 0.5s ease-out;
 }
 
-/* Анимация для магазина */
 .shop-item {
     transition: all 0.2s ease;
 }
@@ -990,17 +941,14 @@ body {
     animation: pulse 0.5s;
 }
 
-/* Эффект для сохранения */
 #saveBtn:active {
     animation: pulse 0.3s;
 }
 
-/* Анимация для кнопки языка */
 #langBtn-welcome:active {
     animation: pulse 0.3s;
 }
 
-/* Индикатор активных бустов */
 #activeBoosts {
     position: fixed;
     top: 120px;
@@ -1012,7 +960,6 @@ body {
     max-width: 300px;
 }
 
-/* Индикатор сохранения */
 #saveIndicator {
     position: fixed;
     top: 20px;
@@ -1028,24 +975,35 @@ body {
     pointer-events: none;
 }
 
-/* Адаптивность для маленьких экранов */
-@media (max-width: 360px) {
+/* ✅ MOBILE АДАПТАЦИЯ - ИСПРАВЛЕНО */
+@media (max-width: 768px) {
     #hud-left {
-        top: 80px;
-        left: 5px;
+        top: 65px;
+        left: 8px;
         padding: 5px 8px;
-        min-width: 120px;
+        min-width: 110px;
+        max-width: 130px;
+        gap: 2px;
     }
     
     .hud-item {
-        font-size: 0.7em;
+        font-size: 0.65em;
         gap: 4px;
+    }
+    
+    .hud-item i {
+        width: 16px;
+        font-size: 0.85em;
     }
     
     .upgrade-btn {
         width: 42px;
         height: 42px;
-        right: 5px;
+        right: 6px;
+    }
+    
+    .upgrade-cost {
+        font-size: 0.45em;
     }
     
     #upgradeClickBtn { bottom: 65px; }
@@ -1053,16 +1011,118 @@ body {
     #upgradeCritChanceBtn { bottom: 165px; }
     #upgradeCritMultBtn { bottom: 215px; }
     #upgradeHelperDmgBtn { bottom: 265px; }
+    
+    #progressContainer {
+        top: 40px;
+        height: 6px;
+    }
+    
+    #progressText {
+        top: 52px;
+        font-size: 0.6em;
+    }
+    
+    .achievements-panel {
+        width: 95%;
+        padding: 15px;
+    }
+    
+    .shop-panel {
+        width: 220px;
+        padding: 12px;
+    }
 }
 
-/* Тёмная тема Telegram */
+/* ✅ МАЛЕНЬКИЕ ЭКРАНЫ (менее 480px) */
+@media (max-width: 480px) {
+    #hud-left {
+        top: 60px;
+        left: 5px;
+        padding: 4px 6px;
+        min-width: 100px;
+        max-width: 120px;
+    }
+    
+    .hud-item {
+        font-size: 0.6em;
+        gap: 3px;
+    }
+    
+    .hud-item i {
+        width: 14px;
+    }
+    
+    .upgrade-btn {
+        width: 40px;
+        height: 40px;
+        right: 5px;
+    }
+    
+    .upgrade-cost {
+        font-size: 0.4em;
+    }
+    
+    #upgradeClickBtn { bottom: 60px; }
+    #upgradeHelperBtn { bottom: 108px; }
+    #upgradeCritChanceBtn { bottom: 156px; }
+    #upgradeCritMultBtn { bottom: 204px; }
+    #upgradeHelperDmgBtn { bottom: 252px; }
+    
+    #gameTitle {
+        font-size: 1.1em;
+    }
+    
+    #welcomeScreen h2 {
+        font-size: 1.5em;
+    }
+    
+    #welcomeScreen p {
+        font-size: 0.85em;
+    }
+}
+
+/* ✅ LANDSCAPE РЕЖИМ */
+@media (max-height: 500px) and (orientation: landscape) {
+    #header {
+        padding: 4px 40px 4px 0;
+    }
+    
+    #hud-left {
+        top: 50px;
+        left: 8px;
+        gap: 2px;
+        padding: 4px 8px;
+    }
+    
+    .upgrade-btn {
+        width: 38px;
+        height: 38px;
+        right: 6px;
+    }
+    
+    #upgradeClickBtn { bottom: 55px; }
+    #upgradeHelperBtn { bottom: 100px; }
+    #upgradeCritChanceBtn { bottom: 145px; }
+    #upgradeCritMultBtn { bottom: 190px; }
+    #upgradeHelperDmgBtn { bottom: 235px; }
+    
+    #progressContainer {
+        top: 35px;
+        height: 6px;
+    }
+    
+    #progressText {
+        top: 46px;
+        font-size: 0.55em;
+    }
+}
+
 @media (prefers-color-scheme: dark) {
     body {
         background: #0f0f1a;
     }
 }
 
-/* Скроллбар для панели достижений */
 .achievements-panel::-webkit-scrollbar {
     width: 6px;
 }
