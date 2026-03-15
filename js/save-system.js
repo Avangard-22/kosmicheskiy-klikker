@@ -1,4 +1,4 @@
-// Система сохранения игры
+// Система сохранения игры (localStorage)
 (function() {
     'use strict';
     
@@ -89,7 +89,7 @@
         
         const data = JSON.parse(saved);
         const saveAge = Date.now() - (data.timestamp || 0);
-        const maxSaveAge = 30 * 24 * 60 * 60 * 1000;
+        const maxSaveAge = 30 * 24 * 60 * 60 * 1000; // 30 дней
         
         if (saveAge > maxSaveAge) {
             console.log('Сохранение устарело');
