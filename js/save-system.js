@@ -4,7 +4,7 @@
     
     let isInitialized = false;
     let autoSaveInterval = null;
-    const AUTO_SAVE_INTERVAL = 30000; // 30 секунд
+    const AUTO_SAVE_INTERVAL = 60000; // 60 секунд
     
     const defaultGameState = {
         coins: 0,

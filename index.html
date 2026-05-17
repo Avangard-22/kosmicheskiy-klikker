@@ -3,199 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0f0f1a">
-    <meta name="description" content="Космический Кликер — разрушайте блоки и исследуйте Солнечную систему!">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
-    
+    <meta name="theme-color" content="#000000">
     <title>Космический Кликер</title>
     
-    <!-- ✅ Telegram WebApp Script (для расширения экрана) -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Font Awesome для иконок -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google Fonts -->
+    <!-- Шрифты и иконки -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Основные стили -->
+    <!-- Стили -->
     <link rel="stylesheet" href="css/styles.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
 <body>
-    <!-- Планетарный фон (Canvas) -->
     <canvas id="planetBackgroundCanvas"></canvas>
     
-    <!-- Верхняя панель -->
     <div id="header">
         <h1 id="gameTitle">☿ Меркурий</h1>
     </div>
-    
-    <!-- Кнопка сохранения -->
-    <button id="saveBtn" title="Сохранить игру">
-        <i class="fas fa-save"></i>
-    </button>
-    
-    <!-- Левая панель статистики (HUD) -->
-    <div id="hud-left">
-        <div class="hud-item">
-            <i class="fas fa-gem" style="color: #FFD54F;"></i>
-            Кристаллы: <span id="coins-value">0</span>
-        </div>
-        <div class="hud-item">
-            <i class="fas fa-fist-raised" style="color: #4FC3F7;"></i>
-            Сила: <span id="clickPower-value">1</span>
-        </div>
-        <div class="hud-item">
-            <i class="fas fa-star" style="color: #FFD700;"></i>
-            Крит: <span id="critChance-value">0.1%</span>
-        </div>
-        <div class="hud-item">
-            <i class="fas fa-bolt" style="color: #FFD700;"></i>
-            Множ.крита: <span id="critMultiplier-value">x2.0</span>
-        </div>
-    </div>
-    
-    <!-- Прогресс-бар астрономических единиц -->
+
     <div id="progressContainer">
         <div id="progressBar"></div>
     </div>
     <div id="progressText">Прогресс: 0.00000 / 0.38710 а.е. (0%)</div>
-    
-    <!-- Кнопки улучшений (справа) -->
-    <button id="upgradeClickBtn" class="upgrade-btn btn-available">
-       
-        👊 <span class="upgrade-cost">80</span>
-    </button>
-    
-    <button id="upgradeHelperBtn" class="upgrade-btn btn-available">
-    
-       🤖 <span class="upgrade-cost">1500</span>
-    </button>
-    
-    <button id="upgradeCritChanceBtn" class="upgrade-btn btn-available">
-      
-       🎯 <span class="upgrade-cost">500</span>
-    </button>
-    
-    <button id="upgradeCritMultBtn" class="upgrade-btn btn-available">
-       
-        💥 <span class="upgrade-cost">800</span>
-    </button>
-    
-    <button id="upgradeHelperDmgBtn" class="upgrade-btn btn-available">
-      
-        ⚔️ <span class="upgrade-cost">1000</span>
-    </button>
-    
-    <!-- Игровая область -->
-    <div id="gameArea"></div>
-    
-    <!-- Анимация объявления уровня -->
-    <div id="levelAnnounce"></div>
-    
-    <!-- Уведомление о штрафе -->
-    <div id="penaltyAnnounce"></div>
-    
-    <!-- Всплывающая подсказка -->
-    <div id="tooltip" class="tooltip"></div>
-    
-    <!-- Индикатор активных бустов -->
+
+    <div id="hud-left">
+        <div class="hud-item">
+            <i class="fas fa-coins" style="color: #FFD54F;"></i>
+            <span>Кристаллы: </span>
+            <span id="coins-value">0</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-fist-raised" style="color: #4FC3F7;"></i>
+            <span>Сила: </span>
+            <span id="clickPower-value">1</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-star" style="color: #FFD700;"></i>
+            <span>Крит: </span>
+            <span id="critChance-value">0.1%</span>
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-bolt" style="color: #FFD700;"></i>
+            <span>Множ.крита: </span>
+            <span id="critMultiplier-value">x2.0</span>
+        </div>
+    </div>
+
     <div id="activeBoosts"></div>
-    
-    <!-- Индикатор сохранения -->
-    <div id="saveIndicator"></div>
-    
-    <!-- Панель магазина -->
+
+    <div id="gameArea"></div>
+
+    <div id="levelAnnounce"></div>
+    <div id="penaltyAnnounce"></div>
+
+    <div id="upgrades-container">
+        <div class="upgrade-btn btn-available" id="upgradeClickBtn" title="Увеличить силу удара">
+            <i class="fas fa-fist-raised"></i>
+            <div class="upgrade-cost">80</div>
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeHelperBtn" title="Активировать Bobo">
+            <i class="fas fa-robot"></i>
+            <div class="upgrade-cost">1500</div>
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeCritChanceBtn" title="Увеличить шанс крита">
+            <i class="fas fa-star"></i>
+            <div class="upgrade-cost">500</div>
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeCritMultBtn" title="Увеличить множитель крита">
+            <i class="fas fa-bolt"></i>
+            <div class="upgrade-cost">800</div>
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeHelperDmgBtn" title="Увеличить урон Bobo">
+            <i class="fas fa-chart-line"></i>
+            <div class="upgrade-cost">1000</div>
+        </div>
+    </div>
+
     <div class="shop-container">
-        <button id="shopBtn" class="shop-btn">
-            <i class="fas fa-shopping-cart"></i>
-        </button>
-        <div id="shopPanel" class="shop-panel">
-            <h3>🛒 Магазин</h3>
-            <div id="shopTimeWarp" class="shop-item">
-                <i class="fas fa-hourglass-half"></i>
-                <span>Искажение времени (30сек)</span>
-                <span class="shop-cost">250</span>
-            </div>
-            <div id="shopCrystalBoost" class="shop-item">
-                <i class="fas fa-gem"></i>
-                <span>Усилитель кристаллов (1мин)</span>
-                <span class="shop-cost">400</span>
-            </div>
-            <div id="shopPowerSurge" class="shop-item">
-                <i class="fas fa-bolt"></i>
-                <span>Скачок силы (45сек)</span>
-                <span class="shop-cost">300</span>
-            </div>
-        </div>
+        <button id="shopBtn" class="shop-btn" title="Магазин бонусов">🛒</button>
+        <div id="shopPanel" class="shop-panel"></div>
     </div>
-    
-    <!-- Панель достижений -->
-    <div class="achievements-container">
-        <button id="achievementsBtn" class="achievements-btn">
-            <i class="fas fa-trophy"></i>
-            <span id="achievementsCount">0/0</span>
-        </button>
-        <div id="achievementsPanel" class="achievements-panel">
-            <!-- Достижения генерируются динамически -->
-        </div>
-    </div>
-    
-    <!-- Экран приветствия (ЕДИНСТВЕННЫЙ экран меню) -->
+
+   <div class="achievements-container">
+    <button id="achievementsBtn" class="achievements-btn" title="Достижения">
+        <i class="fas fa-trophy"></i>
+        <span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/0</span>
+    </button>
+</div>
+
+<!-- Панель достижений -->
+<div id="achievementsPanel" class="achievements-panel"></div>
+
+    <button id="saveBtn" title="Сохранить игру">
+        <i class="fas fa-save"></i>
+    </button>
+
+    <div id="tooltip" class="tooltip"></div>
+
     <div id="welcomeScreen">
-        <button id="langBtn-welcome">
-            <span id="currentLangFlag">🇷🇺</span>
-        </button>
+        <button id="langBtn-welcome">🇷🇺</button>
         <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
         <p>Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
-        <p>Каждый блок требует определённого количества ударов для разрушения.</p>
-        <p>Реалистичная система прогресса:</p>
-        <p>🌌 Астрономические единицы — перемещайтесь по Солнечной системе</p>
-        <p>🪐 9 реальных планет — от Меркурия до Плутона</p>
-        <p>🚀 Улучшения — увеличивайте силу, криты и активируйте помощника</p>
-        <p>✨ Редкие блоки — дают бонусы и огромные награды!</p>
-        <p style="color: #ff6b6b; font-size: 0.9em; margin-top: 10px;">⚠️ Если блок уйдёт за экран — вы потеряете часть улучшения!</p>
         <button id="continueBtn" class="btn">Продолжить</button>
         <button id="startBtn" class="btn">Новая игра</button>
     </div>
-    
-    <!-- Аудио файлы -->
-    <audio id="clickSound" src="audio/click.mp3" preload="auto"></audio>
-    <audio id="breakSound" src="audio/break.mp3" preload="auto"></audio>
-    <audio id="upgradeSound" src="audio/upgrade.mp3" preload="auto"></audio>
-    <audio id="comboSound" src="audio/combo.mp3" preload="auto"></audio>
-    <audio id="helperSound" src="audio/helper.mp3" preload="auto"></audio>
-    <audio id="penaltySound" src="audio/penalty.mp3" preload="auto"></audio>
-    
-    <!-- ✅ СКРИПТЫ (ВАЖНЫЙ ПОРЯДОК ЗАГРУЗКИ!) -->
-    
-    <!-- 1. Система переводов -->
+
+    <div id="gameOverScreen" style="display: none;">
+        <h2>ДОБЫЧА ПРЕРВАНА!</h2>
+        <p id="finalScore">Всего урона: 0</p>
+        <button id="restartBtn">Новая добыча</button>
+        <button id="shareBtn">Поделиться</button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. ВСПОМОГАТЕЛЬНЫЕ МОДУЛИ (Без зависимостей) -->
+    <!-- ========================================== -->
     <script src="js/translations.js"></script>
-    
-    <!-- 2. Система сохранений -->
-    <script src="js/save-system.js"></script>
-    
-    <!-- 3. Telegram интеграция (заглушка) -->
     <script src="js/telegram-integration.js"></script>
-    
-    <!-- 4. Система достижений -->
-    <script src="js/achievements.js"></script>
-    
-    <!-- 5. Система магазина -->
-    <script src="js/shop.js"></script>
-    
-    <!-- 6. Планетарный фон -->
+
+    <!-- ========================================== -->
+    <!-- 2. ДАННЫЕ И СОХРАНЕНИЯ (Глобальные переменные) -->
+    <!-- ========================================== -->
+    <script src="js/save-system.js"></script>
+    <script src="js/game-config.js"></script>
+
+    <!-- ========================================== -->
+    <!-- 3. МОДУЛИ ИГРЫ (UI, Механики, Фон, Магазин) -->
+    <!-- ========================================== -->
+    <script src="js/game-ui.js"></script>
+    <script src="js/game-features.js"></script>
     <script src="js/planet-background.js"></script>
-    
-    <!-- 7. Основная игровая логика -->
-    <script src="js/game-logic.js"></script>
+    <script src="js/shop.js"></script>
+
+    <!-- ========================================== -->
+    <!-- 4. ЯДРО (Связывает всё воедино, запускает игру) -->
+    <!-- ========================================== -->
+    <script src="js/game-core.js"></script>
+
+    <!-- ========================================== -->
+    <!-- 5. ДОПОЛНИТЕЛЬНЫЕ СИСТЕМЫ -->
+    <!-- ========================================== -->
+    <script src="js/achievements.js"></script>
+    <script src="js/daily-bonus.js"></script>
+
 </body>
 </html>

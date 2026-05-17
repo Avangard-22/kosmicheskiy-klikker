@@ -163,3 +163,94 @@ body {
     #upgradeClickBtn { bottom: 55px; } #upgradeHelperBtn { bottom: 100px; } #upgradeCritChanceBtn { bottom: 145px; } #upgradeCritMultBtn { bottom: 190px; } #upgradeHelperDmgBtn { bottom: 235px; }
     #progressContainer { top: 35px; height: 6px; } #progressText { top: 46px; font-size: 0.55em; }
 }
+/* === СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО МАГАЗИНА === */
+.shop-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 3000; /* Поверх всего */
+    display: none; /* Скрыто по умолчанию */
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.shop-modal.visible {
+    display: flex;
+    opacity: 1;
+}
+.shop-modal-content {
+    background: linear-gradient(135deg, #1a1a2e, #24243e);
+    border: 2px solid #4CAF50;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh; /* Ограничение высоты */
+    overflow-y: auto; /* Скролл внутри окна */
+    padding: 20px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    scrollbar-width: thin;
+    scrollbar-color: #4CAF50 #1a1a2e;
+    transform: scale(0.9);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.shop-modal.visible .shop-modal-content {
+    transform: scale(1);
+}
+.shop-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 10px;
+}
+.shop-modal-title {
+    color: #4CAF50;
+    font-size: 1.4em;
+    font-weight: bold;
+    font-family: 'Orbitron', sans-serif;
+}
+.shop-close-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    font-size: 1.5em;
+    width: 35px; height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.shop-close-btn:active { background: rgba(255,0,0,0.3); }
+
+/* Стили элементов магазина */
+.shop-item-row {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+.shop-item-row:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+.shop-item-row.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.8); }
+.shop-item-row.active {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.15);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+}
+.shop-item-icon {
+    font-size: 1.8em;
+    width: 45px;
+    text-align: center;
+    margin-right: 15px;
+}
+.shop-item-info { flex: 1; }
+.shop-item-name { color: #fff; font-weight: bold; font-size: 1.05em; display: block; margin-bottom: 3px; }
+.shop-item-desc { color: #aaa; font-size: 0.8em; line-height: 1.2; }
+.shop-item-cost { color: #FFD700; font-weight: bold; font-size: 1.1em; min-width: 60px; text-align: right; }
+.shop-item-row.active .shop-item-cost { color: #4CAF50; }
