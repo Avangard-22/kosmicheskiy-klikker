@@ -92,46 +92,61 @@
     window.telegramCloud = {
         isAvailable: false,
 
-        saveProgress: async function(progressData) {
-            try {
-                const response = await fetch(`${CLOUD_API_URL}/api/save`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Telegram-Init-Data': tg.initData
-                    },
-                    body: JSON.stringify({ progress: progressData })
-                });
+     saveProgress: async function(progressData) {
+    console.log('☁️ [CLOUD SAVE] Начало сохранения');
+    console.log('☁️ [CLOUD SAVE] initData:', tg.initData ? tg.initData.substring(0, 50) + '...' : 'ПУСТО!');
+    console.log('☁️ [CLOUD SAVE] Данные:', progressData);
+    console.log('☁️ [CLOUD SAVE] URL:', `${CLOUD_API_URL}/api/save`);
+    
+    try {
+        const response = await fetch(`${CLOUD_API_URL}/api/save`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Telegram-Init-Data': tg.initData
+            },
+            body: JSON.stringify({ progress: progressData })
+        });
 
-                const result = await response.json();
-                if (result.success) {
-                    this.isAvailable = true;
-                    window.isCloudAvailable = true;
-                }
-                return result;
-            } catch (error) {
-                console.warn('⚠️ Cloud save error:', error.message);
-                return { success: false, error: error.message };
-            }
-        },
+        console.log('☁️ [CLOUD SAVE] HTTP статус:', response.status);
+        
+        const result = await response.json();
+        console.log('☁️ [CLOUD SAVE] Ответ сервера:', result);
+        
+        if (result.success) {
+            this.isAvailable = true;
+            window.isCloudAvailable = true;
+            console.log('✅ [CLOUD SAVE] УСПЕХ!');
+        } else {
+            console.error('❌ [CLOUD SAVE] Ошибка сервера:', result.error);
+        }
+        return result;
+    } catch (error) {
+        console.error('❌ [CLOUD SAVE] Ошибка сети:', error.message);
+        return { success: false, error: error.message };
+    }
+},
 
-        loadProgress: async function() {
-            try {
-                const response = await fetch(`${CLOUD_API_URL}/api/save`, {
-                    method: 'GET',
-                    headers: { 'X-Telegram-Init-Data': tg.initData }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    this.isAvailable = true;
-                    window.isCloudAvailable = true;
-                }
-                return result;
-            } catch (error) {
-                console.warn('⚠️ Cloud load error:', error.message);
-                return { success: false, error: error.message };
-            }
-        },
+   loadProgress: async function() {
+    console.log('☁️ [CLOUD LOAD] Начало загрузки');
+    try {
+        const response = await fetch(`${CLOUD_API_URL}/api/save`, {
+            method: 'GET',
+            headers: { 'X-Telegram-Init-Data': tg.initData }
+        });
+        console.log('☁️ [CLOUD LOAD] HTTP статус:', response.status);
+        const result = await response.json();
+        console.log('☁️ [CLOUD LOAD] Ответ:', result);
+        if (result.success) {
+            this.isAvailable = true;
+            window.isCloudAvailable = true;
+        }
+        return result;
+    } catch (error) {
+        console.error('❌ [CLOUD LOAD] Ошибка сети:', error.message);
+        return { success: false, error: error.message };
+    }
+},
 
         getLeaderboard: async function(limit = 50) {
             try {
