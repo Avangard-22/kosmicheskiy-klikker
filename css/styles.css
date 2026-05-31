@@ -1,256 +1,636 @@
-/* ✅ Универсальный селектор */
+/* ==========================================
+   🎨 COSMIC CLICKER - MAIN STYLESHEET
+   ========================================== */
+
+/* ✅ Универсальный сброс и мобильная адаптация */
 *, *::before, *::after {
     box-sizing: border-box;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    -webkit-user-select: none;
 }
 
 body {
     font-family: 'Orbitron', 'Segoe UI', sans-serif;
-    margin: 0; padding: 0; overflow: hidden; position: relative;
-    background: #000; width: 100vw; height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    background: #000;
+    width: 100vw;
+    height: 100vh;
+    color: #fff;
 }
 
-#planetBackgroundCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-#header { position: absolute; top: 0; left: 0; width: 100%; text-align: center; z-index: 20; padding: 8px 50px 8px 0; backdrop-filter: blur(6px); border-bottom: 1px solid; background: rgba(0, 0, 0, 0.5); }
-#gameTitle { margin: 0; font-size: clamp(1.1em, 4vw, 1.4em); color: white; }
+/* ==========================================
+   🌌 ФОН И ЗАГОЛОВОК
+   ========================================== */
+#planetBackgroundCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
 
-/* ✅ HUD */
-#hud-left { position: absolute; top: 10px; left: 10px; z-index: 25; display: flex; flex-direction: column; gap: 3px; background: rgba(0, 0, 0, 0.6); padding: 6px 10px; border-radius: 8px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); min-width: 120px; max-width: 150px; }
-.hud-item { font-size: clamp(0.65em, 2.5vw, 0.8em); display: flex; align-items: center; gap: 5px; color: white; white-space: nowrap; }
-.hud-item i { width: 18px; text-align: center; font-size: 0.9em; }
+#header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    z-index: 20;
+    padding: 8px 50px 8px 0;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+#gameTitle {
+    margin: 0;
+    font-size: clamp(1.1em, 4vw, 1.4em);
+    color: white;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+/* ==========================================
+   📊 HUD (ИНТЕРФЕЙС)
+   ========================================== */
+#hud-left {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.1);
+    min-width: 120px;
+    max-width: 150px;
+}
+
+.hud-item {
+    font-size: clamp(0.65em, 2.5vw, 0.8em);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: white;
+    white-space: nowrap;
+}
+
+.hud-item i {
+    width: 18px;
+    text-align: center;
+    font-size: 0.9em;
+}
+
 #coins-value { color: #FFD54F; text-shadow: 0 0 4px rgba(255,213,79,0.6); }
 #clickPower-value { color: #4FC3F7; text-shadow: 0 0 4px rgba(79,195,247,0.6); }
 #critChance-value, #critMultiplier-value { color: #FFD700; text-shadow: 0 0 4px rgba(255,215,0,0.6); }
 
-#progressContainer { position: absolute; top: 45px; left: 50%; transform: translateX(-50%); width: min(90%, 400px); height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; z-index: 25; }
-#progressBar { height: 100%; background: linear-gradient(90deg, #bb86fc, #4a55e0); border-radius: 4px; width: 0%; transition: width 0.3s ease; }
-#progressText { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); font-size: clamp(0.6em, 2.5vw, 0.7em); color: #a0d2ff; text-shadow: 0 0 3px rgba(160,210,255,0.6); z-index: 25; text-align: center; width: min(90%, 400px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Прогресс-бар */
+#progressContainer {
+    position: absolute;
+    top: 45px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(90%, 400px);
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    z-index: 25;
+}
 
-#saveBtn { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: none; border-radius: 8px; font-size: 1.2em; cursor: pointer; z-index: 30; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: #4CAF50; transition: transform 0.1s; }
+#progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #bb86fc, #4a55e0);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+#progressText {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(0.6em, 2.5vw, 0.7em);
+    color: #a0d2ff;
+    text-shadow: 0 0 3px rgba(160,210,255,0.6);
+    z-index: 25;
+    text-align: center;
+    width: min(90%, 400px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Кнопка сохранения */
+#saveBtn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: #4CAF50;
+    transition: transform 0.1s;
+}
+
 #saveBtn:active { transform: scale(0.92); }
 
-/* ✅ Кнопки улучшений */
-.upgrade-btn { position: absolute; right: 8px; width: clamp(44px, 11vw, 52px); height: clamp(44px, 11vw, 52px); border: none; border-radius: 8px; font-size: clamp(1em, 3.5vw, 1.3em); cursor: pointer; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 3px 6px rgba(0,0,0,0.3); padding: 2px; overflow: hidden; }
+#saveIndicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.8);
+    color: #4CAF50;
+    border-radius: 8px;
+    font-size: 0.9em;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+/* ==========================================
+   🔧 КНОПКИ УЛУЧШЕНИЙ
+   ========================================== */
+.upgrade-btn {
+    position: absolute;
+    right: 8px;
+    width: clamp(44px, 11vw, 52px);
+    height: clamp(44px, 11vw, 52px);
+    border: none;
+    border-radius: 8px;
+    font-size: clamp(1em, 3.5vw, 1.3em);
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    padding: 2px;
+    overflow: hidden;
+}
+
 .upgrade-btn:active { transform: scale(0.92); }
 .upgrade-btn.btn-available:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(76, 175, 80, 0.5); }
-#upgradeClickBtn { bottom: 70px; } #upgradeHelperBtn { bottom: 130px; } #upgradeCritChanceBtn { bottom: 190px; } #upgradeCritMultBtn { bottom: 250px; } #upgradeHelperDmgBtn { bottom: 310px; }
-.upgrade-cost { font-size: clamp(0.45em, 2vw, 0.55em); margin-top: 1px; font-weight: bold; text-shadow: 0 0 2px rgba(0,0,0,0.8); line-height: 1.1; }
+
+#upgradeClickBtn { bottom: 70px; }
+#upgradeHelperBtn { bottom: 130px; }
+#upgradeCritChanceBtn { bottom: 190px; }
+#upgradeCritMultBtn { bottom: 250px; }
+#upgradeHelperDmgBtn { bottom: 310px; }
+
+.upgrade-cost {
+    font-size: clamp(0.45em, 2vw, 0.55em);
+    margin-top: 1px;
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(0,0,0,0.8);
+    line-height: 1.1;
+}
+
 .upgrade-btn.btn-available { background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; }
 .upgrade-btn.btn-unavailable { background: linear-gradient(135deg, #666, #444); color: #ccc; cursor: not-allowed; opacity: 0.7; }
 
-.moving-block { position: absolute; left: 50%; transform: translateX(-50%); border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; font-weight: bold; font-size: clamp(0.8em, 4vw, 0.9em); font-family: 'Orbitron', monospace; transition: transform 0.1s; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); overflow: hidden; min-width: 60px; min-height: 60px; }
+/* ==========================================
+   🧱 БЛОКИ И ИГРОВАЯ ЗОНА
+   ========================================== */
+#gameArea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 5;
+}
 
-/* ✅ Экраны */
-#welcomeScreen, #gameOverScreen, #saveScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; color: white; text-align: center; padding: 15px; box-sizing: border-box; }
-#welcomeScreen h2 { font-size: clamp(1.5em, 6vw, 2em); margin-bottom: 15px; }
-#welcomeScreen p { max-width: 95%; text-align: center; margin: 8px 0; line-height: 1.4; font-size: clamp(0.9em, 3.5vw, 1em); }
-.btn { padding: clamp(10px, 3vw, 12px) clamp(25px, 6vw, 30px); margin-top: 15px; font-size: clamp(1em, 4vw, 1.1em); background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; font-family: 'Orbitron', sans-serif; transition: transform 0.1s; min-height: 44px; }
-#continueBtn { background: #2196F3; margin-bottom: 10px; }
-#continueBtn.save-available { background: #4CAF50; } #continueBtn.no-save { background: #f44336; }
-#gameOverScreen h2 { font-size: clamp(1.6em, 6vw, 2.2em); margin-bottom: 15px; }
-#finalScore { font-size: clamp(1.1em, 4vw, 1.4em); margin-bottom: 15px; }
-#restartBtn, #shareBtn { padding: clamp(8px, 2.5vw, 10px) clamp(20px, 5vw, 24px); margin: 6px; font-size: clamp(0.9em, 3.5vw, 1em); border: none; border-radius: 8px; cursor: pointer; font-family: 'Orbitron', sans-serif; transition: transform 0.1s; min-height: 44px; }
-#restartBtn { background: #4CAF50; color: white; } #shareBtn { background: #00c853; color: white; }
+.moving-block {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    font-weight: bold;
+    font-size: clamp(0.8em, 4vw, 0.9em);
+    font-family: 'Orbitron', monospace;
+    transition: transform 0.1s;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    overflow: hidden;
+    min-width: 60px;
+    min-height: 60px;
+}
 
-/* ✅ Текст урона, комбо, наград */
-.damage-text { font-size: clamp(1em, 4vw, 1.1em); position: absolute; pointer-events: none; z-index: 15; opacity: 1; transition: transform 0.5s, opacity 0.5s; text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9); max-width: 100px; text-align: center; font-weight: bold; color: #FFFFFF; -webkit-text-stroke: 1px #000000; }
-.combo-text { font-size: clamp(1.4em, 5vw, 1.8em); position: absolute; pointer-events: none; z-index: 15; animation: comboPop 0.5s ease-out; font-family: 'Orbitron', monospace; max-width: 150px; text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9); font-weight: bold; color: #FFD700; -webkit-text-stroke: 1px #000000; }
-.reward-text { font-size: clamp(1.1em, 4vw, 1.3em); position: absolute; pointer-events: none; z-index: 15; animation: rewardFloat 1.5s ease-out; font-family: 'Orbitron', monospace; max-width: 120px; text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9); font-weight: bold; color: #FFFFFF; -webkit-text-stroke: 1px #000000; }
-
-#gameArea { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 5; }
-.crack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background-image: radial-gradient(circle at 30% 30%, transparent 60%, rgba(0,0,0,0.3) 65%), radial-gradient(circle at 70% 70%, transparent 60%, rgba(0,0,0,0.3) 65%), radial-gradient(circle at 50% 20%, transparent 60%, rgba(0,0,0,0.3) 65%); opacity: 0; transition: opacity 0.3s; }
-.crack-1 { opacity: 0.3; } .crack-2 { opacity: 0.6; } .crack-3 { opacity: 0.9; }
-
-#levelAnnounce { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(1.2em, 5vw, 1.5em); font-weight: bold; z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s; font-family: 'Orbitron', sans-serif; text-align: center; color: white; text-shadow: 0 0 10px rgba(0,0,0,0.8); }
-.tooltip { position: absolute; bottom: 70px; right: 15px; padding: 5px 8px; border-radius: 6px; font-size: clamp(0.75em, 3vw, 0.85em); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; background: rgba(0, 0, 0, 0.8); color: white; z-index: 35; }
-
-/* ✅ BOBO (ИСПРАВЛЕНО - теперь работает с эмодзи) */
-.helper {
-    position: fixed; /* ✅ Фиксируем относительно окна браузера */
-    width: 44px; height: 44px;
-    background: transparent;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px; line-height: 1;
-    z-index: 9999; /* ✅ Поверх всего интерфейса */
+.crack-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     pointer-events: none;
-    filter: drop-shadow(0 0 12px rgba(0, 198, 255, 0.7));
-    animation: helperFloat 3s ease-in-out infinite;
-    left: 0; top: 0; /* ✅ Сброс для точного позиционирования JS */
+    background-image: radial-gradient(circle at 30% 30%, transparent 60%, rgba(0,0,0,0.3) 65%),
+                      radial-gradient(circle at 70% 70%, transparent 60%, rgba(0,0,0,0.3) 65%),
+                      radial-gradient(circle at 50% 20%, transparent 60%, rgba(0,0,0,0.3) 65%);
+    opacity: 0;
+    transition: opacity 0.3s;
 }
-.helper::before { content: '🤖'; } 
-@keyframes helperFloat {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(0, -8px) scale(1.05); }
-}
+.crack-1 { opacity: 0.3; }
+.crack-2 { opacity: 0.6; }
+.crack-3 { opacity: 0.9; }
 
-/* ✅ Редкие блоки */
+/* Редкие блоки */
 .block-gold { background: linear-gradient(135deg, #ffd700, #ff6b00) !important; animation: gold-shimmer 3s infinite; }
 .block-rainbow { background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff) !important; background-size: 400% 400%; animation: rainbow 3s ease infinite; }
 .block-crystal { background: linear-gradient(45deg, #00ffff, #ffffff, #00ffff) !important; box-shadow: 0 0 25px #00ffff, 0 0 10px #ffffff inset !important; animation: crystalPulse 2s ease-in-out infinite !important; }
 .block-mystery { background: linear-gradient(45deg, #9b59b6, #e74c3c, #3498db) !important; background-size: 300% 300% !important; box-shadow: 0 0 20px rgba(155, 89, 182, 0.7) !important; animation: mysteryShift 4s ease-in-out infinite !important; }
 
-@keyframes gold-shimmer { 0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); } 50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); } 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); } }
+/* ==========================================
+   🤖 BOBO (ПОМОЩНИК)
+   ========================================== */
+.helper {
+    position: fixed;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    line-height: 1;
+    z-index: 9999;
+    pointer-events: none;
+    filter: drop-shadow(0 0 12px rgba(0, 198, 255, 0.7));
+    animation: helperFloat 3s ease-in-out infinite;
+    left: 0;
+    top: 0;
+}
+
+.helper::before { content: '🤖'; }
+
+@keyframes helperFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(0, -8px) scale(1.05); }
+}
+
+/* ==========================================
+   💥 ЭФФЕКТЫ И АНИМАЦИИ
+   ========================================== */
+.damage-text {
+    font-size: clamp(1em, 4vw, 1.1em);
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+    opacity: 1;
+    transition: transform 0.5s, opacity 0.5s;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
+    max-width: 100px;
+    text-align: center;
+    font-weight: bold;
+    color: #FFFFFF;
+    -webkit-text-stroke: 1px #000000;
+}
+
+.combo-text {
+    font-size: clamp(1.4em, 5vw, 1.8em);
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+    animation: comboPop 0.5s ease-out;
+    font-family: 'Orbitron', monospace;
+    max-width: 150px;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
+    font-weight: bold;
+    color: #FFD700;
+    -webkit-text-stroke: 1px #000000;
+}
+
+.reward-text {
+    font-size: clamp(1.1em, 4vw, 1.3em);
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+    animation: rewardFloat 1.5s ease-out;
+    font-family: 'Orbitron', monospace;
+    max-width: 120px;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
+    font-weight: bold;
+    color: #FFFFFF;
+    -webkit-text-stroke: 1px #000000;
+}
+
+.explosion {
+    position: absolute;
+    pointer-events: none;
+    z-index: 15;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
+    transform: translate(-50%, -50%);
+    animation: explode 0.6s ease-out forwards;
+}
+
+.explosion-particle {
+    position: absolute;
+    pointer-events: none;
+    z-index: 14;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    animation: particleFly 0.8s ease-out forwards;
+}
+
+.rare-block-announce { animation: fadeInOut 2s ease-in-out; }
+
+#levelAnnounce {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(1.2em, 5vw, 1.5em);
+    font-weight: bold;
+    z-index: 40;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+    color: white;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8);
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 70px; right: 15px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: clamp(0.75em, 3vw, 0.85em);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    z-index: 35;
+}
+
+/* Keyframes */
+@keyframes gold-shimmer { 0% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } 50% { box-shadow: 0 0 20px rgba(255,215,0,0.8); } 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } }
 @keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 @keyframes crystalPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
 @keyframes mysteryShift { 0%, 100% { background-position: 0% 50%; filter: hue-rotate(0deg); } 50% { background-position: 100% 50%; filter: hue-rotate(180deg); } }
-
-.explosion { position: absolute; pointer-events: none; z-index: 15; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%); transform: translate(-50%, -50%); animation: explode 0.6s ease-out forwards; }
-.explosion-particle { position: absolute; pointer-events: none; z-index: 14; width: 12px; height: 12px; border-radius: 50%; animation: particleFly 0.8s ease-out forwards; }
-@keyframes explode { 0% { transform: translate(-50%, -50%) scale(0); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; } }
-@keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+@keyframes explode { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; } }
+@keyframes particleFly { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
 @keyframes comboPop { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes rewardFloat { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
-@keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
-.rare-block-announce { animation: fadeInOut 2s ease-in-out; }
+@keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
+
 .upgrade-btn.btn-available:active { animation: pulse 0.3s; }
 
-/* ✅ Магазин & Достижения & Daily Bonus */
+/* ==========================================
+   🛒 МАГАЗИН
+   ========================================== */
 .shop-container { position: absolute; bottom: 10px; right: 10px; z-index: 30; }
-.shop-btn { width: 50px; height: 50px; border: none; border-radius: 8px; font-size: 1.3em; cursor: pointer; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #9c27b0, #673ab7); color: white; transition: transform 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+.shop-btn {
+    width: 50px; height: 50px;
+    border: none; border-radius: 8px;
+    font-size: 1.3em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #9c27b0, #673ab7);
+    color: white; transition: transform 0.2s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
 .shop-btn:active { transform: scale(0.92); }
-.shop-panel { position: absolute; bottom: 60px; right: 0; width: 250px; max-height: 65vh; overflow-y: auto; background: rgba(0, 0, 0, 0.85); border-radius: 12px; padding: 15px; display: none; flex-direction: column; gap: 10px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); z-index: 31; scrollbar-width: thin; scrollbar-color: #4CAF50 #222; }
+
+.shop-panel {
+    position: absolute; bottom: 60px; right: 0;
+    width: 250px; max-height: 65vh;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 12px; padding: 15px;
+    display: none; flex-direction: column; gap: 10px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    z-index: 31;
+    scrollbar-width: thin; scrollbar-color: #4CAF50 #222;
+}
+
 .shop-panel h3 { margin: 0 0 10px 0; color: #bb86fc; text-align: center; font-size: 1.1em; }
-.shop-item { display: flex; align-items: center; gap: 10px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; transition: background 0.2s; color: white; font-size: 0.9em; }
+
+.shop-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px; background: rgba(255,255,255,0.05);
+    border-radius: 8px; cursor: pointer;
+    transition: background 0.2s; color: white; font-size: 0.9em;
+}
 .shop-item:hover { background: rgba(255,255,255,0.1); }
 .shop-item i { font-size: 1.4em; width: 28px; text-align: center; color: #4CAF50; }
 .shop-cost { margin-left: auto; color: #FFD54F; font-weight: bold; font-size: 0.9em; }
 .shop-item.active { background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50; }
 .shop-item.disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Активные бусты HUD */
+#activeBoosts {
+    position: fixed; top: 120px; right: 20px;
+    display: none; flex-wrap: wrap; gap: 5px;
+    z-index: 32; max-width: 300px;
+}
+
+/* ==========================================
+   🏆 ДОСТИЖЕНИЯ
+   ========================================== */
 .achievements-container { position: absolute; top: 60px; right: 10px; z-index: 30; }
-.achievements-btn { width: 50px; height: 50px; border: none; border-radius: 8px; font-size: 1.3em; cursor: pointer; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FF9800, #F57C00); color: white; transition: transform 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+
+.achievements-btn {
+    width: 50px; height: 50px;
+    border: none; border-radius: 8px;
+    font-size: 1.3em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    color: white; transition: transform 0.2s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
 .achievements-btn:active { transform: scale(0.92); }
-.achievements-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 500px; max-height: 70vh; background: rgba(0, 0, 0, 0.85); border-radius: 15px; padding: 20px; display: none; flex-direction: column; gap: 10px; backdrop-filter: blur(10px); border: 3px solid #FFD700; z-index: 1000; overflow-y: auto; box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3); }
+
+.achievements-panel {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%; max-width: 500px; max-height: 70vh;
+    background: rgba(0, 0, 0, 0.85);
+    border-radius: 15px; padding: 20px;
+    display: none; flex-direction: column; gap: 10px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 3px solid #FFD700;
+    z-index: 1000; overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
+}
+
 .achievements-panel::-webkit-scrollbar { width: 6px; }
 .achievements-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
 .achievements-panel::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 3px; }
+
 .achievements-panel h3 { margin: 0 0 10px 0; color: #ff9800; text-align: center; font-size: 1.3em; font-family: 'Orbitron', sans-serif; }
-.achievement-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; color: white; font-size: 0.85em; position: relative; transition: all 0.3s ease; min-height: 60px; }
+
+.achievement-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px; background: rgba(255,255,255,0.05);
+    border-radius: 8px; color: white; font-size: 0.85em;
+    position: relative; transition: all 0.3s ease; min-height: 60px;
+}
 .achievement-item.unlocked { background: rgba(255, 215, 0, 0.1); border: 1px solid #FFD700; animation: achievementUnlock 0.5s ease; }
 @keyframes achievementUnlock { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
 .achievement-item i { font-size: 1.2em; color: #FFD700; width: 24px; }
 .achievement-progress { margin-left: auto; color: #4FC3F7; font-size: 0.8em; font-weight: bold; font-family: 'Orbitron', sans-serif; }
 .achievement-item.unlocked .achievement-progress { color: #4CAF50; }
 
-#langBtn-welcome { position: absolute; top: 15px; right: 15px; width: 40px; height: 40px; border: none; border-radius: 8px; font-size: 1.5em; cursor: pointer; z-index: 35; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); color: white; transition: transform 0.1s; }
-#langBtn-welcome:active { transform: scale(0.92); }
-#activeBoosts { position: fixed; top: 120px; right: 20px; display: none; flex-wrap: wrap; gap: 5px; z-index: 32; max-width: 300px; }
-#saveIndicator { position: fixed; top: 20px; right: 20px; padding: 8px 16px; background: rgba(0, 0, 0, 0.8); color: #4CAF50; border-radius: 8px; font-size: 0.9em; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+/* ==========================================
+   🎁 ЕЖЕДНЕВНЫЙ БОНУС
+   ========================================== */
+.daily-bonus-claimed { opacity: 0.5; filter: grayscale(100%); }
+.daily-bonus-current { border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(255,215,0,0.5); animation: dailyBonusPulse 1s infinite; }
+.daily-bonus-locked { opacity: 0.3; }
 
-/* ✅ MOBILE */
+@keyframes dailyBonusPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,215,0,0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,215,0,0.7); }
+}
+
+/* ==========================================
+   🖥️ ЭКРАНЫ (WELCOME / GAME OVER)
+   ========================================== */
+#welcomeScreen, #gameOverScreen, #saveScreen {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    z-index: 100; color: white; text-align: center;
+    padding: 15px; box-sizing: border-box;
+    background: rgba(0,0,0,0.85);
+}
+
+#welcomeScreen h2 { font-size: clamp(1.5em, 6vw, 2em); margin-bottom: 15px; }
+#welcomeScreen p { max-width: 95%; text-align: center; margin: 8px 0; line-height: 1.4; font-size: clamp(0.9em, 3.5vw, 1em); }
+
+.btn {
+    padding: clamp(10px, 3vw, 12px) clamp(25px, 6vw, 30px);
+    margin-top: 15px; font-size: clamp(1em, 4vw, 1.1em);
+    background: #4CAF50; color: white; border: none;
+    border-radius: 8px; cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    transition: transform 0.1s; min-height: 44px;
+}
+
+#continueBtn { background: #2196F3; margin-bottom: 10px; }
+#continueBtn.save-available { background: #4CAF50; }
+#continueBtn.no-save { background: #f44336; }
+
+#gameOverScreen h2 { font-size: clamp(1.6em, 6vw, 2.2em); margin-bottom: 15px; }
+#finalScore { font-size: clamp(1.1em, 4vw, 1.4em); margin-bottom: 15px; }
+
+#restartBtn, #shareBtn {
+    padding: clamp(8px, 2.5vw, 10px) clamp(20px, 5vw, 24px);
+    margin: 6px; font-size: clamp(0.9em, 3.5vw, 1em);
+    border: none; border-radius: 8px; cursor: pointer;
+    font-family: 'Orbitron', sans-serif;
+    transition: transform 0.1s; min-height: 44px;
+}
+#restartBtn { background: #4CAF50; color: white; }
+#shareBtn { background: #00c853; color: white; }
+
+#langBtn-welcome {
+    position: absolute; top: 15px; right: 15px;
+    width: 40px; height: 40px;
+    border: none; border-radius: 8px;
+    font-size: 1.5em; cursor: pointer; z-index: 35;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.5); color: white;
+    transition: transform 0.1s;
+}
+#langBtn-welcome:active { transform: scale(0.92); }
+
+/* ==========================================
+   📱 МОБИЛЬНАЯ АДАПТАЦИЯ
+   ========================================== */
 @media (max-width: 768px) {
     #hud-left { top: 65px; left: 8px; padding: 5px 8px; min-width: 110px; max-width: 130px; gap: 2px; }
-    .hud-item { font-size: 0.65em; gap: 4px; } .hud-item i { width: 16px; font-size: 0.85em; }
-    .upgrade-btn { width: 42px; height: 42px; right: 6px; } .upgrade-cost { font-size: 0.45em; }
-    #upgradeClickBtn { bottom: 65px; } #upgradeHelperBtn { bottom: 115px; } #upgradeCritChanceBtn { bottom: 165px; } #upgradeCritMultBtn { bottom: 215px; } #upgradeHelperDmgBtn { bottom: 265px; }
-    #progressContainer { top: 40px; height: 6px; } #progressText { top: 52px; font-size: 0.6em; }
-    .achievements-panel { width: 95%; padding: 15px; } .shop-panel { width: 220px; padding: 12px; }
+    .hud-item { font-size: 0.65em; gap: 4px; }
+    .hud-item i { width: 16px; font-size: 0.85em; }
+
+    .upgrade-btn { width: 42px; height: 42px; right: 6px; }
+    .upgrade-cost { font-size: 0.45em; }
+
+    #upgradeClickBtn { bottom: 65px; }
+    #upgradeHelperBtn { bottom: 115px; }
+    #upgradeCritChanceBtn { bottom: 165px; }
+    #upgradeCritMultBtn { bottom: 215px; }
+    #upgradeHelperDmgBtn { bottom: 265px; }
+
+    #progressContainer { top: 40px; height: 6px; }
+    #progressText { top: 52px; font-size: 0.6em; }
+
+    .achievements-panel { width: 95%; padding: 15px; }
+    .shop-panel { width: 220px; padding: 12px; }
 }
+
 @media (max-width: 480px) {
     #hud-left { top: 60px; left: 5px; padding: 4px 6px; min-width: 100px; max-width: 120px; }
-    .hud-item { font-size: 0.6em; gap: 3px; } .hud-item i { width: 14px; }
-    .upgrade-btn { width: 40px; height: 40px; right: 5px; } .upgrade-cost { font-size: 0.4em; }
-    #upgradeClickBtn { bottom: 60px; } #upgradeHelperBtn { bottom: 108px; } #upgradeCritChanceBtn { bottom: 156px; } #upgradeCritMultBtn { bottom: 204px; } #upgradeHelperDmgBtn { bottom: 252px; }
-    #gameTitle { font-size: 1.1em; } #welcomeScreen h2 { font-size: 1.5em; } #welcomeScreen p { font-size: 0.85em; }
-}
-@media (max-height: 500px) and (orientation: landscape) {
-    #header { padding: 4px 40px 4px 0; } #hud-left { top: 50px; left: 8px; gap: 2px; padding: 4px 8px; }
-    .upgrade-btn { width: 38px; height: 38px; right: 6px; }
-    #upgradeClickBtn { bottom: 55px; } #upgradeHelperBtn { bottom: 100px; } #upgradeCritChanceBtn { bottom: 145px; } #upgradeCritMultBtn { bottom: 190px; } #upgradeHelperDmgBtn { bottom: 235px; }
-    #progressContainer { top: 35px; height: 6px; } #progressText { top: 46px; font-size: 0.55em; }
-}
-/* === СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО МАГАЗИНА === */
-.shop-modal {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-    z-index: 3000; /* Поверх всего */
-    display: none; /* Скрыто по умолчанию */
-    justify-content: center;
-    align-items: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.shop-modal.visible {
-    display: flex;
-    opacity: 1;
-}
-.shop-modal-content {
-    background: linear-gradient(135deg, #1a1a2e, #24243e);
-    border: 2px solid #4CAF50;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh; /* Ограничение высоты */
-    overflow-y: auto; /* Скролл внутри окна */
-    padding: 20px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-    scrollbar-width: thin;
-    scrollbar-color: #4CAF50 #1a1a2e;
-    transform: scale(0.9);
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.shop-modal.visible .shop-modal-content {
-    transform: scale(1);
-}
-.shop-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    padding-bottom: 10px;
-}
-.shop-modal-title {
-    color: #4CAF50;
-    font-size: 1.4em;
-    font-weight: bold;
-    font-family: 'Orbitron', sans-serif;
-}
-.shop-close-btn {
-    background: rgba(255,255,255,0.1);
-    border: none;
-    color: #fff;
-    font-size: 1.5em;
-    width: 35px; height: 35px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-}
-.shop-close-btn:active { background: rgba(255,0,0,0.3); }
+    .hud-item { font-size: 0.6em; gap: 3px; }
+    .hud-item i { width: 14px; }
 
-/* Стили элементов магазина */
-.shop-item-row {
-    display: flex;
-    align-items: center;
-    background: rgba(255,255,255,0.05);
-    margin-bottom: 12px;
-    padding: 12px;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid transparent;
+    .upgrade-btn { width: 40px; height: 40px; right: 5px; }
+    .upgrade-cost { font-size: 0.4em; }
+
+    #upgradeClickBtn { bottom: 60px; }
+    #upgradeHelperBtn { bottom: 108px; }
+    #upgradeCritChanceBtn { bottom: 156px; }
+    #upgradeCritMultBtn { bottom: 204px; }
+    #upgradeHelperDmgBtn { bottom: 252px; }
+
+    #gameTitle { font-size: 1.1em; }
+    #welcomeScreen h2 { font-size: 1.5em; }
+    #welcomeScreen p { font-size: 0.85em; }
 }
-.shop-item-row:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
-.shop-item-row.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.8); }
-.shop-item-row.active {
-    border-color: #4CAF50;
-    background: rgba(76, 175, 80, 0.15);
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.2);
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #header { padding: 4px 40px 4px 0; }
+    #hud-left { top: 50px; left: 8px; gap: 2px; padding: 4px 8px; }
+
+    .upgrade-btn { width: 38px; height: 38px; right: 6px; }
+
+    #upgradeClickBtn { bottom: 55px; }
+    #upgradeHelperBtn { bottom: 100px; }
+    #upgradeCritChanceBtn { bottom: 145px; }
+    #upgradeCritMultBtn { bottom: 190px; }
+    #upgradeHelperDmgBtn { bottom: 235px; }
+
+    #progressContainer { top: 35px; height: 6px; }
+    #progressText { top: 46px; font-size: 0.55em; }
 }
-.shop-item-icon {
-    font-size: 1.8em;
-    width: 45px;
-    text-align: center;
-    margin-right: 15px;
-}
-.shop-item-info { flex: 1; }
-.shop-item-name { color: #fff; font-weight: bold; font-size: 1.05em; display: block; margin-bottom: 3px; }
-.shop-item-desc { color: #aaa; font-size: 0.8em; line-height: 1.2; }
-.shop-item-cost { color: #FFD700; font-weight: bold; font-size: 1.1em; min-width: 60px; text-align: right; }
-.shop-item-row.active .shop-item-cost { color: #4CAF50; }

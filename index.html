@@ -5,28 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
     <title>Космический Кликер</title>
-    
+
+    <!-- Telegram WebApp SDK (должен быть первым!) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
     <!-- Шрифты и иконки -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Стили -->
+
+    <!-- ✅ ИСПРАВЛЕНО: Путь к CSS -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <!-- Фоновый canvas -->
     <canvas id="planetBackgroundCanvas"></canvas>
-    
+
+    <!-- Заголовок -->
     <div id="header">
         <h1 id="gameTitle">☿ Меркурий</h1>
     </div>
 
+    <!-- Прогресс-бар -->
     <div id="progressContainer">
         <div id="progressBar"></div>
     </div>
     <div id="progressText">Прогресс: 0.00000 / 0.38710 а.е. (0%)</div>
 
+    <!-- HUD слева -->
     <div id="hud-left">
         <div class="hud-item">
             <i class="fas fa-coins" style="color: #FFD54F;"></i>
@@ -50,13 +57,17 @@
         </div>
     </div>
 
+    <!-- Активные бусты -->
     <div id="activeBoosts"></div>
 
+    <!-- Игровая зона -->
     <div id="gameArea"></div>
 
+    <!-- Уведомления -->
     <div id="levelAnnounce"></div>
     <div id="penaltyAnnounce"></div>
 
+    <!-- Кнопки улучшений -->
     <div id="upgrades-container">
         <div class="upgrade-btn btn-available" id="upgradeClickBtn" title="Увеличить силу удара">
             <i class="fas fa-fist-raised"></i>
@@ -80,72 +91,106 @@
         </div>
     </div>
 
+    <!-- Магазин -->
     <div class="shop-container">
         <button id="shopBtn" class="shop-btn" title="Магазин бонусов">🛒</button>
         <div id="shopPanel" class="shop-panel"></div>
     </div>
 
-   <div class="achievements-container">
-    <button id="achievementsBtn" class="achievements-btn" title="Достижения">
-        <i class="fas fa-trophy"></i>
-        <span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/0</span>
-    </button>
-</div>
+    <!-- Достижения -->
+    <div class="achievements-container">
+        <button id="achievementsBtn" class="achievements-btn" title="Достижения">
+            <i class="fas fa-trophy"></i>
+            <span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/0</span>
+        </button>
+    </div>
 
-<!-- Панель достижений -->
-<div id="achievementsPanel" class="achievements-panel"></div>
-
+    <!-- Кнопка сохранения -->
     <button id="saveBtn" title="Сохранить игру">
         <i class="fas fa-save"></i>
     </button>
 
+    <!-- Тултип -->
     <div id="tooltip" class="tooltip"></div>
 
-    <div id="welcomeScreen">
-        <button id="langBtn-welcome">🇷🇺</button>
-        <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
-        <p>Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
-        <button id="continueBtn" class="btn">Продолжить</button>
-        <button id="startBtn" class="btn">Новая игра</button>
+    <!-- Экран приветствия -->
+<div id="welcomeScreen">
+    <button id="langBtn-welcome">🇷🇺</button>
+    <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
+    <p>Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
+    <p>Каждый блок требует определённого количества ударов для разрушения.</p>
+    <p>Реалистичная система прогресса:</p>
+    <p>🌌 Астрономические единицы — перемещайтесь по Солнечной системе</p>
+    <p>🪐 9 реальных планет — от Меркурия до Плутона</p>
+    <p>🚀 Улучшения — увеличивайте силу, криты и активируйте помощника</p>
+    <p>✨ Редкие блоки — дают бонусы и огромные награды!</p>
+    
+    <!-- ✅ НОВОЕ: Контейнер для ежедневного бонуса -->
+    <div id="dailyBonusContainer" class="daily-bonus-container">
+        <button id="dailyBonusWelcomeBtn" class="daily-bonus-welcome-btn">
+            <div class="daily-bonus-icon">🎁</div>
+            <div class="daily-bonus-label">Ежедневный бонус</div>
+            <div id="dailyBonusTimer" class="daily-bonus-timer">00:00:00</div>
+        </button>
     </div>
+    
+    <button id="continueBtn" class="btn">Продолжить</button>
+    <button id="startBtn" class="btn">Новая игра</button>
+</div>
 
-    <div id="gameOverScreen" style="display: none;">
-        <h2>ДОБЫЧА ПРЕРВАНА!</h2>
-        <p id="finalScore">Всего урона: 0</p>
-        <button id="restartBtn">Новая добыча</button>
-        <button id="shareBtn">Поделиться</button>
+<!-- Экран окончания игры -->
+<div id="gameOverScreen" style="display: none;">
+    <h2>ДОБЫЧА ПРЕРВАНА!</h2>
+    <p id="finalScore">Всего урона: 0</p>
+    <button id="restartBtn">Новая добыча</button>
+    <button id="shareBtn">Поделиться</button>
+</div>
+
+<!-- ✅ НОВОЕ: Модальное окно ежедневного бонуса -->
+<div id="dailyBonusModal" class="daily-bonus-modal">
+    <div class="daily-bonus-modal-content">
+        <button id="dailyBonusCloseBtn" class="daily-bonus-close-btn">✕</button>
+        <h3 class="daily-bonus-modal-title">🎁 Ежедневный Бонус</h3>
+        <div id="dailyBonusStreak" class="daily-bonus-streak"></div>
+        <div id="dailyBonusGrid" class="daily-bonus-grid"></div>
+        <button id="dailyBonusClaimBtn" class="daily-bonus-claim-btn">🎁 Получить награду</button>
     </div>
+</div>
+
+    <!-- Панель достижений -->
+    <div id="achievementsPanel" class="achievements-panel"></div>
 
     <!-- ========================================== -->
-    <!-- 1. ВСПОМОГАТЕЛЬНЫЕ МОДУЛИ (Без зависимостей) -->
+    <!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
     <!-- ========================================== -->
+
+    <!-- 0. Шина событий (должна быть первой!) -->
+    <script src="js/event-bus.js"></script>
+
+    <!-- 1. Базовые системы -->
     <script src="js/translations.js"></script>
     <script src="js/telegram-integration.js"></script>
 
-    <!-- ========================================== -->
-    <!-- 2. ДАННЫЕ И СОХРАНЕНИЯ (Глобальные переменные) -->
-    <!-- ========================================== -->
+    <!-- 2. Данные и сохранение -->
     <script src="js/save-system.js"></script>
     <script src="js/game-config.js"></script>
 
-    <!-- ========================================== -->
-    <!-- 3. МОДУЛИ ИГРЫ (UI, Механики, Фон, Магазин) -->
-    <!-- ========================================== -->
+    <!-- 3. UI и механики -->
     <script src="js/game-ui.js"></script>
+    <script src="js/combat-system.js"></script>
     <script src="js/game-features.js"></script>
     <script src="js/planet-background.js"></script>
     <script src="js/shop.js"></script>
 
-    <!-- ========================================== -->
-    <!-- 4. ЯДРО (Связывает всё воедино, запускает игру) -->
-    <!-- ========================================== -->
+    <!-- 4. Ядро (ПОСЛЕ всех зависимостей!) -->
     <script src="js/game-core.js"></script>
 
-    <!-- ========================================== -->
-    <!-- 5. ДОПОЛНИТЕЛЬНЫЕ СИСТЕМЫ -->
-    <!-- ========================================== -->
+    <!-- 5. Дополнительные системы -->
     <script src="js/achievements.js"></script>
     <script src="js/daily-bonus.js"></script>
+
+    <!-- Модуль Вояджеров -->
+    <script src="js/voyager-tracker.js"></script>
 
 </body>
 </html>
