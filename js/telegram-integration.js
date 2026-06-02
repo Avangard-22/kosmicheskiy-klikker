@@ -89,8 +89,8 @@
     window.telegramInitData = tg.initData || '';
 
     // === ☁️ ОБЛАЧНЫЕ ФУНКЦИИ ===
-    window.telegramCloud = {
-        isAvailable: false,
+window.telegramCloud = {
+    isAvailable: true, // ✅ В Telegram облако всегда доступно для попыток
 
      saveProgress: async function(progressData) {
     console.log('☁️ [CLOUD SAVE] Начало сохранения');

@@ -242,64 +242,57 @@
      * ☁️ Инициализация облачной синхронизации (вызывается при старте)
      * Сравнивает локальные и облачные данные, берёт самые свежие
      */
-    window.cloudInit = async function() {
-        if (!window.telegramCloud?.isAvailable) {
-            console.log('ℹ️ Облако недоступно, работаем только локально');
+  window.cloudInit = async function() {
+    // ✅ УБРАЛИ проверку isAvailable — теперь всегда пытаемся
+    if (!window.telegramCloud) {
+        console.log('ℹ️ Telegram Cloud не инициализирован');
+        return;
+    }
+    
+    try {
+        console.log('☁️ Инициализация облачной синхронизации...');
+        const result = await window.telegramCloud.loadProgress();
+        
+        if (!result?.success || !result.data) {
+            console.log('☁️ Облако пустое или ошибка, отправляем локальные данные');
+            await cloudSaveAsync();
             return;
         }
         
-        try {
-            console.log('☁️ Инициализация облачной синхронизации...');
-            const result = await window.telegramCloud.loadProgress();
+        const cloudData = result.data;
+        const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
+        const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
+        
+        // Сравниваем: если в облаке больше кристаллов или выше уровень — используем облако
+        const cloudWins = 
+            (cloudData.crystals || 0) > (window.gameState.coins || 0) ||
+            (cloudData.level || 1) > currentLevel;
+        
+        if (cloudWins) {
+            console.log('☁️ Облачные данные новее — применяем:', cloudData);
+            applyCloudData(cloudData);
             
-            if (!result?.success || !result.data) {
-                // В облаке нет данных — отправляем текущие локальные
-                console.log('☁️ Облако пустое, отправляем локальные данные');
-                await cloudSaveAsync();
-                return;
+            // Обновляем UI
+            if (window.UI?.updateHUD) window.UI.updateHUD();
+            if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+            
+            // Уведомляем пользователя
+            if (window.showTooltip) {
+                window.showTooltip('☁️ Данные восстановлены из облака!');
+                setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
             
-            const cloudData = result.data;
-            const localTimestamp = getLocalTimestamp();
-            
-            // Сравниваем: если в облаке больше кристаллов или выше уровень — используем облако
-            const cloudWins = 
-                (cloudData.crystals || 0) > (window.gameState.coins || 0) ||
-                (cloudData.level || 1) > getCurrentLocalLevel();
-            
-            if (cloudWins) {
-                console.log('☁️ Облачные данные новее — применяем:', cloudData);
-                applyCloudData(cloudData);
-                
-                // Пересохраняем локально с новыми данными
-                const saveData = {
-                    version: 2,
-                    timestamp: Date.now(),
-                    gameState: window.gameState,
-                    gameMetrics: window.gameMetrics
-                };
-                localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-                
-                // Уведомляем UI
-                if (window.UI?.updateHUD) window.UI.updateHUD();
-                if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
-                
-                if (window.showTooltip) {
-                    window.showTooltip('☁️ Данные восстановлены из облака!');
-                    setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
-                }
-                
-                if (window.telegramHaptic?.success) {
-                    window.telegramHaptic.success();
-                }
-            } else {
-                console.log('☁️ Локальные данные актуальнее — синхронизируем в облако');
-                await cloudSaveAsync();
+            if (window.telegramHaptic?.success) {
+                window.telegramHaptic.success();
             }
-        } catch (e) {
-            console.warn('⚠️ Ошибка cloudInit:', e);
+        } else {
+            console.log('☁️ Локальные данные актуальнее — синхронизируем в облако');
+            await cloudSaveAsync();
         }
-    };
+    } catch (e) {
+        console.warn('⚠️ Ошибка cloudInit:', e);
+    }
+};
 
     /**
      * Вспомогательные функции
