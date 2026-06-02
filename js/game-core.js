@@ -487,11 +487,9 @@ window.GAME_CORE = {
 
 continueGame: async function() {
     console.log('🔄 Пытаемся загрузить сохранение...');
-    
-    // 1. Сначала грузим локально
     const hasLocal = typeof window.loadGame === 'function' && window.loadGame();
     
-    // 2. Если есть облако — пытаемся синхронизировать
+    // ☁️ ВАЖНО: облачная инициализация
     if (typeof window.cloudInit === 'function') {
         await window.cloudInit();
     }
@@ -503,7 +501,6 @@ continueGame: async function() {
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
-        
         if (window.showTooltip && window.formatString) {
             const t = window.formatString('Игра загружена! Кристаллы: {coins}, Урон: {damage}', {
                 coins: Math.floor(window.gameState.coins).toLocaleString(),
