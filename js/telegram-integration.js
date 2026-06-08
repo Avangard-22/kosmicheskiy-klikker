@@ -4,7 +4,7 @@
 
     const tg = window.Telegram?.WebApp;
     const isTelegram = !!tg;
-    const CLOUD_API_URL = 'https://d5d43ru46b7455niv49r.xxg4zr82.apigw.yandexcloud.net';
+    const CLOUD_API_URL = 'https://d5de5jfdv68j295hgj7a.y3q8o1jq.apigw.yandexcloud.net';
 
     window.isTelegramEnvironment = isTelegram;
     window.isCloudAvailable = false;
