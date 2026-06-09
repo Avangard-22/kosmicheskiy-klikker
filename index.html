@@ -237,5 +237,36 @@ window.addEventListener('load', function() {
 });
 </script>
 
+    <div id="mobile-console" style="position:fixed;bottom:0;left:0;right:0;height:200px;background:rgba(0,0,0,0.9);color:#0f0;font-size:10px;overflow-y:auto;z-index:99999;padding:5px;font-family:monospace;display:none;"></div>
+<script>
+// Показывать консоль на мобильных устройствах
+if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    document.getElementById('mobile-console').style.display = 'block';
+    
+    const consoleDiv = document.getElementById('mobile-console');
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        consoleDiv.innerHTML += '<div>' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '</div>';
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+    
+    console.error = function(...args) {
+        originalError.apply(console, args);
+        consoleDiv.innerHTML += '<div style="color:red;">' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '</div>';
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+    
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        consoleDiv.innerHTML += '<div style="color:yellow;">' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') + '</div>';
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+}
+</script>
+    
 </body>
 </html>
