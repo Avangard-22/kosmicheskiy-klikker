@@ -116,26 +116,25 @@ function applyCloudData(cloudData) {
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     
-    // Применяем только если облачные данные лучше локальных
-    if (cloudData.crystals > (window.gameState.coins || 0)) {
+    // Применяем ВСЕ данные из облака (не только если они лучше)
+    if (cloudData.crystals !== undefined) {
         window.gameState.coins = cloudData.crystals;
     }
     
-    // Если уровень выше — переносим на эту планету
-    const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
-    if (cloudData.level > currentLevel && planetOrder[cloudData.level - 1]) {
+    if (cloudData.level !== undefined && planetOrder[cloudData.level - 1]) {
         window.gameState.currentLocation = planetOrder[cloudData.level - 1];
     }
     
-    // Общий урон
-    if (cloudData.score > (window.gameState.totalDamageDealt || 0)) {
+    if (cloudData.score !== undefined) {
         window.gameState.totalDamageDealt = cloudData.score;
     }
     
-    // Скины
     if (cloudData.bobo_skin) {
         window.gameState.boboSkin = cloudData.bobo_skin;
     }
+    
+    console.log('✅ Облачные данные применены к gameState');
+}
 }
 
 /**
@@ -280,7 +279,7 @@ window.loadGame = function() {
 
 /**
  * ☁️ Инициализация облачной синхронизации (вызывается при старте)
- * ВСЕГДА загружает из облака если есть initData
+ * ВСЕГДА загружает из облака и применяет данные
  */
 window.cloudInit = async function() {
     if (!window.telegramCloud) {
@@ -290,8 +289,6 @@ window.cloudInit = async function() {
     
     try {
         console.log('☁️ Инициализация облачной синхронизации...');
-        console.log('🔍 cloudInit: isCloudAvailable:', window.isCloudAvailable);
-        console.log('🔍 cloudInit: telegramCloud.isAvailable:', window.telegramCloud.isAvailable);
         
         // ВСЕГДА пытаемся загрузить из облака
         const result = await window.telegramCloud.loadProgress();
