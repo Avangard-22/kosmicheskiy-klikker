@@ -4,30 +4,6 @@
 
 const CLOUD_API_URL = 'https://d5de5jfdv68j295hgj7a.y3q8o1jq.apigw.yandexcloud.net';
 
-// === ЖДЁМ ИНИЦИАЛИЗАЦИИ TELEGRAM WEBAPP ===
-function waitForTelegramWebApp(callback, timeout = 5000) {
-    const startTime = Date.now();
-    
-    function check() {
-        if (window.Telegram?.WebApp) {
-            console.log('✅ Telegram WebApp detected after waiting');
-            callback(window.Telegram.WebApp);
-            return true;
-        }
-        
-        if (Date.now() - startTime > timeout) {
-            console.warn('⚠️ Telegram WebApp not detected after timeout');
-            callback(null);
-            return false;
-        }
-        
-        setTimeout(check, 100);
-        return false;
-    }
-    
-    check();
-}
-
 // === ИЗВЛЕЧЕНИЕ INITDATA ИЗ URL ===
 function extractInitDataFromURL() {
     try {
@@ -49,9 +25,57 @@ function extractInitDataFromURL() {
     }
 }
 
+// === ОТПРАВКА В ОБЛАКО ===
+async function sendToCloud(action, progressData, initData) {
+    console.log('🔍 DEBUG: sendToCloud called with action:', action);
+    console.log('🔍 DEBUG: initData available:', !!initData);
+    console.log('🔍 DEBUG: initData length:', initData?.length || 0);
+    
+    if (!initData) {
+        console.error(' No initData available');
+        return { success: false, error: 'No initData' };
+    }
+    
+    try {
+        const body = {
+            initData: initData,
+            action: action
+        };
+        
+        if (progressData) {
+            body.progress = progressData;
+        }
+        
+        console.log('🔍 DEBUG: Request body:', JSON.stringify(body).substring(0, 200));
+        
+        const response = await fetch(`${CLOUD_API_URL}/api/save`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify(body)
+        });
+        
+        console.log(' DEBUG: Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('☁️ [CLOUD] Ответ:', result);
+        
+        if (result.success) {
+            window.isCloudAvailable = true;
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('❌ [CLOUD] Ошибка:', error.message);
+        console.error('❌ [CLOUD] Stack:', error.stack);
+        return { success: false, error: error.message };
+    }
+}
+
 // === ИНИЦИАЛИЗАЦИЯ ===
 function initTelegramIntegration() {
-    console.log(' Initializing Telegram integration...');
+    console.log('🔍 Initializing Telegram integration...');
     
     // Проверяем, есть ли Telegram WebApp
     const tg = window.Telegram?.WebApp;
@@ -105,6 +129,21 @@ function initTelegramIntegration() {
                 return sendToCloud('leaderboard', { limit }, initDataFromURL);
             }
         };
+        
+        // Устанавливаем telegramUser из URL
+        if (initDataFromURL) {
+            try {
+                const params = new URLSearchParams(initDataFromURL);
+                const userJson = params.get('user');
+                if (userJson) {
+                    window.telegramUser = JSON.parse(decodeURIComponent(userJson));
+                    console.log('✅ telegramUser from URL:', window.telegramUser);
+                }
+            } catch (e) {
+                console.error('❌ Error parsing user from URL:', e);
+            }
+        }
+        
         return;
     }
 
@@ -195,65 +234,10 @@ function initTelegramIntegration() {
     console.log('☁️ Cloud API:', CLOUD_API_URL);
 }
 
-// === ОТПРАВКА В ОБЛАКО ===
-async function sendToCloud(action, progressData, initData) {
-    console.log('🔍 DEBUG: sendToCloud called with action:', action);
-    console.log('🔍 DEBUG: initData available:', !!initData);
-    console.log('🔍 DEBUG: initData length:', initData?.length || 0);
-    
-    try {
-        const body = {
-            initData: initData,
-            action: action
-        };
-        
-        if (progressData) {
-            body.progress = progressData;
-        }
-        
-        console.log('🔍 DEBUG: Request body:', JSON.stringify(body).substring(0, 200));
-        
-        const response = await fetch(`${CLOUD_API_URL}/api/save`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'text/plain'
-            },
-            body: JSON.stringify(body)
-        });
-        
-        console.log('🔍 DEBUG: Response status:', response.status);
-        
-        const result = await response.json();
-        console.log('☁️ [CLOUD] Ответ:', result);
-        
-        if (result.success) {
-            window.isCloudAvailable = true;
-        }
-        
-        return result;
-    } catch (error) {
-        console.error('❌ [CLOUD] Ошибка:', error.message);
-        console.error('❌ [CLOUD] Stack:', error.stack);
-        return { success: false, error: error.message };
-    }
-}
-
 // === ЗАПУСК ===
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        waitForTelegramWebApp((tg) => {
-            if (tg) {
-                window.Telegram.WebApp = tg;
-            }
-            initTelegramIntegration();
-        });
-    });
+    document.addEventListener('DOMContentLoaded', initTelegramIntegration);
 } else {
-    waitForTelegramWebApp((tg) => {
-        if (tg) {
-            window.Telegram.WebApp = tg;
-        }
-        initTelegramIntegration();
-    });
+    initTelegramIntegration();
 }
 })();
