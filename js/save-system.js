@@ -116,43 +116,37 @@ function applyCloudData(cloudData) {
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     
-    // Применяем ВСЕ данные из облака (не только если они лучше)
-    if (cloudData.crystals !== undefined) {
+    // Применяем только если облачные данные лучше локальных
+    if (cloudData.crystals > (window.gameState.coins || 0)) {
         window.gameState.coins = cloudData.crystals;
     }
     
-    if (cloudData.level !== undefined && planetOrder[cloudData.level - 1]) {
+    // Если уровень выше — переносим на эту планету
+    const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
+    if (cloudData.level > currentLevel && planetOrder[cloudData.level - 1]) {
         window.gameState.currentLocation = planetOrder[cloudData.level - 1];
     }
     
-    if (cloudData.score !== undefined) {
+    // Общий урон
+    if (cloudData.score > (window.gameState.totalDamageDealt || 0)) {
         window.gameState.totalDamageDealt = cloudData.score;
     }
     
+    // Скины
     if (cloudData.bobo_skin) {
         window.gameState.boboSkin = cloudData.bobo_skin;
     }
     
     console.log('✅ Облачные данные применены к gameState');
 }
-}
 
 /**
  * 💾 Сохранить игру (localStorage + облако)
- * ШАГ 2: Улучшенная версия с подробным логированием
  */
 window.saveGame = function() {
     try {
-        console.log('💾 [SAVE] Attempting to save...');
-        
         if (!window.gameState || !window.gameMetrics) {
-            console.error('❌ [SAVE] No game state to save');
-            return false;
-        }
-
-        // Проверяем, доступен ли localStorage
-        if (typeof localStorage === 'undefined') {
-            console.error('❌ [SAVE] localStorage is not available');
+            console.warn('⚠️ saveGame: gameState или gameMetrics не инициализированы');
             return false;
         }
 
@@ -163,18 +157,8 @@ window.saveGame = function() {
             gameMetrics: window.gameMetrics
         };
 
-        console.log('💾 [SAVE] Data to save:', {
-            crystals: window.gameState.coins,
-            level: window.gameState.currentLocation,
-            damage: window.gameState.totalDamageDealt
-        });
-
         // 1. Всегда сохраняем локально
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-        
-        // Проверяем, что сохранилось
-        const saved = localStorage.getItem(SAVE_KEY);
-        console.log('💾 [SAVE] Verification:', saved ? 'SUCCESS' : 'FAILED');
         
         // 2. Визуальная индикация локального сохранения
         showSaveIndicator('💾', 'Сохранено');
@@ -184,8 +168,7 @@ window.saveGame = function() {
 
         return true;
     } catch (e) {
-        console.error('❌ [SAVE] Error saving game:', e);
-        console.error('❌ [SAVE] Error stack:', e.stack);
+        console.error('❌ Ошибка сохранения игры:', e);
         return false;
     }
 };
@@ -194,10 +177,7 @@ window.saveGame = function() {
  * ☁️ Асинхронное сохранение в облако
  */
 async function cloudSaveAsync() {
-    if (!window.telegramCloud?.isAvailable) {
-        console.log('⚠️ [CLOUD] Cloud not available, skipping');
-        return;
-    }
+    if (!window.telegramCloud?.isAvailable) return;
     
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
@@ -207,18 +187,14 @@ async function cloudSaveAsync() {
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
-            console.log('☁️ [CLOUD] Sending data:', cloudData);
             const result = await window.telegramCloud.saveProgress(cloudData);
             if (result?.success) {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Синхронизировано', '#4CAF50');
-                console.log('✅ [CLOUD] Sync successful');
-            } else {
-                console.warn('⚠️ [CLOUD] Sync failed:', result?.error);
             }
         }
     } catch (e) {
-        console.warn('⚠️ [CLOUD] Sync error:', e);
+        console.warn('⚠️ Ошибка облачной синхронизации:', e);
     } finally {
         isSyncing = false;
     }
@@ -226,31 +202,19 @@ async function cloudSaveAsync() {
 
 /**
  * 📥 Загрузить игру (локально)
- * ШАГ 2: Улучшенная версия с подробным логированием
  */
 window.loadGame = function() {
     try {
-        console.log('💾 [LOAD] Attempting to load from localStorage...');
-        
-        // Проверяем, доступен ли localStorage
-        if (typeof localStorage === 'undefined') {
-            console.error('❌ [LOAD] localStorage is not available');
-            return false;
-        }
-        
         const raw = localStorage.getItem(SAVE_KEY);
-        console.log('💾 [LOAD] Raw data:', raw ? 'exists (' + raw.length + ' chars)' : 'null');
-        
         if (!raw) {
-            console.log('️ [LOAD] No save found in localStorage');
+            console.log('ℹ️ Локальное сохранение не найдено');
             return false;
         }
-        
+
         const saveData = JSON.parse(raw);
-        console.log('💾 [LOAD] Parsed save data version:', saveData?.version);
         
         if (!saveData || !saveData.gameState || !saveData.gameMetrics) {
-            console.warn('⚠️ [LOAD] Corrupted save data, resetting');
+            console.warn('⚠️ Повреждённое сохранение, сброс');
             return false;
         }
 
@@ -267,12 +231,12 @@ window.loadGame = function() {
         window.gameState.boboCoinBonus = 0;
         window.gameState.comboCount = 0;
 
-        console.log('✅ [LOAD] Game loaded successfully. Session #' + window.gameMetrics.sessions);
-        console.log('💾 [LOAD] Crystals:', window.gameState.coins, 'Location:', window.gameState.currentLocation);
+        console.log('✅ Локальная игра загружена. Сессия #' + window.gameMetrics.sessions);
+        console.log('💾 gameState.coins:', window.gameState.coins);
+        console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
         return true;
     } catch (e) {
-        console.error('❌ [LOAD] Error loading game:', e);
-        console.error(' [LOAD] Error stack:', e.stack);
+        console.error('❌ Ошибка загрузки сохранения:', e);
         return false;
     }
 };
@@ -400,7 +364,7 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
 }
 
 /**
- * ️ Запуск автосохранения
+ * ⏱️ Запуск автосохранения
  */
 function startAutoSave() {
     if (autoSaveTimer) clearInterval(autoSaveTimer);
@@ -444,6 +408,8 @@ function init() {
     });
 
     console.log('💾 Save System initialized');
+    console.log('💾 gameState.coins:', window.gameState.coins);
+    console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
 }
 
 if (document.readyState === 'loading') {
