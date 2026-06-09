@@ -486,16 +486,31 @@ window.GAME_CORE = {
     },
 
 continueGame: async function() {
-    console.log('🔄 Пытаемся загрузить сохранение...');
-    const hasLocal = typeof window.loadGame === 'function' && window.loadGame();
+    console.log('🔄 [GAME] Starting continueGame...');
+    console.log('🔄 [GAME] loadGame function exists:', typeof window.loadGame === 'function');
+    console.log('🔄 [GAME] cloudInit function exists:', typeof window.cloudInit === 'function');
+    console.log('🔄 [GAME] gameState exists:', !!window.gameState);
+    console.log('🔄 [GAME] isTelegramEnvironment:', window.isTelegramEnvironment);
     
-    // ☁️ ВАЖНО: облачная инициализация
+    const hasLocal = typeof window.loadGame === 'function' && window.loadGame();
+    console.log('🔄 [GAME] Local save loaded:', hasLocal);
+    
+    // ☁️ Облачная инициализация
     if (typeof window.cloudInit === 'function') {
-        await window.cloudInit();
+        console.log('️ [GAME] cloudInit function exists, calling...');
+        try {
+            await window.cloudInit();
+            console.log('☁️ [GAME] cloudInit completed');
+        } catch (e) {
+            console.error('☁️ [GAME] cloudInit error:', e);
+            console.error('️ [GAME] cloudInit stack:', e.stack);
+        }
+    } else {
+        console.warn('⚠️ [GAME] cloudInit function NOT found');
     }
     
     if (hasLocal || window.isCloudAvailable) {
-        console.log('✅ Загрузка успешна, запускаем игру...');
+        console.log('✅ [GAME] Load successful, starting game...');
         UI.updateHUD();
         UI.updateUpgradeButtons();
         UI.updateProgressBar();
@@ -510,6 +525,7 @@ continueGame: async function() {
             setTimeout(window.hideTooltip, 3000);
         }
     } else {
+        console.warn('⚠️ [GAME] No save found, starting new game');
         if (window.showTooltip && window.translations) {
             window.showTooltip(window.translations[window.currentLanguage].tooltips.noSave);
             setTimeout(window.hideTooltip, 2000);

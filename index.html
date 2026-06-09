@@ -169,11 +169,11 @@
 
     <!-- 1. Базовые системы -->
     <script src="js/translations.js"></script>
-    <script src="js/telegram-integration.js?v=6"></script>
+    <script src="js/telegram-integration.js?v=8"></script>
 
     <!-- 2. Данные и сохранение -->
-    <script src="js/save-system.js?v=3"></script>
-    <script src="js/game-config.js?v=3"></script>
+    <script src="js/save-system.js?v=8"></script>
+    <script src="js/game-config.js?v=8"></script>
 
     <!-- 3. UI и механики -->
     <script src="js/game-ui.js"></script>
@@ -191,6 +191,51 @@
 
     <!-- Модуль Вояджеров -->
     <script src="js/voyager-tracker.js"></script>
+<!-- ШАГ 4: Тестовая диагностика для мобильных устройств -->
+<script>
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        console.log('📱 MOBILE DEBUG:');
+        console.log('- User Agent:', navigator.userAgent);
+        console.log('- Platform:', navigator.platform);
+        console.log('- localStorage:', typeof localStorage !== 'undefined' ? 'available' : 'NOT available');
+        console.log('- sessionStorage:', typeof sessionStorage !== 'undefined' ? 'available' : 'NOT available');
+        console.log('- Telegram WebApp:', window.Telegram?.WebApp ? 'detected' : 'NOT detected');
+        console.log('- Telegram version:', window.Telegram?.WebApp?.version);
+        console.log('- Telegram platform:', window.Telegram?.WebApp?.platform);
+        console.log('- Telegram initData:', window.Telegram?.WebApp?.initData ? 'exists (' + window.Telegram?.WebApp.initData.length + ' chars)' : 'MISSING');
+        console.log('- Telegram user:', window.Telegram?.WebApp?.initDataUnsafe?.user);
+        console.log('- isTelegramEnvironment:', window.isTelegramEnvironment);
+        console.log('- telegramCloud:', window.telegramCloud ? 'exists' : 'MISSING');
+        console.log('- cloud isAvailable:', window.telegramCloud?.isAvailable);
+        
+        // Тест localStorage
+        try {
+            localStorage.setItem('cosmic_test', 'test_value');
+            const value = localStorage.getItem('cosmic_test');
+            console.log('- localStorage test:', value === 'test_value' ? 'PASS ✅' : 'FAIL ❌');
+            localStorage.removeItem('cosmic_test');
+        } catch (e) {
+            console.error('- localStorage test: ERROR ❌', e.message);
+        }
+        
+        // Тест sessionStorage
+        try {
+            sessionStorage.setItem('cosmic_test', 'test_value');
+            const value = sessionStorage.getItem('cosmic_test');
+            console.log('- sessionStorage test:', value === 'test_value' ? 'PASS ✅' : 'FAIL ❌');
+            sessionStorage.removeItem('cosmic_test');
+        } catch (e) {
+            console.error('- sessionStorage test: ERROR ❌', e.message);
+        }
+        
+        // Проверка gameState
+        console.log('- gameState:', window.gameState ? 'exists' : 'MISSING');
+        console.log('- gameState.coins:', window.gameState?.coins);
+        console.log('- gameState.currentLocation:', window.gameState?.currentLocation);
+    }, 2000);
+});
+</script>
 
 </body>
 </html>
