@@ -2,14 +2,13 @@
 (function() {
 'use strict';
 const SAVE_KEY = 'cosmicClickerSave';
-const AUTO_SAVE_INTERVAL = 30000; // 30 секунд
-const CLOUD_SYNC_COOLDOWN = 5000; // Минимум 5 секунд между облачными синхронизациями
+const AUTO_SAVE_INTERVAL = 30000;
+const CLOUD_SYNC_COOLDOWN = 5000;
 
 let autoSaveTimer = null;
 let lastCloudSync = 0;
 let isSyncing = false;
 
-// ✅ Дефолтное состояние (единый источник правды)
 const DEFAULT_GAME_STATE = {
     coins: 0,
     clickPower: 1,
@@ -51,12 +50,8 @@ const DEFAULT_GAME_METRICS = {
     sessions: 0
 };
 
-/**
- * Глубокое слияние объектов
- */
 function deepMerge(defaults, saved) {
     const result = Object.assign({}, defaults);
-    
     for (const key in saved) {
         if (saved.hasOwnProperty(key)) {
             if (key in defaults) {
@@ -75,20 +70,15 @@ function deepMerge(defaults, saved) {
             }
         }
     }
-    
     return result;
 }
 
-/**
- * Извлечь данные для облачного сохранения
- */
 function extractCloudData() {
     if (!window.gameState) return null;
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
     
-    // Вычисляем разблокированные локации на основе текущего прогресса
     const unlocked = [];
     for (let i = 0; i <= planetOrder.indexOf(window.gameState.currentLocation); i++) {
         unlocked.push(planetOrder[i]);
@@ -104,45 +94,61 @@ function extractCloudData() {
         score: Math.floor(window.gameState.totalDamageDealt || 0),
         unlocked_locations: unlocked,
         bobo_skin: window.gameState.boboSkin || 'default',
-        username: username
+        username: username,
+        // ✅ ОТПРАВЛЯЕМ ВЕСЬ gameState
+        full_game_state: JSON.parse(JSON.stringify(window.gameState))
     };
 }
 
-/**
- * Применить данные из облака к gameState
- */
 function applyCloudData(cloudData) {
     if (!cloudData || !window.gameState) return;
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     
-    // Применяем только если облачные данные лучше локальных
+    // ✅ Если есть полный gameState — используем его
+    if (cloudData.full_game_state && typeof cloudData.full_game_state === 'object') {
+        console.log('☁️ Применяем ПОЛНЫЙ gameState из облака');
+        
+        const currentGameActive = window.gameState.gameActive;
+        const currentGamePaused = window.gameState.gamePaused;
+        
+        window.gameState = deepMerge(DEFAULT_GAME_STATE, cloudData.full_game_state);
+        
+        window.gameState.gameActive = currentGameActive;
+        window.gameState.gamePaused = currentGamePaused;
+        window.gameState.helperActive = false;
+        window.gameState.helperTimeLeft = 0;
+        window.gameState.comboCount = 0;
+        
+        console.log('✅ Полный gameState применён');
+        console.log('💾 coins:', window.gameState.coins);
+        console.log('💾 clickPower:', window.gameState.clickPower);
+        console.log('💾 critChance:', window.gameState.critChance);
+        console.log('💾 clickUpgradeLevel:', window.gameState.clickUpgradeLevel);
+        return;
+    }
+    
+    // Резервный вариант для старых данных
+    console.log('⚠️ Используем старый формат данных');
+    
     if (cloudData.crystals > (window.gameState.coins || 0)) {
         window.gameState.coins = cloudData.crystals;
     }
     
-    // Если уровень выше — переносим на эту планету
     const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
     if (cloudData.level > currentLevel && planetOrder[cloudData.level - 1]) {
         window.gameState.currentLocation = planetOrder[cloudData.level - 1];
     }
     
-    // Общий урон
     if (cloudData.score > (window.gameState.totalDamageDealt || 0)) {
         window.gameState.totalDamageDealt = cloudData.score;
     }
     
-    // Скины
     if (cloudData.bobo_skin) {
         window.gameState.boboSkin = cloudData.bobo_skin;
     }
-    
-    console.log('✅ Облачные данные применены к gameState');
 }
 
-/**
- * 💾 Сохранить игру (localStorage + облако)
- */
 window.saveGame = function() {
     try {
         if (!window.gameState || !window.gameMetrics) {
@@ -157,13 +163,8 @@ window.saveGame = function() {
             gameMetrics: window.gameMetrics
         };
 
-        // 1. Всегда сохраняем локально
         localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-        
-        // 2. Визуальная индикация локального сохранения
         showSaveIndicator('💾', 'Сохранено');
-
-        // 3. Фоновая синхронизация с облаком (неблокирующая)
         cloudSaveAsync();
 
         return true;
@@ -173,9 +174,6 @@ window.saveGame = function() {
     }
 };
 
-/**
- * ☁️ Асинхронное сохранение в облако
- */
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable) return;
     
@@ -187,10 +185,14 @@ async function cloudSaveAsync() {
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
+            console.log('☁️ [CLOUD] Sending data:', cloudData);
             const result = await window.telegramCloud.saveProgress(cloudData);
             if (result?.success) {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Синхронизировано', '#4CAF50');
+                console.log('✅ [CLOUD] Sync successful');
+            } else {
+                console.warn('⚠️ [CLOUD] Sync failed:', result?.error);
             }
         }
     } catch (e) {
@@ -200,9 +202,6 @@ async function cloudSaveAsync() {
     }
 }
 
-/**
- * 📥 Загрузить игру (локально)
- */
 window.loadGame = function() {
     try {
         const raw = localStorage.getItem(SAVE_KEY);
@@ -223,7 +222,6 @@ window.loadGame = function() {
 
         window.gameMetrics.sessions = (window.gameMetrics.sessions || 0) + 1;
 
-        // Сбрасываем временные состояния
         window.gameState.gameActive = false;
         window.gameState.gamePaused = false;
         window.gameState.helperActive = false;
@@ -241,10 +239,6 @@ window.loadGame = function() {
     }
 };
 
-/**
- * ☁️ Инициализация облачной синхронизации (вызывается при старте)
- * ВСЕГДА загружает из облака и применяет данные
- */
 window.cloudInit = async function() {
     if (!window.telegramCloud) {
         console.log('ℹ️ Telegram Cloud не инициализирован');
@@ -252,9 +246,8 @@ window.cloudInit = async function() {
     }
     
     try {
-        console.log('☁️ Инициализация облачной синхронизации...');
+        console.log('️ Инициализация облачной синхронизации...');
         
-        // ВСЕГДА пытаемся загрузить из облака
         const result = await window.telegramCloud.loadProgress();
         console.log('🔍 cloudInit: loadProgress result:', result);
         
@@ -265,24 +258,41 @@ window.cloudInit = async function() {
         }
         
         const cloudData = result.data;
-        console.log('☁️ Облачные данные:', cloudData);
+        console.log('☁️ Облачные данные получены:', {
+            has_full_state: !!cloudData.full_game_state,
+            crystals: cloudData.crystals,
+            level: cloudData.level,
+            score: cloudData.score
+        });
         
-        // ВСЕГДА применяем облачные данные (они авторитетнее)
-        console.log('☁️ Применяем облачные данные...');
-        applyCloudData(cloudData);
+        const cloudScore = cloudData.score || 0;
+        const localScore = window.gameState?.totalDamageDealt || 0;
+        const cloudCrystals = cloudData.crystals || 0;
+        const localCrystals = window.gameState?.coins || 0;
         
-        // Обновляем UI
-        if (window.UI?.updateHUD) window.UI.updateHUD();
-        if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+        console.log('🔍 Сравнение: облако score=' + cloudScore + ' vs локально score=' + localScore);
+        console.log(' Сравнение: облако crystals=' + cloudCrystals + ' vs локально crystals=' + localCrystals);
         
-        // Уведомляем пользователя
-        if (window.showTooltip) {
-            window.showTooltip('☁️ Данные синхронизированы с облаком!');
-            setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
-        }
+        const cloudWins = cloudScore > localScore || cloudCrystals > localCrystals;
         
-        if (window.telegramHaptic?.success) {
-            window.telegramHaptic.success();
+        if (cloudWins) {
+            console.log('️ Облачные данные новее — применяем');
+            applyCloudData(cloudData);
+            
+            if (window.UI?.updateHUD) window.UI.updateHUD();
+            if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+            
+            if (window.showTooltip) {
+                window.showTooltip('☁️ Данные синхронизированы с облаком!');
+                setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
+            }
+            
+            if (window.telegramHaptic?.success) {
+                window.telegramHaptic.success();
+            }
+        } else {
+            console.log('☁️ Локальные данные актуальнее — синхронизируем в облако');
+            await cloudSaveAsync();
         }
         
         console.log('✅ Облачная синхронизация завершена');
@@ -292,58 +302,6 @@ window.cloudInit = async function() {
     }
 };
 
-/**
- * Вспомогательные функции
- */
-function getLocalTimestamp() {
-    try {
-        const raw = localStorage.getItem(SAVE_KEY);
-        if (!raw) return 0;
-        const data = JSON.parse(raw);
-        return data.timestamp || 0;
-    } catch { return 0; }
-}
-
-function getCurrentLocalLevel() {
-    if (!window.gameState || !window.GAME_CONFIG?.planetOrder) return 1;
-    return window.GAME_CONFIG.planetOrder.indexOf(window.gameState.currentLocation) + 1;
-}
-
-/**
- * 🔄 Сброс прогресса
- */
-window.resetGame = function() {
-    window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
-    window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
-    window.gameMetrics.startTime = Date.now();
-    window.gameMetrics.sessions = 1;
-    
-    localStorage.removeItem(SAVE_KEY);
-    
-    // Очистка облака (тихо, без блокировки)
-    if (window.telegramCloud?.saveProgress) {
-        window.telegramCloud.saveProgress({
-            crystals: 0,
-            level: 1,
-            score: 0,
-            unlocked_locations: ['mercury'],
-            bobo_skin: 'default'
-        }).catch(() => {});
-    }
-    
-    console.log('🔄 Прогресс сброшен (локально и в облаке)');
-};
-
-/**
- * Проверить наличие сохранения
- */
-window.hasSave = function() {
-    return localStorage.getItem(SAVE_KEY) !== null;
-};
-
-/**
- * 💾 Визуальный индикатор сохранения
- */
 function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '#4CAF50') {
     let indicator = document.getElementById('saveIndicator');
     if (!indicator) {
@@ -363,9 +321,6 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
     }, 1500);
 }
 
-/**
- * ⏱️ Запуск автосохранения
- */
 function startAutoSave() {
     if (autoSaveTimer) clearInterval(autoSaveTimer);
     autoSaveTimer = setInterval(() => {
@@ -375,9 +330,6 @@ function startAutoSave() {
     }, AUTO_SAVE_INTERVAL);
 }
 
-/**
- * 🚀 Инициализация системы
- */
 function init() {
     if (!window.gameState) {
         window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
@@ -393,14 +345,12 @@ function init() {
 
     startAutoSave();
 
-    // Сохраняем при закрытии вкладки
     window.addEventListener('beforeunload', () => {
         if (window.gameState && window.gameState.gameActive) {
             window.saveGame();
         }
     });
 
-    // Сохраняем при сворачивании на мобильных
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && window.gameState && window.gameState.gameActive) {
             window.saveGame();
