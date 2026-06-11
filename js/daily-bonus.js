@@ -9,23 +9,23 @@ const dailyRewards = [
     { day: 3, type: 'crystals', amount: 200, icon: '💎', name: '200 Кристаллов' },
     { day: 4, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 5, type: 'crystals', amount: 300, icon: '💎', name: '300 Кристаллов' },
-    { day: 6, type: 'boost', boost: 'crystalBoost', icon: '', name: 'Усилитель кристаллов' },
+    { day: 6, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
     { day: 7, type: 'crystals', amount: 500, icon: '🎁', name: 'Бонус недели: 500 💎' },
     { day: 8, type: 'crystals', amount: 400, icon: '💎', name: '400 Кристаллов' },
-    { day: 9, type: 'boost', boost: 'powerSurge', icon: '', name: 'Скачок силы' },
+    { day: 9, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 10, type: 'crystals', amount: 500, icon: '💎', name: '500 Кристаллов' },
     { day: 11, type: 'upgrade', upgrade: 'clickPower', levels: 2, icon: '👊', name: '+2 уровня Силы' },
     { day: 12, type: 'crystals', amount: 600, icon: '💎', name: '600 Кристаллов' },
-    { day: 13, type: 'boost', boost: 'crystalBoost', icon: '', name: 'Усилитель кристаллов' },
+    { day: 13, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
     { day: 14, type: 'crystals', amount: 1000, icon: '🎁', name: 'Бонус 2 недели: 1K 💎' },
     { day: 15, type: 'crystals', amount: 800, icon: '💎', name: '800 Кристаллов' },
     { day: 16, type: 'upgrade', upgrade: 'critChance', levels: 3, icon: '🎯', name: '+3 уровня Крита' },
     { day: 17, type: 'crystals', amount: 900, icon: '💎', name: '900 Кристаллов' },
-    { day: 18, type: 'boost', boost: 'powerSurge', icon: '', name: 'Скачок силы' },
+    { day: 18, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 19, type: 'crystals', amount: 1000, icon: '💎', name: '1000 Кристаллов' },
     { day: 20, type: 'upgrade', upgrade: 'helperDamage', levels: 2, icon: '🤖', name: '+2 уровня Bobo' },
     { day: 21, type: 'crystals', amount: 2000, icon: '🎁', name: 'Бонус 3 недели: 2K 💎' },
-    { day: 22, type: 'crystals', amount: 1500, icon: '', name: '1500 Кристаллов' },
+    { day: 22, type: 'crystals', amount: 1500, icon: '💎', name: '1500 Кристаллов' },
     { day: 23, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 24, type: 'crystals', amount: 2000, icon: '💎', name: '2000 Кристаллов' },
     { day: 25, type: 'upgrade', upgrade: 'critMultiplier', levels: 3, icon: '⭐', name: '+3 уровня Множителя' },
@@ -46,9 +46,12 @@ let dailyBonusData = {
 let timerInterval = null;
 let modalVisible = false;
 
-// ✅ НОВОЕ: флаг, что бонус уже был применён в этой сессии (чтобы не применить дважды)
+// ✅ Флаг для предотвращения двойного применения бонуса в сессии
 let bonusAppliedThisSession = false;
 
+/**
+ * 🚀 Инициализация системы ежедневных бонусов
+ */
 function init() {
     loadDailyBonusData();
     injectStyles();
@@ -57,21 +60,55 @@ function init() {
     startTimer();
 }
 
+/**
+ * 📥 Загрузка данных ежедневного бонуса
+ * ✅ ИСПРАВЛЕНО: приоритет — gameState.dailyBonus (из облака), резерв — localStorage
+ */
 function loadDailyBonusData() {
     try {
+        // ✅ Приоритет 1: из gameState (получено из облака)
+        if (window.gameState && window.gameState.dailyBonus) {
+            dailyBonusData = { 
+                lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
+                currentDay: window.gameState.dailyBonus.currentDay || 1,
+                totalClaimed: window.gameState.dailyBonus.totalClaimed || 0,
+                streak: window.gameState.dailyBonus.streak || 0
+            };
+            console.log('✅ dailyBonusData загружен из облака (gameState):', dailyBonusData);
+            return;
+        }
+        
+        // ✅ Приоритет 2: из localStorage
         const saved = localStorage.getItem('cosmicDailyBonus');
-        if (saved) dailyBonusData = JSON.parse(saved);
+        if (saved) {
+            dailyBonusData = JSON.parse(saved);
+            console.log('✅ dailyBonusData загружен из localStorage:', dailyBonusData);
+        }
     } catch (e) {
-        console.error('Ошибка загрузки ежедневного бонуса:', e);
+        console.error('❌ Ошибка загрузки ежедневного бонуса:', e);
         resetDailyBonus();
     }
 }
 
+/**
+ * 💾 Сохранение данных ежедневного бонуса
+ * ✅ ИСПРАВЛЕНО: сохраняем в localStorage И в gameState.dailyBonus (для синхронизации через облако)
+ */
 function saveDailyBonusData() {
     try {
+        // Сохраняем локально
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
+        
+        // ✅ НОВОЕ: сохраняем в gameState для облачной синхронизации
+        if (window.gameState) {
+            if (!window.gameState.dailyBonus) {
+                window.gameState.dailyBonus = {};
+            }
+            window.gameState.dailyBonus = { ...dailyBonusData };
+            console.log('💾 dailyBonusData сохранён в gameState для облака');
+        }
     } catch (e) {
-        console.error('Ошибка сохранения ежедневного бонуса:', e);
+        console.error('❌ Ошибка сохранения ежедневного бонуса:', e);
     }
 }
 
@@ -129,7 +166,6 @@ function updateTimerDisplay() {
         return;
     }
 
-    // Рассчитываем время до следующего дня
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -445,7 +481,6 @@ function setupEventHandlers() {
         }, { passive: false });
     }
 
-    // Закрытие по клику вне модального окна
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) hideModal();
@@ -525,12 +560,14 @@ function updateModalContent() {
 }
 
 /**
- * ✅ ИСПРАВЛЕНО: получение ежедневного бонуса с защитой от race condition
- * Бонус применяется только после загрузки из облака
+ * 🎁 Получение ежедневного бонуса
+ * ✅ ИСПРАВЛЕНО: блокируем синхронизацию, применяем награду, разблокируем и сохраняем
+ * Это предотвращает race condition между бонусом и облачной синхронизацией
  */
 function claimDailyBonus() {
     const today = new Date().toDateString();
 
+    // Защита от двойного получения
     if (dailyBonusData.lastClaimDate === today) {
         showNotification('⏰ Вы уже получили бонус сегодня!', '#ff9800');
         return;
@@ -543,50 +580,52 @@ function claimDailyBonus() {
 
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
 
-    // ✅ НОВОЕ: проверяем, загружено ли облако
-    const isCloudReady = typeof window.isCloudLoaded === 'boolean' ? window.isCloudLoaded : true;
-    
-    if (!isCloudReady) {
-        console.log('⏳ Облако ещё не загружено, ждём...');
-        showNotification('⏳ Загрузка данных из облака... Бонус будет применён через мгновение', '#4FC3F7');
-        
-        // ✅ НОВОЕ: добавляем операцию в очередь save-system.js
-        if (typeof window.addToBonusQueue === 'function') {
-            window.addToBonusQueue(() => {
-                _applyAndSaveBonus(reward, today);
-            });
-        } else {
-            // Резервный вариант: ждём 3 секунды и применяем
-            setTimeout(() => {
-                _applyAndSaveBonus(reward, today);
-            }, 3000);
-        }
-        return;
+    // ✅ ШАГ 1: БЛОКИРУЕМ синхронизацию на время применения бонуса
+    if (typeof window.lockSync === 'function') {
+        window.lockSync();
+        console.log('🔒 [BONUS] Синхронизация заблокирована');
     }
 
-    // Облако загружено — применяем сразу
+    // ✅ ШАГ 2: Применяем награду и обновляем данные
     _applyAndSaveBonus(reward, today);
+
+    // ✅ ШАГ 3: РАЗБЛОКИРУЕМ синхронизацию после небольшой задержки
+    // Это позволяет saveGame() выполниться синхронно с актуальными данными
+    setTimeout(() => {
+        if (typeof window.unlockSync === 'function') {
+            window.unlockSync();
+            console.log('🔓 [BONUS] Синхронизация разблокирована');
+        }
+    }, 300);
 }
 
 /**
- * ✅ НОВОЕ: внутренняя функция применения бонуса
- * Вызывается либо сразу, либо из очереди после загрузки облака
+ * ✅ Внутренняя функция: применение награды и сохранение
+ * Применяет все типы бонусов (кристаллы, бусты, улучшения)
  */
 function _applyAndSaveBonus(reward, today) {
-    // Применяем награду
+    console.log(`🎁 [BONUS] Применяем награду дня ${dailyBonusData.currentDay}:`, reward.name);
+    
+    // Применяем награду к gameState
     applyReward(reward);
 
     // Обновляем данные бонуса
     dailyBonusData.lastClaimDate = today;
     dailyBonusData.streak++;
     dailyBonusData.totalClaimed++;
-    if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
+    if (dailyBonusData.currentDay < 30) {
+        dailyBonusData.currentDay++;
+    }
 
+    // ✅ Сохраняем данные (в localStorage + в gameState.dailyBonus для облака)
     saveDailyBonusData();
+    
+    // Обновляем UI
     updateModalContent();
     updateWelcomeButton();
     showRewardNotification(reward);
 
+    // Звук и тактильная отдача
     const sound = document.getElementById('upgradeSound');
     if (sound) {
         sound.currentTime = 0;
@@ -599,24 +638,36 @@ function _applyAndSaveBonus(reward, today) {
         navigator.vibrate([100, 50, 100]);
     }
 
-    // ✅ НОВОЕ: сохраняем игру с небольшой задержкой, чтобы gameState успел обновиться
+    // ✅ ШАГ 4: Сохраняем игру сразу (синхронизация заблокирована, поэтому не будет race condition)
     if (typeof window.saveGame === 'function') {
-        setTimeout(() => {
-            console.log(' [BONUS] Сохранение после получения бонуса...');
-            window.saveGame();
-        }, 200);
+        console.log('💾 [BONUS] Сохранение после получения бонуса...');
+        window.saveGame();
     }
 }
 
+/**
+ * 🎯 Применение награды к gameState
+ * ✅ Поддерживает ВСЕ типы бонусов: crystals, boost, upgrade
+ */
 function applyReward(reward) {
-    if (!window.gameState) return;
-    if (!window.gameState.shopItems) window.gameState.shopItems = {};
+    if (!window.gameState) {
+        console.warn('⚠️ [BONUS] gameState не инициализирован');
+        return;
+    }
+    
+    if (!window.gameState.shopItems) {
+        window.gameState.shopItems = {};
+    }
 
     switch (reward.type) {
         case 'crystals':
-            window.gameState.coins += reward.amount;
+            // Кристаллы
+            window.gameState.coins = (window.gameState.coins || 0) + reward.amount;
+            console.log(`💎 [BONUS] +${reward.amount} кристаллов, итого: ${window.gameState.coins}`);
             break;
+            
         case 'boost':
+            // Бустеры (timeWarp, crystalBoost, powerSurge)
             const duration = window.shopSystem?.config?.[reward.boost]?.duration || getBoostDuration(reward.boost);
             if (!window.gameState.shopItems[reward.boost]) {
                 window.gameState.shopItems[reward.boost] = { purchased: false, active: false, timeLeft: 0 };
@@ -624,34 +675,53 @@ function applyReward(reward) {
             window.gameState.shopItems[reward.boost].active = true;
             window.gameState.shopItems[reward.boost].timeLeft = duration;
             window.gameState.shopItems[reward.boost].purchased = true;
-            if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
-            break;
-        case 'upgrade':
-            if (reward.upgrade === 'all') {
-                window.gameState.clickUpgradeLevel += reward.levels;
-                window.gameState.critChanceUpgradeLevel += reward.levels;
-                window.gameState.critMultiplierUpgradeLevel += reward.levels;
-                window.gameState.helperUpgradeLevel += reward.levels;
-            } else if (reward.upgrade === 'clickPower') {
-                window.gameState.clickUpgradeLevel += reward.levels;
-            } else if (reward.upgrade === 'critChance') {
-                window.gameState.critChanceUpgradeLevel += reward.levels;
-                window.gameState.critChance = Math.min(1.0, 0.001 + window.gameState.critChanceUpgradeLevel * 0.001);
-            } else if (reward.upgrade === 'critMultiplier') {
-                window.gameState.critMultiplierUpgradeLevel += reward.levels;
-                window.gameState.critMultiplier = 2.0 + window.gameState.critMultiplierUpgradeLevel * 0.2;
-            } else if (reward.upgrade === 'helperDamage') {
-                window.gameState.helperUpgradeLevel += reward.levels;
+            console.log(`⚡ [BONUS] Активирован бустер ${reward.boost} на ${duration}мс`);
+            
+            if (window.shopSystem?.updateShopDisplay) {
+                window.shopSystem.updateShopDisplay();
             }
+            break;
+            
+        case 'upgrade':
+            // Улучшения (clickPower, critChance, critMultiplier, helperDamage, all)
+            if (reward.upgrade === 'all') {
+                window.gameState.clickUpgradeLevel = (window.gameState.clickUpgradeLevel || 0) + reward.levels;
+                window.gameState.critChanceUpgradeLevel = (window.gameState.critChanceUpgradeLevel || 0) + reward.levels;
+                window.gameState.critMultiplierUpgradeLevel = (window.gameState.critMultiplierUpgradeLevel || 0) + reward.levels;
+                window.gameState.helperUpgradeLevel = (window.gameState.helperUpgradeLevel || 0) + reward.levels;
+                console.log(`🚀 [BONUS] +${reward.levels} ко ВСЕМ улучшениям`);
+            } else if (reward.upgrade === 'clickPower') {
+                window.gameState.clickUpgradeLevel = (window.gameState.clickUpgradeLevel || 0) + reward.levels;
+                console.log(`👊 [BONUS] +${reward.levels} к силе клика`);
+            } else if (reward.upgrade === 'critChance') {
+                window.gameState.critChanceUpgradeLevel = (window.gameState.critChanceUpgradeLevel || 0) + reward.levels;
+                window.gameState.critChance = Math.min(1.0, 0.001 + window.gameState.critChanceUpgradeLevel * 0.001);
+                console.log(`🎯 [BONUS] +${reward.levels} к шансу крита`);
+            } else if (reward.upgrade === 'critMultiplier') {
+                window.gameState.critMultiplierUpgradeLevel = (window.gameState.critMultiplierUpgradeLevel || 0) + reward.levels;
+                window.gameState.critMultiplier = 2.0 + window.gameState.critMultiplierUpgradeLevel * 0.2;
+                console.log(`⭐ [BONUS] +${reward.levels} к множителю крита`);
+            } else if (reward.upgrade === 'helperDamage') {
+                window.gameState.helperUpgradeLevel = (window.gameState.helperUpgradeLevel || 0) + reward.levels;
+                console.log(`🤖 [BONUS] +${reward.levels} к уровню Bobo`);
+            }
+            
+            // Пересчитываем силу клика после улучшений
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
             }
             break;
     }
 
+    // Обновляем HUD и кнопки улучшений
     if (window.gameFunctions) {
         if (window.gameFunctions.updateHUD) window.gameFunctions.updateHUD();
         if (window.gameFunctions.updateUpgradeButtons) window.gameFunctions.updateUpgradeButtons();
+    }
+    
+    if (window.UI) {
+        if (window.UI.updateHUD) window.UI.updateHUD();
+        if (window.UI.updateUpgradeButtons) window.UI.updateUpgradeButtons();
     }
 }
 
@@ -676,7 +746,9 @@ function showNotification(text, color) {
     setTimeout(() => {
         notif.style.transition = 'opacity 0.5s';
         notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
+        setTimeout(() => { 
+            if (notif.parentNode) notif.parentNode.removeChild(notif); 
+        }, 500);
     }, 2500);
 }
 
@@ -701,21 +773,30 @@ function showRewardNotification(reward) {
         notif.style.transition = 'all 0.5s ease-in';
         notif.style.top = '-100px';
         notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
+        setTimeout(() => { 
+            if (notif.parentNode) notif.parentNode.removeChild(notif); 
+        }, 500);
     }, 3000);
 }
 
+/**
+ * ✅ Проверка при загрузке: сброс серии, если пропущен день
+ */
 function checkOnLoad() {
     const today = new Date().toDateString();
     if (dailyBonusData.lastClaimDate) {
         const lastDate = new Date(dailyBonusData.lastClaimDate);
         const todayDate = new Date(today);
         const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
-        if (diffDays > 1) dailyBonusData.streak = 0;
+        if (diffDays > 1) {
+            console.log(`⚠️ Пропущено ${diffDays - 1} дней, сбрасываем серию`);
+            dailyBonusData.streak = 0;
+            saveDailyBonusData();
+        }
     }
-    saveDailyBonusData();
 }
 
+// Экспортируем систему
 window.dailyBonusSystem = {
     init,
     claimDailyBonus,
@@ -729,9 +810,16 @@ window.dailyBonusSystem = {
     })
 };
 
+// Запуск с небольшой задержкой (ждём загрузки gameState из облака)
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); checkOnLoad(); }, 500));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { 
+        init(); 
+        checkOnLoad(); 
+    }, 800));
 } else {
-    setTimeout(() => { init(); checkOnLoad(); }, 500);
+    setTimeout(() => { 
+        init(); 
+        checkOnLoad(); 
+    }, 800);
 }
 })();
