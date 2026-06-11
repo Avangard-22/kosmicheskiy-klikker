@@ -2,7 +2,6 @@
 (function() {
 'use strict';
 
-// ✅ Конфигурация наград на 30 дней
 const dailyRewards = [
     { day: 1, type: 'crystals', amount: 100, icon: '💎', name: '100 Кристаллов' },
     { day: 2, type: 'crystals', amount: 150, icon: '💎', name: '150 Кристаллов' },
@@ -46,12 +45,6 @@ let dailyBonusData = {
 let timerInterval = null;
 let modalVisible = false;
 
-// ✅ Флаг для предотвращения двойного применения бонуса в сессии
-let bonusAppliedThisSession = false;
-
-/**
- * 🚀 Инициализация системы ежедневных бонусов
- */
 function init() {
     loadDailyBonusData();
     injectStyles();
@@ -62,19 +55,23 @@ function init() {
 
 /**
  * 📥 Загрузка данных ежедневного бонуса
- * ✅ ИСПРАВЛЕНО: приоритет — gameState.dailyBonus (из облака), резерв — localStorage
+ * ✅ ИСПРАВЛЕНО: приоритет у gameState.dailyBonus (из облака)
  */
 function loadDailyBonusData() {
     try {
         // ✅ Приоритет 1: из gameState (получено из облака)
-        if (window.gameState && window.gameState.dailyBonus) {
-            dailyBonusData = { 
+        if (window.gameState && window.gameState.dailyBonus && 
+            window.gameState.dailyBonus.lastClaimDate !== undefined) {
+            dailyBonusData = {
                 lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
                 currentDay: window.gameState.dailyBonus.currentDay || 1,
                 totalClaimed: window.gameState.dailyBonus.totalClaimed || 0,
                 streak: window.gameState.dailyBonus.streak || 0
             };
-            console.log('✅ dailyBonusData загружен из облака (gameState):', dailyBonusData);
+            console.log('✅ dailyBonusData загружен из gameState (облако):', dailyBonusData);
+            
+            // ✅ Синхронизируем в localStorage для резерва
+            localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
             return;
         }
         
@@ -83,6 +80,11 @@ function loadDailyBonusData() {
         if (saved) {
             dailyBonusData = JSON.parse(saved);
             console.log('✅ dailyBonusData загружен из localStorage:', dailyBonusData);
+            
+            // ✅ Синхронизируем в gameState
+            if (window.gameState) {
+                window.gameState.dailyBonus = { ...dailyBonusData };
+            }
         }
     } catch (e) {
         console.error('❌ Ошибка загрузки ежедневного бонуса:', e);
@@ -92,18 +94,15 @@ function loadDailyBonusData() {
 
 /**
  * 💾 Сохранение данных ежедневного бонуса
- * ✅ ИСПРАВЛЕНО: сохраняем в localStorage И в gameState.dailyBonus (для синхронизации через облако)
+ * ✅ ИСПРАВЛЕНО: сохраняем в localStorage И в gameState.dailyBonus
  */
 function saveDailyBonusData() {
     try {
         // Сохраняем локально
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
         
-        // ✅ НОВОЕ: сохраняем в gameState для облачной синхронизации
+        // ✅ Сохраняем в gameState для облачной синхронизации
         if (window.gameState) {
-            if (!window.gameState.dailyBonus) {
-                window.gameState.dailyBonus = {};
-            }
             window.gameState.dailyBonus = { ...dailyBonusData };
             console.log('💾 dailyBonusData сохранён в gameState для облака');
         }
@@ -138,10 +137,8 @@ function updateWelcomeButton() {
     }
 }
 
-// ✅ Таймер обратного отсчёта
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
-    
     timerInterval = setInterval(() => {
         updateTimerDisplay();
     }, 1000);
@@ -186,267 +183,38 @@ function injectStyles() {
     const style = document.createElement('style');
     style.id = 'daily-bonus-welcome-styles';
     style.textContent = `
-        .daily-bonus-container {
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .daily-bonus-welcome-btn {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
-            border: 2px solid #FFD700;
-            border-radius: 15px;
-            padding: 15px 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            min-width: 200px;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-        }
-
-        .daily-bonus-welcome-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
-        }
-
-        .daily-bonus-welcome-btn:active {
-            transform: scale(0.95);
-        }
-
-        .daily-bonus-welcome-btn.available {
-            animation: dailyBonusPulse 2s infinite;
-        }
-
-        .daily-bonus-welcome-btn.claimed {
-            opacity: 0.6;
-            border-color: #666;
-            background: rgba(100, 100, 100, 0.2);
-        }
-
-        .daily-bonus-icon {
-            font-size: 3em;
-            filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.6));
-        }
-
-        .daily-bonus-label {
-            color: #FFD700;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            font-size: 1em;
-        }
-
-        .daily-bonus-timer {
-            font-family: 'Orbitron', monospace;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        @keyframes dailyBonusPulse {
-            0%, 100% { 
-                transform: scale(1); 
-                box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-            }
-            50% { 
-                transform: scale(1.05); 
-                box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6);
-            }
-        }
-
-        /* Модальное окно */
-        .daily-bonus-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 3000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .daily-bonus-modal.visible {
-            display: flex;
-            opacity: 1;
-        }
-
-        .daily-bonus-modal-content {
-            background: linear-gradient(135deg, rgba(20, 20, 40, 0.98), rgba(10, 10, 30, 0.98));
-            border: 3px solid #FFD700;
-            border-radius: 20px;
-            padding: 25px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
-            position: relative;
-            transform: scale(0.9);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .daily-bonus-modal.visible .daily-bonus-modal-content {
-            transform: scale(1);
-        }
-
-        .daily-bonus-close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
-            font-size: 1.5em;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .daily-bonus-close-btn:hover {
-            background: rgba(255, 0, 0, 0.3);
-        }
-
-        .daily-bonus-modal-title {
-            text-align: center;
-            color: #FFD700;
-            font-size: 1.6em;
-            margin: 0 0 15px 0;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .daily-bonus-streak {
-            text-align: center;
-            color: #fff;
-            font-size: 1em;
-            margin-bottom: 20px;
-            padding: 12px;
-            background: rgba(255, 215, 0, 0.1);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .daily-bonus-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .daily-bonus-cell {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 12px 8px;
-            text-align: center;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s;
-            cursor: default;
-        }
-
-        .daily-bonus-cell.claimed {
-            opacity: 0.5;
-            filter: grayscale(100%);
-            border-color: #4CAF50;
-        }
-
-        .daily-bonus-cell.current {
-            border: 2px solid #FFD700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-            animation: dailyBonusPulse 2s infinite;
-            background: rgba(255, 215, 0, 0.1);
-        }
-
-        .daily-bonus-cell.locked {
-            opacity: 0.4;
-        }
-
-        .daily-bonus-cell-icon {
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .daily-bonus-cell-day {
-            font-size: 0.75em;
-            color: #FFD700;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .daily-bonus-cell-name {
-            font-size: 0.65em;
-            color: #fff;
-            line-height: 1.2;
-        }
-
-        .daily-bonus-claim-btn {
-            width: 100%;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.5);
-            transition: all 0.2s;
-            min-height: 50px;
-        }
-
-        .daily-bonus-claim-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
-        }
-
-        .daily-bonus-claim-btn:active:not(:disabled) {
-            transform: scale(0.98);
-        }
-
-        .daily-bonus-claim-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        @media (max-width: 480px) {
-            .daily-bonus-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
-            .daily-bonus-cell {
-                padding: 10px 6px;
-            }
-            .daily-bonus-cell-icon {
-                font-size: 1.6em;
-            }
-            .daily-bonus-cell-name {
-                font-size: 0.6em;
-            }
-            .daily-bonus-welcome-btn {
-                min-width: 160px;
-                padding: 12px 20px;
-            }
-            .daily-bonus-icon {
-                font-size: 2.5em;
-            }
-        }
-
-        @keyframes dailyBonusSlideDown {
-            from { top: -100px; opacity: 0; transform: translateX(-50%) scale(0.8); }
-            to { top: 20%; opacity: 1; transform: translateX(-50%) scale(1); }
-        }
+        .daily-bonus-container { margin: 20px 0; display: flex; justify-content: center; }
+        .daily-bonus-welcome-btn { background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2)); border: 2px solid #FFD700; border-radius: 15px; padding: 15px 30px; cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 200px; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+        .daily-bonus-welcome-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5); }
+        .daily-bonus-welcome-btn:active { transform: scale(0.95); }
+        .daily-bonus-welcome-btn.available { animation: dailyBonusPulse 2s infinite; }
+        .daily-bonus-welcome-btn.claimed { opacity: 0.6; border-color: #666; background: rgba(100, 100, 100, 0.2); }
+        .daily-bonus-icon { font-size: 3em; filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.6)); }
+        .daily-bonus-label { color: #FFD700; font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1em; }
+        .daily-bonus-timer { font-family: 'Orbitron', monospace; font-size: 0.9em; font-weight: bold; }
+        @keyframes dailyBonusPulse { 0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); } 50% { transform: scale(1.05); box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6); } }
+        .daily-bonus-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 3000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+        .daily-bonus-modal.visible { display: flex; opacity: 1; }
+        .daily-bonus-modal-content { background: linear-gradient(135deg, rgba(20, 20, 40, 0.98), rgba(10, 10, 30, 0.98)); border: 3px solid #FFD700; border-radius: 20px; padding: 25px; width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; box-shadow: 0 0 50px rgba(255, 215, 0, 0.4); position: relative; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .daily-bonus-modal.visible .daily-bonus-modal-content { transform: scale(1); }
+        .daily-bonus-close-btn { position: absolute; top: 15px; right: 15px; background: rgba(255, 255, 255, 0.1); border: none; color: #fff; font-size: 1.5em; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .daily-bonus-close-btn:hover { background: rgba(255, 0, 0, 0.3); }
+        .daily-bonus-modal-title { text-align: center; color: #FFD700; font-size: 1.6em; margin: 0 0 15px 0; font-family: 'Orbitron', sans-serif; }
+        .daily-bonus-streak { text-align: center; color: #fff; font-size: 1em; margin-bottom: 20px; padding: 12px; background: rgba(255, 215, 0, 0.1); border-radius: 10px; border: 1px solid rgba(255, 215, 0, 0.3); }
+        .daily-bonus-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .daily-bonus-cell { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px 8px; text-align: center; border: 2px solid rgba(255, 255, 255, 0.1); transition: all 0.3s; cursor: default; }
+        .daily-bonus-cell.claimed { opacity: 0.5; filter: grayscale(100%); border-color: #4CAF50; }
+        .daily-bonus-cell.current { border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); animation: dailyBonusPulse 2s infinite; background: rgba(255, 215, 0, 0.1); }
+        .daily-bonus-cell.locked { opacity: 0.4; }
+        .daily-bonus-cell-icon { font-size: 2em; margin-bottom: 5px; }
+        .daily-bonus-cell-day { font-size: 0.75em; color: #FFD700; font-weight: bold; margin-bottom: 3px; }
+        .daily-bonus-cell-name { font-size: 0.65em; color: #fff; line-height: 1.2; }
+        .daily-bonus-claim-btn { width: 100%; padding: 15px 30px; font-size: 1.2em; background: linear-gradient(135deg, #4CAF50, #45a049); color: white; border: none; border-radius: 12px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-weight: bold; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.5); transition: all 0.2s; min-height: 50px; }
+        .daily-bonus-claim-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6); }
+        .daily-bonus-claim-btn:active:not(:disabled) { transform: scale(0.98); }
+        .daily-bonus-claim-btn:disabled { background: #666; cursor: not-allowed; opacity: 0.6; }
+        @media (max-width: 480px) { .daily-bonus-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } .daily-bonus-cell { padding: 10px 6px; } .daily-bonus-cell-icon { font-size: 1.6em; } .daily-bonus-cell-name { font-size: 0.6em; } .daily-bonus-welcome-btn { min-width: 160px; padding: 12px 20px; } .daily-bonus-icon { font-size: 2.5em; } }
+        @keyframes dailyBonusSlideDown { from { top: -100px; opacity: 0; transform: translateX(-50%) scale(0.8); } to { top: 20%; opacity: 1; transform: translateX(-50%) scale(1); } }
     `;
     document.head.appendChild(style);
 }
@@ -459,39 +227,24 @@ function setupEventHandlers() {
 
     if (welcomeBtn) {
         welcomeBtn.addEventListener('click', showModal);
-        welcomeBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            showModal();
-        }, { passive: false });
+        welcomeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); showModal(); }, { passive: false });
     }
-
     if (closeBtn) {
         closeBtn.addEventListener('click', hideModal);
-        closeBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            hideModal();
-        }, { passive: false });
+        closeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); hideModal(); }, { passive: false });
     }
-
     if (claimBtn) {
         claimBtn.addEventListener('click', claimDailyBonus);
-        claimBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            claimDailyBonus();
-        }, { passive: false });
+        claimBtn.addEventListener('touchstart', (e) => { e.preventDefault(); claimDailyBonus(); }, { passive: false });
     }
-
     if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) hideModal();
-        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
     }
 }
 
 function showModal() {
     const modal = document.getElementById('dailyBonusModal');
     if (!modal) return;
-
     updateModalContent();
     modal.classList.add('visible');
     modalVisible = true;
@@ -500,7 +253,6 @@ function showModal() {
 function hideModal() {
     const modal = document.getElementById('dailyBonusModal');
     if (!modal) return;
-
     modal.classList.remove('visible');
     modalVisible = false;
 }
@@ -509,7 +261,6 @@ function updateModalContent() {
     const grid = document.getElementById('dailyBonusGrid');
     const streakInfo = document.getElementById('dailyBonusStreak');
     const claimBtn = document.getElementById('dailyBonusClaimBtn');
-
     if (!grid || !streakInfo || !claimBtn) return;
 
     grid.innerHTML = '';
@@ -519,31 +270,19 @@ function updateModalContent() {
         const day = index + 1;
         const cell = document.createElement('div');
         cell.className = 'daily-bonus-cell';
-
         const isClaimed = dailyBonusData.currentDay > day;
         const isCurrent = dailyBonusData.currentDay === day;
 
         if (isClaimed) {
             cell.classList.add('claimed');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">✅</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-            `;
+            cell.innerHTML = `<div class="daily-bonus-cell-icon">✅</div><div class="daily-bonus-cell-day">День ${day}</div>`;
         } else if (isCurrent) {
             cell.classList.add('current');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">${reward.icon}</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-                <div class="daily-bonus-cell-name">${reward.name}</div>
-            `;
+            cell.innerHTML = `<div class="daily-bonus-cell-icon">${reward.icon}</div><div class="daily-bonus-cell-day">День ${day}</div><div class="daily-bonus-cell-name">${reward.name}</div>`;
         } else {
             cell.classList.add('locked');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">🔒</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-            `;
+            cell.innerHTML = `<div class="daily-bonus-cell-icon">🔒</div><div class="daily-bonus-cell-day">День ${day}</div>`;
         }
-
         grid.appendChild(cell);
     });
 
@@ -561,13 +300,11 @@ function updateModalContent() {
 
 /**
  * 🎁 Получение ежедневного бонуса
- * ✅ ИСПРАВЛЕНО: блокируем синхронизацию, применяем награду, разблокируем и сохраняем
- * Это предотвращает race condition между бонусом и облачной синхронизацией
+ * ✅ ИСПРАВЛЕНО: блокируем синхронизацию, ждём загрузки облака
  */
 function claimDailyBonus() {
     const today = new Date().toDateString();
 
-    // Защита от двойного получения
     if (dailyBonusData.lastClaimDate === today) {
         showNotification('⏰ Вы уже получили бонус сегодня!', '#ff9800');
         return;
@@ -580,94 +317,92 @@ function claimDailyBonus() {
 
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
 
-    // ✅ ШАГ 1: БЛОКИРУЕМ синхронизацию на время применения бонуса
-    if (typeof window.lockSync === 'function') {
-        window.lockSync();
-        console.log('🔒 [BONUS] Синхронизация заблокирована');
+    // ✅ ПРОВЕРКА: загружено ли облако
+    const isCloudReady = window.isCloudLoaded === true;
+    
+    if (!isCloudReady) {
+        console.log('⏳ Облако ещё не загружено, добавляем в очередь');
+        showNotification('⏳ Загрузка данных из облака...', '#4FC3F7');
+        
+        if (typeof window.addToBonusQueue === 'function') {
+            window.addToBonusQueue(() => {
+                _applyAndSaveBonus(reward, today);
+            });
+        } else {
+            setTimeout(() => { _applyAndSaveBonus(reward, today); }, 3000);
+        }
+        return;
     }
 
-    // ✅ ШАГ 2: Применяем награду и обновляем данные
+    // Облако загружено — применяем сразу с блокировкой
     _applyAndSaveBonus(reward, today);
-
-    // ✅ ШАГ 3: РАЗБЛОКИРУЕМ синхронизацию после небольшой задержки
-    // Это позволяет saveGame() выполниться синхронно с актуальными данными
-    setTimeout(() => {
-        if (typeof window.unlockSync === 'function') {
-            window.unlockSync();
-            console.log('🔓 [BONUS] Синхронизация разблокирована');
-        }
-    }, 300);
 }
 
 /**
- * ✅ Внутренняя функция: применение награды и сохранение
- * Применяет все типы бонусов (кристаллы, бусты, улучшения)
+ * ✅ Внутренняя функция: применение бонуса с блокировкой синхронизации
  */
 function _applyAndSaveBonus(reward, today) {
     console.log(`🎁 [BONUS] Применяем награду дня ${dailyBonusData.currentDay}:`, reward.name);
     
-    // Применяем награду к gameState
-    applyReward(reward);
-
-    // Обновляем данные бонуса
-    dailyBonusData.lastClaimDate = today;
-    dailyBonusData.streak++;
-    dailyBonusData.totalClaimed++;
-    if (dailyBonusData.currentDay < 30) {
-        dailyBonusData.currentDay++;
+    // ✅ БЛОКИРУЕМ синхронизацию
+    if (typeof window.lockSync === 'function') {
+        window.lockSync();
     }
 
-    // ✅ Сохраняем данные (в localStorage + в gameState.dailyBonus для облака)
-    saveDailyBonusData();
-    
-    // Обновляем UI
-    updateModalContent();
-    updateWelcomeButton();
-    showRewardNotification(reward);
+    try {
+        // Применяем награду
+        applyReward(reward);
 
-    // Звук и тактильная отдача
-    const sound = document.getElementById('upgradeSound');
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
-    }
+        // Обновляем данные бонуса
+        dailyBonusData.lastClaimDate = today;
+        dailyBonusData.streak++;
+        dailyBonusData.totalClaimed++;
+        if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
 
-    if (window.telegramHaptic && window.telegramHaptic.success) {
-        window.telegramHaptic.success();
-    } else if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-    }
+        // ✅ Сохраняем (в localStorage + в gameState.dailyBonus)
+        saveDailyBonusData();
+        
+        updateModalContent();
+        updateWelcomeButton();
+        showRewardNotification(reward);
 
-    // ✅ ШАГ 4: Сохраняем игру сразу (синхронизация заблокирована, поэтому не будет race condition)
-    if (typeof window.saveGame === 'function') {
-        console.log('💾 [BONUS] Сохранение после получения бонуса...');
-        window.saveGame();
+        const sound = document.getElementById('upgradeSound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        }
+
+        if (window.telegramHaptic && window.telegramHaptic.success) {
+            window.telegramHaptic.success();
+        } else if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+
+        // ✅ Сохраняем игру (синхронизация заблокирована, race condition невозможен)
+        if (typeof window.saveGame === 'function') {
+            console.log('💾 [BONUS] Сохранение после получения бонуса...');
+            window.saveGame();
+        }
+    } finally {
+        // ✅ РАЗБЛОКИРУЕМ синхронизацию
+        setTimeout(() => {
+            if (typeof window.unlockSync === 'function') {
+                window.unlockSync();
+            }
+        }, 300);
     }
 }
 
-/**
- * 🎯 Применение награды к gameState
- * ✅ Поддерживает ВСЕ типы бонусов: crystals, boost, upgrade
- */
 function applyReward(reward) {
-    if (!window.gameState) {
-        console.warn('⚠️ [BONUS] gameState не инициализирован');
-        return;
-    }
-    
-    if (!window.gameState.shopItems) {
-        window.gameState.shopItems = {};
-    }
+    if (!window.gameState) return;
+    if (!window.gameState.shopItems) window.gameState.shopItems = {};
 
     switch (reward.type) {
         case 'crystals':
-            // Кристаллы
             window.gameState.coins = (window.gameState.coins || 0) + reward.amount;
             console.log(`💎 [BONUS] +${reward.amount} кристаллов, итого: ${window.gameState.coins}`);
             break;
-            
         case 'boost':
-            // Бустеры (timeWarp, crystalBoost, powerSurge)
             const duration = window.shopSystem?.config?.[reward.boost]?.duration || getBoostDuration(reward.boost);
             if (!window.gameState.shopItems[reward.boost]) {
                 window.gameState.shopItems[reward.boost] = { purchased: false, active: false, timeLeft: 0 };
@@ -676,14 +411,9 @@ function applyReward(reward) {
             window.gameState.shopItems[reward.boost].timeLeft = duration;
             window.gameState.shopItems[reward.boost].purchased = true;
             console.log(`⚡ [BONUS] Активирован бустер ${reward.boost} на ${duration}мс`);
-            
-            if (window.shopSystem?.updateShopDisplay) {
-                window.shopSystem.updateShopDisplay();
-            }
+            if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
             break;
-            
         case 'upgrade':
-            // Улучшения (clickPower, critChance, critMultiplier, helperDamage, all)
             if (reward.upgrade === 'all') {
                 window.gameState.clickUpgradeLevel = (window.gameState.clickUpgradeLevel || 0) + reward.levels;
                 window.gameState.critChanceUpgradeLevel = (window.gameState.critChanceUpgradeLevel || 0) + reward.levels;
@@ -692,37 +422,25 @@ function applyReward(reward) {
                 console.log(`🚀 [BONUS] +${reward.levels} ко ВСЕМ улучшениям`);
             } else if (reward.upgrade === 'clickPower') {
                 window.gameState.clickUpgradeLevel = (window.gameState.clickUpgradeLevel || 0) + reward.levels;
-                console.log(`👊 [BONUS] +${reward.levels} к силе клика`);
             } else if (reward.upgrade === 'critChance') {
                 window.gameState.critChanceUpgradeLevel = (window.gameState.critChanceUpgradeLevel || 0) + reward.levels;
                 window.gameState.critChance = Math.min(1.0, 0.001 + window.gameState.critChanceUpgradeLevel * 0.001);
-                console.log(`🎯 [BONUS] +${reward.levels} к шансу крита`);
             } else if (reward.upgrade === 'critMultiplier') {
                 window.gameState.critMultiplierUpgradeLevel = (window.gameState.critMultiplierUpgradeLevel || 0) + reward.levels;
                 window.gameState.critMultiplier = 2.0 + window.gameState.critMultiplierUpgradeLevel * 0.2;
-                console.log(`⭐ [BONUS] +${reward.levels} к множителю крита`);
             } else if (reward.upgrade === 'helperDamage') {
                 window.gameState.helperUpgradeLevel = (window.gameState.helperUpgradeLevel || 0) + reward.levels;
-                console.log(`🤖 [BONUS] +${reward.levels} к уровню Bobo`);
             }
-            
-            // Пересчитываем силу клика после улучшений
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
             }
             break;
     }
 
-    // Обновляем HUD и кнопки улучшений
-    if (window.gameFunctions) {
-        if (window.gameFunctions.updateHUD) window.gameFunctions.updateHUD();
-        if (window.gameFunctions.updateUpgradeButtons) window.gameFunctions.updateUpgradeButtons();
-    }
-    
-    if (window.UI) {
-        if (window.UI.updateHUD) window.UI.updateHUD();
-        if (window.UI.updateUpgradeButtons) window.UI.updateUpgradeButtons();
-    }
+    if (window.UI?.updateHUD) window.UI.updateHUD();
+    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+    if (window.gameFunctions?.updateHUD) window.gameFunctions.updateHUD();
+    if (window.gameFunctions?.updateUpgradeButtons) window.gameFunctions.updateUpgradeButtons();
 }
 
 function getBoostDuration(boostId) {
@@ -733,55 +451,28 @@ function getBoostDuration(boostId) {
 function showNotification(text, color) {
     const notif = document.createElement('div');
     notif.textContent = text;
-    notif.style.cssText = `
-        position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
-        background: ${color || '#4CAF50'}; color: #fff;
-        padding: 15px 25px; border-radius: 12px; z-index: 4000;
-        text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 2px solid #fff;
-        animation: dailyBonusSlideDown 0.5s ease-out;
-        max-width: 90%; width: 350px; pointer-events: none;
-    `;
+    notif.style.cssText = `position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: ${color || '#4CAF50'}; color: #fff; padding: 15px 25px; border-radius: 12px; z-index: 4000; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 2px solid #fff; animation: dailyBonusSlideDown 0.5s ease-out; max-width: 90%; width: 350px; pointer-events: none;`;
     document.body.appendChild(notif);
     setTimeout(() => {
         notif.style.transition = 'opacity 0.5s';
         notif.style.opacity = '0';
-        setTimeout(() => { 
-            if (notif.parentNode) notif.parentNode.removeChild(notif); 
-        }, 500);
+        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
     }, 2500);
 }
 
 function showRewardNotification(reward) {
     const notif = document.createElement('div');
-    notif.style.cssText = `
-        position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
-        background: linear-gradient(135deg, rgba(255,215,0,0.95), rgba(255,140,0,0.95));
-        color: #000; padding: 20px 30px; border-radius: 15px; z-index: 4000;
-        text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;
-        box-shadow: 0 10px 40px rgba(255,215,0,0.5); border: 3px solid #fff;
-        animation: dailyBonusSlideDown 0.5s ease-out; max-width: 90%; width: 400px;
-    `;
-    notif.innerHTML = `
-        <div style="font-size:2em;margin-bottom:10px;">${reward.icon}</div>
-        <div style="font-size:1.3em;margin-bottom:5px;">🎁 ЕЖЕДНЕВНЫЙ БОНУС!</div>
-        <div style="font-size:1.1em;margin-bottom:10px;">День ${dailyBonusData.totalClaimed}/30</div>
-        <div style="font-size:1.2em;color:#fff;">${reward.name}</div>
-    `;
+    notif.style.cssText = `position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, rgba(255,215,0,0.95), rgba(255,140,0,0.95)); color: #000; padding: 20px 30px; border-radius: 15px; z-index: 4000; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold; box-shadow: 0 10px 40px rgba(255,215,0,0.5); border: 3px solid #fff; animation: dailyBonusSlideDown 0.5s ease-out; max-width: 90%; width: 400px;`;
+    notif.innerHTML = `<div style="font-size:2em;margin-bottom:10px;">${reward.icon}</div><div style="font-size:1.3em;margin-bottom:5px;">🎁 ЕЖЕДНЕВНЫЙ БОНУС!</div><div style="font-size:1.1em;margin-bottom:10px;">День ${dailyBonusData.totalClaimed}/30</div><div style="font-size:1.2em;color:#fff;">${reward.name}</div>`;
     document.body.appendChild(notif);
     setTimeout(() => {
         notif.style.transition = 'all 0.5s ease-in';
         notif.style.top = '-100px';
         notif.style.opacity = '0';
-        setTimeout(() => { 
-            if (notif.parentNode) notif.parentNode.removeChild(notif); 
-        }, 500);
+        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
     }, 3000);
 }
 
-/**
- * ✅ Проверка при загрузке: сброс серии, если пропущен день
- */
 function checkOnLoad() {
     const today = new Date().toDateString();
     if (dailyBonusData.lastClaimDate) {
@@ -796,7 +487,6 @@ function checkOnLoad() {
     }
 }
 
-// Экспортируем систему
 window.dailyBonusSystem = {
     init,
     claimDailyBonus,
@@ -810,16 +500,10 @@ window.dailyBonusSystem = {
     })
 };
 
-// Запуск с небольшой задержкой (ждём загрузки gameState из облака)
+// ✅ Увеличенная задержка — ждём загрузки gameState из облака
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { 
-        init(); 
-        checkOnLoad(); 
-    }, 800));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); checkOnLoad(); }, 1000));
 } else {
-    setTimeout(() => { 
-        init(); 
-        checkOnLoad(); 
-    }, 800);
+    setTimeout(() => { init(); checkOnLoad(); }, 1000);
 }
 })();
