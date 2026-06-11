@@ -32,7 +32,14 @@ const DEFAULT_GAME_STATE = {
     shopItems: {},
     permanentBonuses: {},
     unlockedLocations: ['mercury'],
-    boboSkin: 'default'
+    boboSkin: 'default',
+    // ✅ НОВОЕ: данные ежедневного бонуса для синхронизации через облако
+    dailyBonus: {
+        lastClaimDate: null,
+        currentDay: 1,
+        totalClaimed: 0,
+        streak: 0
+    }
 };
 
 const DEFAULT_GAME_METRICS = {
