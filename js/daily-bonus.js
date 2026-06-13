@@ -50,6 +50,7 @@ function init() {
     createBonusIcon();
     startTimer();
     console.log('✅ Daily bonus system initialized');
+    console.log('🎁 dailyBonusData:', dailyBonusData);
 }
 
 function loadDailyBonusData() {
@@ -157,6 +158,10 @@ function startTimer() {
     }, 1000);
 }
 
+/**
+ * 🔄 Обновление отображения иконки
+ * ✅ ИСПРАВЛЕНО: упрощена логика, убраны избыточные проверки
+ */
 function updateIconDisplay() {
     const dayEl = document.getElementById('dailyBonusDay');
     const timerEl = document.getElementById('dailyBonusTimer');
@@ -167,44 +172,38 @@ function updateIconDisplay() {
     const today = new Date().toDateString();
     const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
 
+    // ✅ Всегда обновляем номер дня
     dayEl.textContent = `День ${dailyBonusData.currentDay}`;
 
     if (isAvailable) {
+        // Бонус доступен - показываем галочку
         timerEl.textContent = '✅';
         timerEl.style.color = '#4CAF50';
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
     } else if (dailyBonusData.currentDay > 30) {
+        // Цикл завершён
         timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         icon.style.borderColor = '#FFD700';
         icon.style.animation = 'none';
     } else {
+        // ✅ Бонус уже получен сегодня - показываем таймер до следующего дня
         updateTimerDisplay();
         icon.style.borderColor = '#FFD700';
         icon.style.animation = 'none';
     }
 }
 
+/**
+ * ⏱️ Обновление таймера обратного отсчёта
+ * ✅ ИСПРАВЛЕНО: убрана избыточная проверка isAvailable
+ */
 function updateTimerDisplay() {
     const timerEl = document.getElementById('dailyBonusTimer');
     if (!timerEl) return;
 
-    const today = new Date().toDateString();
-    const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
-
-    if (isAvailable) {
-        timerEl.textContent = '✅';
-        timerEl.style.color = '#4CAF50';
-        return;
-    }
-
-    if (dailyBonusData.currentDay > 30) {
-        timerEl.textContent = '🎉';
-        timerEl.style.color = '#FFD700';
-        return;
-    }
-
+    // ✅ Рассчитываем время до следующего дня (полночь)
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
