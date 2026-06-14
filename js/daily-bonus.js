@@ -45,6 +45,18 @@ let dailyBonusData = {
 let timerInterval = null;
 let iconCreated = false;
 
+/**
+ * ✅ НОВОЕ: Получить текущую дату в формате UTC (YYYY-MM-DD)
+ * Используем UTC для глобальной синхронизации между устройствами
+ */
+function getUTCToday() {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 function init() {
     loadDailyBonusData();
     createBonusIcon();
@@ -160,7 +172,7 @@ function startTimer() {
 
 /**
  * 🔄 Обновление отображения иконки
- * ✅ ИСПРАВЛЕНО: упрощена логика, убраны избыточные проверки
+ * ✅ ИСПРАВЛЕНО: используем UTC время
  */
 function updateIconDisplay() {
     const dayEl = document.getElementById('dailyBonusDay');
@@ -169,7 +181,8 @@ function updateIconDisplay() {
     
     if (!dayEl || !timerEl || !icon) return;
 
-    const today = new Date().toDateString();
+    // ✅ ИСПРАВЛЕНО: используем UTC дату
+    const today = getUTCToday();
     const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
 
     // ✅ Всегда обновляем номер дня
@@ -197,17 +210,17 @@ function updateIconDisplay() {
 
 /**
  * ⏱️ Обновление таймера обратного отсчёта
- * ✅ ИСПРАВЛЕНО: убрана избыточная проверка isAvailable
+ * ✅ ИСПРАВЛЕНО: используем UTC время для глобальной синхронизации
  */
 function updateTimerDisplay() {
     const timerEl = document.getElementById('dailyBonusTimer');
     if (!timerEl) return;
 
-    // ✅ Рассчитываем время до следующего дня (полночь)
+    // ✅ Рассчитываем время до следующей полуночи UTC
     const now = new Date();
     const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    tomorrow.setUTCHours(0, 0, 0, 0);
 
     const diff = tomorrow - now;
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -220,9 +233,11 @@ function updateTimerDisplay() {
 
 /**
  * 🎁 Получение бонуса
+ * ✅ ИСПРАВЛЕНО: используем UTC дату
  */
 function claimDailyBonus() {
-    const today = new Date().toDateString();
+    // ✅ ИСПРАВЛЕНО: используем UTC дату
+    const today = getUTCToday();
 
     if (dailyBonusData.lastClaimDate === today) {
         showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
@@ -245,6 +260,7 @@ function claimDailyBonus() {
     try {
         applyReward(reward);
 
+        // ✅ Сохраняем дату в UTC формате
         dailyBonusData.lastClaimDate = today;
         dailyBonusData.streak++;
         dailyBonusData.totalClaimed++;
