@@ -46,10 +46,8 @@ let timerInterval = null;
 let iconCreated = false;
 
 /**
- * ✅ НОВОЕ: Получить текущую дату в формате UTC (YYYY-MM-DD)
- * Используем UTC для глобальной синхронизации между устройствами
- */
-function getUTCToday() {
+ * ✅ Получить текущую дату в формате UTC (YYYY-MM-DD)
+ */function getUTCToday() {
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = String(now.getUTCMonth() + 1).padStart(2, '0');
@@ -86,7 +84,6 @@ function loadDailyBonusData() {
             dailyBonusData = JSON.parse(saved);
             console.log('✅ dailyBonusData загружен из localStorage:', dailyBonusData);
             
-            // Синхронизируем в gameState
             if (window.gameState) {
                 window.gameState.dailyBonus = { ...dailyBonusData };
             }
@@ -99,9 +96,7 @@ function loadDailyBonusData() {
 
 function saveDailyBonusData() {
     try {
-        localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
-        
-        // ✅ Сохраняем в gameState для облачной синхронизации
+        localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));        
         if (window.gameState) {
             window.gameState.dailyBonus = { ...dailyBonusData };
             console.log('💾 dailyBonusData сохранён в gameState для облака');
@@ -149,12 +144,8 @@ function createBonusIcon() {
         <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
     `;
     
-    // Клик
     icon.addEventListener('click', claimDailyBonus);
-    
-    // Touch для мобильных
-    icon.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+    icon.addEventListener('touchstart', (e) => {        e.preventDefault();
         claimDailyBonus();
     }, { passive: false });
     
@@ -172,7 +163,7 @@ function startTimer() {
 
 /**
  * 🔄 Обновление отображения иконки
- * ✅ ИСПРАВЛЕНО: используем UTC время
+ * ✅ ИСПРАВЛЕНО: таймер обновляется ВСЕГДА, статус бонуса в dayEl
  */
 function updateIconDisplay() {
     const dayEl = document.getElementById('dailyBonusDay');
@@ -181,42 +172,39 @@ function updateIconDisplay() {
     
     if (!dayEl || !timerEl || !icon) return;
 
-    // ✅ ИСПРАВЛЕНО: используем UTC дату
     const today = getUTCToday();
     const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
 
-    // ✅ Всегда обновляем номер дня
+    // ✅ ВСЕГДА обновляем номер дня
     dayEl.textContent = `День ${dailyBonusData.currentDay}`;
 
+    // ✅ ВСЕГДА обновляем таймер (это ключевое исправление!)
+    updateTimerDisplay();
+
     if (isAvailable) {
-        // Бонус доступен - показываем галочку
-        timerEl.textContent = '✅';
-        timerEl.style.color = '#4CAF50';
+        // ✅ Бонус доступен - показываем "✅" в dayEl
+        dayEl.textContent = `День ${dailyBonusData.currentDay} ✅`;
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
     } else if (dailyBonusData.currentDay > 30) {
         // Цикл завершён
-        timerEl.textContent = '🎉';
-        timerEl.style.color = '#FFD700';
+        dayEl.textContent = `День ${dailyBonusData.currentDay} 🎉`;
         icon.style.borderColor = '#FFD700';
         icon.style.animation = 'none';
     } else {
-        // ✅ Бонус уже получен сегодня - показываем таймер до следующего дня
-        updateTimerDisplay();
+        // Бонус уже получен - таймер показывает время до следующего дня
         icon.style.borderColor = '#FFD700';
-        icon.style.animation = 'none';
-    }
+        icon.style.animation = 'none';    }
 }
 
 /**
  * ⏱️ Обновление таймера обратного отсчёта
- * ✅ ИСПРАВЛЕНО: используем UTC время для глобальной синхронизации
+ * ✅ Теперь всегда считает время до полуночи UTC
  */
 function updateTimerDisplay() {
     const timerEl = document.getElementById('dailyBonusTimer');
     if (!timerEl) return;
 
-    // ✅ Рассчитываем время до следующей полуночи UTC
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
@@ -233,10 +221,8 @@ function updateTimerDisplay() {
 
 /**
  * 🎁 Получение бонуса
- * ✅ ИСПРАВЛЕНО: используем UTC дату
  */
 function claimDailyBonus() {
-    // ✅ ИСПРАВЛЕНО: используем UTC дату
     const today = getUTCToday();
 
     if (dailyBonusData.lastClaimDate === today) {
@@ -251,7 +237,6 @@ function claimDailyBonus() {
 
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
 
-    // ✅ БЛОКИРУЕМ синхронизацию
     if (typeof window.lockSync === 'function') {
         window.lockSync();
         console.log('🔒 [BONUS] Синхронизация заблокирована');
@@ -259,8 +244,6 @@ function claimDailyBonus() {
 
     try {
         applyReward(reward);
-
-        // ✅ Сохраняем дату в UTC формате
         dailyBonusData.lastClaimDate = today;
         dailyBonusData.streak++;
         dailyBonusData.totalClaimed++;
@@ -282,13 +265,11 @@ function claimDailyBonus() {
             navigator.vibrate([100, 50, 100]);
         }
 
-        // ✅ Сохраняем игру
         if (typeof window.saveGame === 'function') {
             console.log('💾 [BONUS] Сохранение после получения бонуса...');
             window.saveGame();
         }
     } finally {
-        // ✅ РАЗБЛОКИРУЕМ синхронизацию
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') {
                 window.unlockSync();
@@ -311,8 +292,7 @@ function applyReward(reward) {
             console.log(`💎 [BONUS] +${reward.amount} кристаллов`);
             break;
         case 'boost':
-            const duration = window.shopSystem?.config?.[reward.boost]?.duration || getBoostDuration(reward.boost);
-            if (!window.gameState.shopItems[reward.boost]) {
+            const duration = window.shopSystem?.config?.[reward.boost]?.duration || getBoostDuration(reward.boost);            if (!window.gameState.shopItems[reward.boost]) {
                 window.gameState.shopItems[reward.boost] = { purchased: false, active: false, timeLeft: 0 };
             }
             window.gameState.shopItems[reward.boost].active = true;
@@ -361,8 +341,7 @@ function showSmallNotification(text, color) {
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: ${color || '#4CAF50'}; color: #fff;
         padding: 12px 20px; border-radius: 10px; z-index: 10000;
-        text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;
-        font-size: 0.9em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 2px solid #fff;
+        text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;        font-size: 0.9em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 2px solid #fff;
         opacity: 0; transition: opacity 0.3s; pointer-events: none;
     `;
     document.body.appendChild(notif);
@@ -411,15 +390,13 @@ document.head.appendChild(style);
 window.dailyBonusSystem = {
     init,
     claimDailyBonus,
-    resetDailyBonus,
-    getProgress: () => ({
+    resetDailyBonus,    getProgress: () => ({
         currentDay: dailyBonusData.currentDay,
         totalClaimed: dailyBonusData.totalClaimed,
         streak: dailyBonusData.streak
     })
 };
 
-// ✅ Запуск с задержкой (ждём загрузки gameState из облака)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); }, 1000));
 } else {
