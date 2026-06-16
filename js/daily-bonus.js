@@ -106,35 +106,7 @@ function resetDailyBonus() {
 /**
  * 🎨 Создание иконки бонуса в рабочей зоне
  */
-function createBonusIcon() {
-    if (iconCreated) return;
-    
-    const icon = document.createElement('div');
-    icon.id = 'dailyBonusIcon';
-    icon.style.cssText = `
-        position: fixed;
-        top: 130px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
-        border: 2px solid #FFD700;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
-        font-family: 'Orbitron', sans-serif;
-    `;
-    
-    icon.innerHTML = `
-        <div id="dailyBonusDay" style="font-size: 0.65em; color: #FFD700; font-weight: bold; margin-bottom: 2px;">День 1</div>
-        <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
-    `;
+
     
     // Клик
     icon.addEventListener('click', claimDailyBonus);
