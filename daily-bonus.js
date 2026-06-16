@@ -110,7 +110,7 @@ function createDailyBonusUI() {
     dailyBonusBtn.innerHTML = '🎁';
     dailyBonusBtn.style.cssText = `
         position: absolute;
-        top: 10px;
+        top: 100px;
         left: 10px;
         width: 50px;
         height: 50px;
