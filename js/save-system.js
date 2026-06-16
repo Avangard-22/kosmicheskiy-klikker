@@ -1,15 +1,21 @@
 // js/save-system.js
 (function() {
 'use strict';
-const SAVE_KEY = 'cosmicClickerSave';
-const AUTO_SAVE_INTERVAL = 30000;
-const CLOUD_SYNC_COOLDOWN = 5000;
 
+// ============================================
+// КОНСТАНТЫ
+// ============================================
+const AUTO_SAVE_INTERVAL = 30000;  // 30 секунд
+const CLOUD_SYNC_COOLDOWN = 5000;  // 5 секунд между синхронизациями
+
+// ============================================
+// СОСТОЯНИЕ СИСТЕМЫ
+// ============================================
 let autoSaveTimer = null;
 let lastCloudSync = 0;
 let isSyncing = false;
 
-// ✅ НОВОЕ: блокировка синхронизации для критических операций (бонусы, покупки)
+// ✅ Блокировка синхронизации для критических операций (бонусы, покупки)
 let isOperationLocked = false;
 let pendingOperations = [];
 
@@ -29,7 +35,6 @@ window.unlockSync = function() {
     isOperationLocked = false;
     console.log('🔓 [SAVE] Синхронизация разблокирована');
     
-    // Выполняем отложенные операции
     if (pendingOperations.length > 0) {
         console.log('📋 [SAVE] Выполняем ' + pendingOperations.length + ' отложенных операций');
         const ops = [...pendingOperations];
@@ -44,13 +49,13 @@ window.unlockSync = function() {
     }
 };
 
-/**
- * Проверка состояния блокировки
- */
 window.isSyncLocked = function() {
     return isOperationLocked;
 };
 
+// ============================================
+// ДЕФОЛТНЫЕ ДАННЫЕ
+// ============================================
 const DEFAULT_GAME_STATE = {
     coins: 0,
     clickPower: 1,
@@ -99,6 +104,13 @@ const DEFAULT_GAME_METRICS = {
     sessions: 0
 };
 
+// ============================================
+// УТИЛИТЫ
+// ============================================
+
+/**
+ * Глубокое слияние объектов
+ */
 function deepMerge(defaults, saved) {
     const result = Object.assign({}, defaults);
     for (const key in saved) {
@@ -124,18 +136,19 @@ function deepMerge(defaults, saved) {
 
 /**
  * Извлечь данные для облачного сохранения
- * ✅ ОТПРАВЛЯЕМ ВЕСЬ gameState + timestamp
+ * ✅ Отправляем ВЕСЬ gameState + timestamp
  */
 function extractCloudData() {
     if (!window.gameState) return null;
+    
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
-
+    
     const unlocked = [];
     for (let i = 0; i <= planetOrder.indexOf(window.gameState.currentLocation); i++) {
         unlocked.push(planetOrder[i]);
     }
-
+    
     const username = window.telegramUser?.username || 
                       window.telegramUser?.first_name || 
                       'Anonymous';
@@ -147,9 +160,7 @@ function extractCloudData() {
         unlocked_locations: unlocked,
         bobo_skin: window.gameState.boboSkin || 'default',
         username: username,
-        // ✅ timestamp для сравнения между устройствами
         timestamp: Date.now(),
-        // ✅ ОТПРАВЛЯЕМ ВЕСЬ gameState (включая dailyBonus)
         full_game_state: JSON.parse(JSON.stringify(window.gameState))
     };
 }
@@ -159,8 +170,7 @@ function extractCloudData() {
  */
 function applyCloudData(cloudData) {
     if (!cloudData || !window.gameState) return;
-    const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
-
+    
     // ✅ Если есть полный gameState — используем его
     if (cloudData.full_game_state && typeof cloudData.full_game_state === 'object') {
         console.log('☁️ Применяем ПОЛНЫЙ gameState из облака');
@@ -184,31 +194,30 @@ function applyCloudData(cloudData) {
         console.log('🎁 dailyBonus:', window.gameState.dailyBonus);
         return;
     }
-
-    // Резервный вариант для старых данных
+    
+    // Резервный вариант для старых данных (без full_game_state)
     console.log('⚠️ Используем старый формат данных');
-
-    if (cloudData.crystals > (window.gameState.coins || 0)) {
+    
+    if (cloudData.crystals !== undefined) {
         window.gameState.coins = cloudData.crystals;
     }
-
-    const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
-    if (cloudData.level > currentLevel && planetOrder[cloudData.level - 1]) {
-        window.gameState.currentLocation = planetOrder[cloudData.level - 1];
-    }
-
-    if (cloudData.score > (window.gameState.totalDamageDealt || 0)) {
+    
+    if (cloudData.score !== undefined) {
         window.gameState.totalDamageDealt = cloudData.score;
     }
-
+    
     if (cloudData.bobo_skin) {
         window.gameState.boboSkin = cloudData.bobo_skin;
     }
 }
 
+// ============================================
+// 💾 СОХРАНЕНИЕ В ОБЛАКО
+// ============================================
+
 /**
- * 💾 Сохранить игру (localStorage + облако)
- * ✅ С проверкой блокировки
+ * 💾 Сохранить игру ТОЛЬКО в облако
+ * ✅ УБРАНО: localStorage
  */
 window.saveGame = function() {
     try {
@@ -217,25 +226,16 @@ window.saveGame = function() {
             return false;
         }
 
-        const saveData = {
-            version: 2,
-            timestamp: Date.now(),
-            gameState: window.gameState,
-            gameMetrics: window.gameMetrics
-        };
-
-        // 1. Всегда сохраняем локально
-        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
-        showSaveIndicator('💾', 'Сохранено');
-
-        // 2. ✅ Если синхронизация заблокирована — добавляем в очередь
+        console.log('💾 [SAVE] Сохранение в облако...');
+        
+        // ✅ Если синхронизация заблокирована — добавляем в очередь
         if (isOperationLocked) {
             console.log('⏳ [SAVE] Синхронизация заблокирована, добавляем в очередь');
             pendingOperations.push(() => cloudSaveAsync());
             return true;
         }
 
-        // 3. Фоновая синхронизация с облаком
+        // Отправляем в облако
         cloudSaveAsync();
         return true;
     } catch (e) {
@@ -245,15 +245,17 @@ window.saveGame = function() {
 };
 
 /**
- * ☁️ Асинхронное сохранение в облако
- * ✅ С проверкой блокировки
+ * ☁️ Асинхронное сохранение в облако (основная функция)
  */
 async function cloudSaveAsync() {
-    if (!window.telegramCloud?.isAvailable) return;
+    if (!window.telegramCloud?.isAvailable) {
+        console.warn('⚠️ [CLOUD] Облако недоступно');
+        return;
+    }
     
     // ✅ Если синхронизация заблокирована — пропускаем
     if (isOperationLocked) {
-        console.log('⏳ [SAVE] Синхронизация заблокирована, пропускаем cloudSaveAsync');
+        console.log('⏳ [CLOUD] Синхронизация заблокирована, пропускаем');
         return;
     }
     
@@ -265,14 +267,22 @@ async function cloudSaveAsync() {
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
-            console.log('☁️ [CLOUD] Sending data:', cloudData);
+            console.log('☁️ [CLOUD] Отправка данных:', {
+                crystals: cloudData.crystals,
+                level: cloudData.level,
+                score: cloudData.score,
+                timestamp: cloudData.timestamp
+            });
+            
             const result = await window.telegramCloud.saveProgress(cloudData);
+            
             if (result?.success) {
                 lastCloudSync = now;
-                showSaveIndicator('☁️', 'Синхронизировано', '#4CAF50');
+                showSaveIndicator('☁️', 'Сохранено');
                 console.log('✅ [CLOUD] Sync successful');
             } else {
                 console.warn('⚠️ [CLOUD] Sync failed:', result?.error);
+                showSaveIndicator('⚠️', 'Ошибка сохранения', '#ff9800');
             }
         }
     } catch (e) {
@@ -282,69 +292,32 @@ async function cloudSaveAsync() {
     }
 }
 
+// ============================================
+// 📥 ЗАГРУЗКА ИЗ ОБЛАКА
+// ============================================
+
 /**
- * 📥 Загрузить игру (локально)
+ * 📥 Загрузить игру ТОЛЬКО из облака
+ * ✅ УБРАНО: localStorage
  */
-window.loadGame = function() {
-    try {
-        const raw = localStorage.getItem(SAVE_KEY);
-        if (!raw) {
-            console.log('ℹ️ Локальное сохранение не найдено');
-            return false;
-        }
-        const saveData = JSON.parse(raw);
-        
-        if (!saveData || !saveData.gameState || !saveData.gameMetrics) {
-            console.warn('⚠️ Повреждённое сохранение, сброс');
-            return false;
-        }
-
-        window.gameState = deepMerge(DEFAULT_GAME_STATE, saveData.gameState);
-        window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, saveData.gameMetrics);
-
-        window.gameMetrics.sessions = (window.gameMetrics.sessions || 0) + 1;
-
-        window.gameState.gameActive = false;
-        window.gameState.gamePaused = false;
-        window.gameState.helperActive = false;
-        window.gameState.helperTimeLeft = 0;
-        window.gameState.boboCoinBonus = 0;
-        window.gameState.comboCount = 0;
-
-        console.log('✅ Локальная игра загружена. Сессия #' + window.gameMetrics.sessions);
-        console.log('💾 gameState.coins:', window.gameState.coins);
-        console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
-        console.log('🎁 gameState.dailyBonus:', window.gameState.dailyBonus);
-        return true;
-    } catch (e) {
-        console.error('❌ Ошибка загрузки сохранения:', e);
+window.loadGame = async function() {
+    if (!window.telegramCloud?.isAvailable) {
+        console.warn('⚠️ [LOAD] Облако недоступно');
         return false;
     }
-};
-
-/**
- * ☁️ Инициализация облачной синхронизации
- * ✅ Сравниваем по timestamp
- */
-window.cloudInit = async function() {
-    if (!window.telegramCloud) {
-        console.log('ℹ️ Telegram Cloud не инициализирован');
-        return;
-    }
+    
     try {
-        console.log('☁️ Инициализация облачной синхронизации...');
+        console.log('📥 [LOAD] Загрузка из облака...');
         
         const result = await window.telegramCloud.loadProgress();
-        console.log('🔍 cloudInit: loadProgress result:', result);
         
         if (!result?.success || !result.data) {
-            console.log('☁️ Облако пустое или ошибка, отправляем локальные данные');
-            await cloudSaveAsync();
-            return;
+            console.log('ℹ️ [LOAD] Облако пустое — начинаем новую игру');
+            return false;
         }
         
         const cloudData = result.data;
-        console.log('☁️ Облачные данные получены:', {
+        console.log('☁️ [LOAD] Облачные данные получены:', {
             has_full_state: !!cloudData.full_game_state,
             crystals: cloudData.crystals,
             level: cloudData.level,
@@ -352,37 +325,44 @@ window.cloudInit = async function() {
             timestamp: cloudData.timestamp
         });
         
-        // ✅ Сравниваем по timestamp
-        const cloudTimestamp = cloudData.timestamp || 0;
-        const localTimestamp = getLocalTimestamp();
+        // Применяем облачные данные
+        applyCloudData(cloudData);
         
-        console.log('🔍 Сравнение timestamp: облако=' + cloudTimestamp + ' vs локально=' + localTimestamp);
+        console.log('✅ [LOAD] Игра загружена из облака');
+        console.log('💾 gameState.coins:', window.gameState.coins);
+        console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
+        console.log('🎁 gameState.dailyBonus:', window.gameState.dailyBonus);
         
-        const cloudWins = cloudTimestamp > localTimestamp;
+        return true;
+    } catch (e) {
+        console.error('❌ Ошибка загрузки из облака:', e);
+        return false;
+    }
+};
+
+/**
+ * ☁️ Инициализация облачной синхронизации
+ * ✅ УПРОЩЕНО: просто загружаем из облака (облако всегда авторитетно)
+ */
+window.cloudInit = async function() {
+    if (!window.telegramCloud) {
+        console.log('ℹ️ Telegram Cloud не инициализирован');
+        return;
+    }
+    
+    try {
+        console.log('☁️ Инициализация облачной синхронизации...');
         
-        if (cloudWins) {
-            console.log('☁️ Облачные данные новее — применяем');
-            applyCloudData(cloudData);
-            
-            // ✅ Обновляем локальное сохранение
-            try {
-                const updatedSaveData = {
-                    version: 2,
-                    timestamp: Date.now(),
-                    gameState: window.gameState,
-                    gameMetrics: window.gameMetrics
-                };
-                localStorage.setItem(SAVE_KEY, JSON.stringify(updatedSaveData));
-                console.log('💾 Локальное сохранение обновлено с новым timestamp');
-            } catch (e) {
-                console.warn('⚠️ Не удалось обновить локальное сохранение:', e);
-            }
-            
+        // ✅ ВСЕГДА загружаем из облака (облако — единственный источник истины)
+        const loaded = await window.loadGame();
+        
+        if (loaded) {
+            // Обновляем UI
             if (window.UI?.updateHUD) window.UI.updateHUD();
             if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
             
             if (window.showTooltip) {
-                window.showTooltip('☁️ Данные синхронизированы с облаком!');
+                window.showTooltip('☁️ Данные загружены из облака!');
                 setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
             
@@ -390,7 +370,8 @@ window.cloudInit = async function() {
                 window.telegramHaptic.success();
             }
         } else {
-            console.log('☁️ Локальные данные актуальнее — синхронизируем в облако');
+            console.log('ℹ️ Облако пустое — начинаем с дефолтными данными');
+            // Отправляем дефолтные данные в облако
             await cloudSaveAsync();
         }
         
@@ -401,22 +382,9 @@ window.cloudInit = async function() {
     }
 };
 
-/**
- * Получить timestamp локального сохранения
- */
-function getLocalTimestamp() {
-    try {
-        const raw = localStorage.getItem(SAVE_KEY);
-        if (!raw) return 0;
-        const data = JSON.parse(raw);
-        return data.timestamp || 0;
-    } catch { return 0; }
-}
-
-function getCurrentLocalLevel() {
-    if (!window.gameState || !window.GAME_CONFIG?.planetOrder) return 1;
-    return window.GAME_CONFIG.planetOrder.indexOf(window.gameState.currentLocation) + 1;
-}
+// ============================================
+// 🔄 СБРОС И ПРОВЕРКИ
+// ============================================
 
 /**
  * 🔄 Сброс прогресса
@@ -427,31 +395,40 @@ window.resetGame = function() {
     window.gameMetrics.startTime = Date.now();
     window.gameMetrics.sessions = 1;
     
-    localStorage.removeItem(SAVE_KEY);
-    
+    // ✅ Отправляем сброс в облако
     if (window.telegramCloud?.saveProgress) {
         window.telegramCloud.saveProgress({
             crystals: 0,
             level: 1,
             score: 0,
             unlocked_locations: ['mercury'],
-            bobo_skin: 'default'
+            bobo_skin: 'default',
+            timestamp: Date.now(),
+            full_game_state: JSON.parse(JSON.stringify(window.gameState))
         }).catch(() => {});
     }
     
-    console.log('🔄 Прогресс сброшен (локально и в облаке)');
+    console.log('🔄 Прогресс сброшен (в облаке)');
 };
 
 /**
- * Проверить наличие сохранения
+ * Проверить наличие сохранения в облаке
  */
-window.hasSave = function() {
-    return localStorage.getItem(SAVE_KEY) !== null;
+window.hasSave = async function() {
+    if (!window.telegramCloud?.isAvailable) return false;
+    
+    try {
+        const result = await window.telegramCloud.loadProgress();
+        return result?.success && !!result.data;
+    } catch {
+        return false;
+    }
 };
 
-/**
- * 💾 Визуальный индикатор сохранения
- */
+// ============================================
+// 💾 ИНДИКАТОР СОХРАНЕНИЯ
+// ============================================
+
 function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '#4CAF50') {
     let indicator = document.getElementById('saveIndicator');
     if (!indicator) {
@@ -470,9 +447,10 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
     }, 1500);
 }
 
-/**
- * ⏱️ Запуск автосохранения
- */
+// ============================================
+// ⏱️ АВТОСОХРАНЕНИЕ
+// ============================================
+
 function startAutoSave() {
     if (autoSaveTimer) clearInterval(autoSaveTimer);
     autoSaveTimer = setInterval(() => {
@@ -482,15 +460,18 @@ function startAutoSave() {
     }, AUTO_SAVE_INTERVAL);
 }
 
-/**
- * 🚀 Инициализация системы
- */
+// ============================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
+// ============================================
+
 function init() {
+    // Инициализируем gameState с дефолтными значениями
     if (!window.gameState) {
         window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
     } else {
         window.gameState = deepMerge(DEFAULT_GAME_STATE, window.gameState);
     }
+
     if (!window.gameMetrics) {
         window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
     } else {
@@ -499,19 +480,21 @@ function init() {
 
     startAutoSave();
 
+    // ✅ Сохраняем в облако при закрытии вкладки
     window.addEventListener('beforeunload', () => {
         if (window.gameState && window.gameState.gameActive) {
             window.saveGame();
         }
     });
 
+    // ✅ Сохраняем в облако при сворачивании
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && window.gameState && window.gameState.gameActive) {
             window.saveGame();
         }
     });
 
-    console.log('💾 Save System initialized');
+    console.log('💾 Save System initialized (CLOUD ONLY)');
     console.log('💾 gameState.coins:', window.gameState.coins);
     console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
     console.log('🎁 gameState.dailyBonus:', window.gameState.dailyBonus);
@@ -522,4 +505,5 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
 })();

@@ -1,6 +1,7 @@
 // js/game-core.js
 (function() {
 'use strict';
+
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
@@ -25,21 +26,21 @@ window.GAME_CORE = {
         return fallback;
     },
 
-    playSound: function(id) { 
-        const s = document.getElementById(id); 
-        if (s) { s.currentTime = 0; s.play().catch(() => {}); } 
+    playSound: function(id) {
+        const s = document.getElementById(id);
+        if (s) { s.currentTime = 0; s.play().catch(() => {}); }
     },
 
-    pauseGame: function() { 
-        this.isGamePaused = true; 
-        if (window.gameState) window.gameState.gamePaused = true; 
+    pauseGame: function() {
+        this.isGamePaused = true;
+        if (window.gameState) window.gameState.gamePaused = true;
         const shopPanel = document.getElementById('shopPanel');
         if (shopPanel) { shopPanel.style.maxHeight = '65vh'; shopPanel.style.overflowY = 'auto'; }
     },
 
-    resumeGame: function() { 
-        this.isGamePaused = false; 
-        if (window.gameState) window.gameState.gamePaused = false; 
+    resumeGame: function() {
+        this.isGamePaused = false;
+        if (window.gameState) window.gameState.gamePaused = false;
     },
 
     calculateClickPower: function() {
@@ -66,7 +67,7 @@ window.GAME_CORE = {
         const gameArea = document.getElementById('gameArea');
         if (!gameArea) return;
         if (this.currentBlock?.parentNode === gameArea) gameArea.removeChild(this.currentBlock);
-        
+
         this.currentBlockHealth = this.calculateBlockHealth();
         const block = document.createElement('div');
         block.className = 'moving-block';
@@ -75,15 +76,15 @@ window.GAME_CORE = {
         block.style.height = size + 'px';
         block.style.bottom = '0px';
         block.dataset.maxHealth = this.currentBlockHealth;
-        
+
         const theme = CFG.locations[window.gameState.currentLocation];
         const rareType = this.getRareBlockType();
-        
+
         if (rareType) {
             const rb = CFG.rareBlocks[rareType];
             block.classList.add(rb.className);
             this.currentBlockHealth = Math.floor(this.currentBlockHealth * rb.healthMultiplier);
-            block.innerHTML = `🌟<div style="font-size:0.35em;margin-top:1px;line-height:1.1;">${rb.name}</div>`;
+            block.innerHTML = `🌟 <div style="font-size:0.35em;margin-top:1px;line-height:1.1;">${rb.name}</div>`;
             this.announceRareBlock(rb.name);
         } else {
             const ci = Math.floor(Math.random() * theme.blockColors.length);
@@ -92,10 +93,10 @@ window.GAME_CORE = {
             block.style.border = `2px solid ${theme.borderColor}`;
             block.textContent = this.currentBlockHealth;
         }
-        
+
         block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower));
         block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower); }, { passive: false });
-        
+
         gameArea.appendChild(block);
         this.currentBlock = block;
         this.animateBlock(block);
@@ -146,36 +147,36 @@ window.GAME_CORE = {
         this.playSound('clickSound');
         block.style.transform = 'translateX(-50%) scale(0.85)';
         setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
-        
+
         let finalDamage = damage * this.getBonus('getDamageMultiplier', 1);
         let isCrit = false;
         let critChance = window.gameState.critChance * this.getBonus('getCritChanceMultiplier', 1);
         let critMult = window.gameState.critMultiplier * this.getBonus('getCritMultMultiplier', 1);
         critChance = Math.min(1.0, critChance);
-        
+
         if (Math.random() < critChance) {
             finalDamage = Math.round(finalDamage * critMult);
             isCrit = true;
             if (window.achievementsSystem) window.achievementsSystem.incrementCrits(1);
-        } else { 
-            finalDamage = Math.round(finalDamage); 
+        } else {
+            finalDamage = Math.round(finalDamage);
         }
-        
+
         this.currentBlockHealth -= finalDamage;
         window.gameState.totalDamageDealt += finalDamage;
-        
+
         if (window.achievementsSystem) {
             window.achievementsSystem.incrementTotalDamage(finalDamage);
             window.achievementsSystem.incrementTotalClicks(1);
         }
-        
+
         this.createDamageText(finalDamage, block, isCrit ? '#FFD700' : '#ff4444');
         UI.checkLocationUpgrade();
-        
+
         if (this.currentBlockHealth <= 0) this.destroyBlock(block);
-        else { 
-            block.textContent = Math.floor(this.currentBlockHealth); 
-            this.updateCracks(block, this.currentBlockHealth); 
+        else {
+            block.textContent = Math.floor(this.currentBlockHealth);
+            this.updateCracks(block, this.currentBlockHealth);
         }
     },
 
@@ -184,31 +185,31 @@ window.GAME_CORE = {
         const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
         window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
         window.gameState.lastDestroyTime = now;
-        
+
         let r = Math.floor((25 + CFG.astronomicalUnits[window.gameState.currentLocation] * 100) * CFG.balanceConfig.rewardMultiplier);
         r = Math.floor(r * (CFG.balanceConfig.randomBonusRange.min + Math.random() * (CFG.balanceConfig.randomBonusRange.max - CFG.balanceConfig.randomBonusRange.min)));
         if (window.gameState.boboCoinBonus > 0) r = Math.floor(r * (1 + window.gameState.boboCoinBonus));
         r = Math.floor(r * this.getBonus('getRewardMultiplier', 1));
-        
+
         let isRare = false;
         for (const k in CFG.rareBlocks) {
-            if (block.classList.contains(CFG.rareBlocks[k].className)) { 
-                r = Math.floor(r * CFG.rareBlocks[k].multiplier); 
+            if (block.classList.contains(CFG.rareBlocks[k].className)) {
+                r = Math.floor(r * CFG.rareBlocks[k].multiplier);
                 isRare = true;
-                break; 
+                break;
             }
         }
-        
+
         if (window.gameState.comboCount > 1) {
             let comboMult = CFG.balanceConfig.comboMultiplier * this.getBonus('getComboMultiplier', 1);
-            const bns = Math.floor(r * (window.gameState.comboCount * comboMult)); 
+            const bns = Math.floor(r * (window.gameState.comboCount * comboMult));
             r += bns;
-            this.showComboText(window.gameState.comboCount, bns, block); 
+            this.showComboText(window.gameState.comboCount, bns, block);
             this.playSound('comboSound');
         }
-        
+
         window.gameState.coins += r;
-        
+
         if (window.achievementsSystem) {
             const currentPlanet = window.gameState.currentLocation;
             window.achievementsSystem.incrementCoinsEarned(r);
@@ -223,75 +224,75 @@ window.GAME_CORE = {
                 window.achievementsSystem.updatePlanetCombo(currentPlanet, window.gameState.comboCount);
             }
         }
-        
-        UI.updateHUD(); 
-        UI.updateUpgradeButtons(); 
-        this.playSound('breakSound'); 
-        this.showRewardText(r, block); 
+
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        this.playSound('breakSound');
+        this.showRewardText(r, block);
         FEAT.createExplosion(block);
-        
-        const ga = document.getElementById('gameArea'); 
+
+        const ga = document.getElementById('gameArea');
         if (ga?.contains(block)) ga.removeChild(block);
-        this.currentBlock = null; 
+        this.currentBlock = null;
         this.currentBlockHealth = 0;
         setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
     },
 
     createDamageText: function(dmg, block, col) {
         const r = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'damage-text'; 
-        t.textContent = `-${dmg}`; 
+        t.className = 'damage-text';
+        t.textContent = `-${dmg}`;
         t.style.color = col;
         let l = r.left + r.width / 2, tp = r.top;
-        if (l < 50) l = 50; 
-        if (l > window.innerWidth - 50) l = window.innerWidth - 50; 
+        if (l < 50) l = 50;
+        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
         if (tp < 50) tp = 50;
-        t.style.left = l + 'px'; 
-        t.style.top = tp + 'px'; 
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
         document.body.appendChild(t);
         let op = 1, y = tp;
-        const anim = () => { 
-            op -= 0.02; 
-            y -= 2; 
-            t.style.opacity = op; 
-            t.style.top = y + 'px'; 
-            if (op > 0) requestAnimationFrame(anim); 
-            else if (t.parentNode) document.body.removeChild(t); 
+        const anim = () => {
+            op -= 0.02;
+            y -= 2;
+            t.style.opacity = op;
+            t.style.top = y + 'px';
+            if (op > 0) requestAnimationFrame(anim);
+            else if (t.parentNode) document.body.removeChild(t);
         };
         anim();
     },
 
     showComboText: function(c, b, block) {
-        const r = block.getBoundingClientRect(), t = document.createElement('div'); 
+        const r = block.getBoundingClientRect(), t = document.createElement('div');
         t.className = 'combo-text';
         t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
         let l = r.left + r.width / 2, tp = r.top;
-        if (l < 75) l = 75; 
-        if (l > window.innerWidth - 75) l = window.innerWidth - 75; 
+        if (l < 75) l = 75;
+        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
         if (tp < 50) tp = 50;
-        t.style.left = l + 'px'; 
-        t.style.top = tp + 'px'; 
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
         document.body.appendChild(t);
         setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
     },
 
     showRewardText: function(r, block) {
-        const rct = block.getBoundingClientRect(), t = document.createElement('div'); 
+        const rct = block.getBoundingClientRect(), t = document.createElement('div');
         t.className = 'reward-text';
         t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
         let l = rct.left + rct.width / 2, tp = rct.top + rct.height / 2;
-        if (l < 60) l = 60; 
-        if (l > window.innerWidth - 60) l = window.innerWidth - 60; 
+        if (l < 60) l = 60;
+        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
         if (tp < 50) tp = 50;
-        t.style.left = l + 'px'; 
-        t.style.top = tp + 'px'; 
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
         document.body.appendChild(t);
         setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
     },
 
     updateCracks: function(block, health) {
         if (!block) return;
-        const ex = block.querySelector('.crack-overlay'); 
+        const ex = block.querySelector('.crack-overlay');
         if (ex) block.removeChild(ex);
         const max = parseInt(block.dataset.maxHealth), rat = 1 - (health / max);
         if (rat > 0.7) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-3' }));
@@ -301,10 +302,10 @@ window.GAME_CORE = {
 
     createHelperElement: function() {
         if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
-        this.helperElement = document.createElement('div'); 
+        this.helperElement = document.createElement('div');
         this.helperElement.className = 'helper';
         document.body.appendChild(this.helperElement);
-        this.moveHelperToRandomPosition(); 
+        this.moveHelperToRandomPosition();
         this.helperElement.style.opacity = '0';
         setTimeout(() => { if (this.helperElement) this.helperElement.style.opacity = '1'; }, 100);
     },
@@ -314,89 +315,89 @@ window.GAME_CORE = {
         let t = { left: window.innerWidth / 2, top: window.innerHeight / 2 };
         if (this.currentBlock) t = this.currentBlock.getBoundingClientRect();
         for (let i = 0; i < 20; i++) {
-            const rx = Math.random() * (window.innerWidth - 60) + 30, 
+            const rx = Math.random() * (window.innerWidth - 60) + 30,
                   ry = Math.random() * (window.innerHeight - 120) + 60;
             const dist = Math.sqrt(Math.pow(rx - (t.left + t.width / 2), 2) + Math.pow(ry - (t.top + t.height / 2), 2));
             if (dist > 150 && rx > 60 && rx < window.innerWidth - 60 && ry > 100 && ry < window.innerHeight - 60) {
-                this.helperPosition = { x: rx, y: ry }; 
+                this.helperPosition = { x: rx, y: ry };
                 break;
             }
         }
-        this.helperElement.style.left = this.helperPosition.x + 'px'; 
+        this.helperElement.style.left = this.helperPosition.x + 'px';
         this.helperElement.style.top = this.helperPosition.y + 'px';
     },
 
     createHelperEffect: function() {
         if (!this.currentBlock || !this.helperElement) return;
-        const br = this.currentBlock.getBoundingClientRect(), 
+        const br = this.currentBlock.getBoundingClientRect(),
               hr = this.helperElement.getBoundingClientRect();
-        const c = document.createElement('div'); 
-        c.className = 'helper-beam'; 
-        c.style.position = 'absolute'; 
+        const c = document.createElement('div');
+        c.className = 'helper-beam';
+        c.style.position = 'absolute';
         c.style.zIndex = '13';
         c.style.pointerEvents = 'none';
         document.body.appendChild(c);
-        
-        const sx = hr.left + hr.width / 2, 
-              sy = hr.top + hr.height / 2, 
-              ex = br.left + br.width / 2, 
+
+        const sx = hr.left + hr.width / 2,
+              sy = hr.top + hr.height / 2,
+              ex = br.left + br.width / 2,
               ey = br.top + br.height / 2;
-        const cv = document.createElement('canvas'), 
+        const cv = document.createElement('canvas'),
               mx = Math.max(window.innerWidth, window.innerHeight);
-        cv.width = mx; 
-        cv.height = mx; 
+        cv.width = mx;
+        cv.height = mx;
         cv.style.pointerEvents = 'none';
-        c.appendChild(cv); 
-        c.style.left = '0px'; 
+        c.appendChild(cv);
+        c.style.left = '0px';
         c.style.top = '0px';
-        
-        const ctx = cv.getContext('2d'); 
+
+        const ctx = cv.getContext('2d');
         let p = 0, st = Date.now();
         const an = () => {
-            const el = Date.now() - st; 
-            p = Math.min(el / 300, 1); 
+            const el = Date.now() - st;
+            p = Math.min(el / 300, 1);
             ctx.clearRect(0, 0, mx, mx);
             if (p > 0) {
                 const cx = sx + (ex - sx) * p, cy = sy + (ey - sy) * p;
                 const g = ctx.createLinearGradient(sx, sy, cx, cy);
-                g.addColorStop(0, 'rgba(105, 240, 174, 0.9)'); 
-                g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)'); 
+                g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
+                g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
                 g.addColorStop(1, 'rgba(105, 240, 174, 0)');
-                ctx.beginPath(); 
-                ctx.moveTo(sx, sy); 
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
                 ctx.lineTo(cx, cy);
-                ctx.lineWidth = 4 + (4 * (1 - p)); 
-                ctx.strokeStyle = g; 
+                ctx.lineWidth = 4 + (4 * (1 - p));
+                ctx.strokeStyle = g;
                 ctx.stroke();
-                ctx.beginPath(); 
-                ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2); 
-                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`; 
+                ctx.beginPath();
+                ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
                 ctx.fill();
             }
-            if (p < 1) requestAnimationFrame(an); 
+            if (p < 1) requestAnimationFrame(an);
             else setTimeout(() => { if (c.parentNode) document.body.removeChild(c); }, 200);
-        }; 
-        an(); 
+        };
+        an();
         this.playSound('helperSound');
     },
 
     helperAttack: function() {
         if (!this.currentBlock || !window.gameState || !window.gameState.helperActive || !this.helperElement || this.isGamePaused) return;
-        
+
         this.createHelperEffect();
-        
+
         let dmg = window.gameState.clickPower * (1 + (window.gameState.helperDamageBonus || 0)) * (1 + (window.gameState.helperUpgradeLevel || 0) * 0.2) * this.getBonus('getDamageMultiplier', 1);
-        
+
         this.currentBlockHealth -= dmg;
         window.gameState.totalDamageDealt += dmg;
-        
+
         if (window.achievementsSystem) {
             window.achievementsSystem.incrementTotalDamage(dmg);
         }
-        
+
         this.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
         UI.checkLocationUpgrade();
-        
+
         if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock);
         else {
             this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
@@ -408,14 +409,14 @@ window.GAME_CORE = {
         if (!window.gameState) return;
         if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
         window.gameState.currentLocation = loc;
-        
+
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
         if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
         if (header) header.style.borderColor = CFG.locations[loc].borderColor;
-        
+
         if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
-        
+
         const ann = document.getElementById('levelAnnounce');
         if (ann) {
             ann.textContent = CFG.locations[loc].name;
@@ -423,7 +424,7 @@ window.GAME_CORE = {
             ann.style.opacity = "1";
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
-        
+
         if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
         UI.updateProgressBar();
     },
@@ -435,106 +436,155 @@ window.GAME_CORE = {
         } else {
             window.gameState.clickPower = this.calculateClickPower();
         }
-        
-        this.isGamePaused = false; 
+
+        this.isGamePaused = false;
         if (window.gameState) window.gameState.gamePaused = false;
-        window.gameState.helperActive = false; 
-        window.gameState.helperTimeLeft = 0; 
+        window.gameState.helperActive = false;
+        window.gameState.helperTimeLeft = 0;
         window.gameState.boboCoinBonus = 0;
-        
+
         if (this.helperInterval) { clearInterval(this.helperInterval); this.helperInterval = null; }
         if (this.helperTimer) { clearInterval(this.helperTimer); this.helperTimer = null; }
-        if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement); 
+        if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
         this.helperElement = null;
         if (this.autoClickInterval) { clearInterval(this.autoClickInterval); this.autoClickInterval = null; }
         if (this.magnetInterval) { clearInterval(this.magnetInterval); this.magnetInterval = null; }
-        
-        const ga = document.getElementById('gameArea'); 
+
+        const ga = document.getElementById('gameArea');
         if (ga) ga.innerHTML = "";
-        const ws = document.getElementById('welcomeScreen'), 
+        const ws = document.getElementById('welcomeScreen'),
               gs = document.getElementById('gameOverScreen');
-        if (ws) ws.style.display = "none"; 
+        if (ws) ws.style.display = "none";
         if (gs) gs.style.display = "none";
-        
-        window.gameState.gameActive = true; 
-        window.gameState.comboCount = 0; 
+
+        window.gameState.gameActive = true;
+        window.gameState.comboCount = 0;
         window.gameState.lastDestroyTime = 0;
-        
+
         if (reset) {
-            window.gameMetrics.startTime = Date.now(); 
-            window.gameMetrics.blocksDestroyed = 0; 
+            window.gameMetrics.startTime = Date.now();
+            window.gameMetrics.blocksDestroyed = 0;
             window.gameMetrics.upgradesBought = 0;
-            window.gameMetrics.totalClicks = 0; 
-            window.gameMetrics.totalCrits = 0; 
+            window.gameMetrics.totalClicks = 0;
+            window.gameMetrics.totalCrits = 0;
             window.gameMetrics.totalCoinsEarned = 0;
-            window.gameMetrics.helpersBought = 0; 
-            window.gameMetrics.boostersUsed = 0; 
+            window.gameMetrics.helpersBought = 0;
+            window.gameMetrics.boostersUsed = 0;
             window.gameMetrics.maxCombo = 0;
-        } else { 
-            window.gameMetrics.startTime = Date.now(); 
+        } else {
+            window.gameMetrics.startTime = Date.now();
         }
-        
-        UI.updateHUD(); 
-        UI.updateUpgradeButtons(); 
-        UI.updateProgressBar(); 
+
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
-        
+
         if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
         if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
-        
+
         setTimeout(() => this.createMovingBlock(), 500);
     },
 
-continueGame: async function() {
-    console.log('🔄 [GAME] Starting continueGame...');
-    console.log('🔄 [GAME] loadGame function exists:', typeof window.loadGame === 'function');
-    console.log('🔄 [GAME] cloudInit function exists:', typeof window.cloudInit === 'function');
-    console.log('🔄 [GAME] gameState exists:', !!window.gameState);
-    console.log('🔄 [GAME] isTelegramEnvironment:', window.isTelegramEnvironment);
-    
-    const hasLocal = typeof window.loadGame === 'function' && window.loadGame();
-    console.log('🔄 [GAME] Local save loaded:', hasLocal);
-    
-    // ☁️ Облачная инициализация
-    if (typeof window.cloudInit === 'function') {
-        console.log('️ [GAME] cloudInit function exists, calling...');
-        try {
-            await window.cloudInit();
-            console.log('☁️ [GAME] cloudInit completed');
-        } catch (e) {
-            console.error('☁️ [GAME] cloudInit error:', e);
-            console.error('️ [GAME] cloudInit stack:', e.stack);
+    /**
+     * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
+     * - Убран вызов window.loadGame() (он больше не нужен)
+     * - cloudInit сам загружает данные из облака
+     * - gameState инициализируется дефолтными значениями до cloudInit
+     */
+    continueGame: async function() {
+        console.log('🔄 [GAME] Starting continueGame...');
+
+        // ✅ Инициализируем gameState дефолтными значениями
+        // (на случай, если облако пустое — игра начнётся с нуля)
+        if (!window.gameState || Object.keys(window.gameState).length === 0) {
+            window.gameState = {
+                coins: 0,
+                clickPower: 1,
+                critChance: 0.001,
+                critMultiplier: 2.0,
+                currentLocation: 'mercury',
+                totalDamageDealt: 0,
+                clickUpgradeLevel: 0,
+                critChanceUpgradeLevel: 0,
+                critMultiplierUpgradeLevel: 0,
+                helperUpgradeLevel: 0,
+                helperActivations: 0,
+                helperActive: false,
+                helperTimeLeft: 0,
+                helperDamageBonus: 0,
+                boboCoinBonus: 0,
+                comboCount: 0,
+                lastDestroyTime: 0,
+                gameActive: false,
+                gamePaused: false,
+                achievements: {},
+                shopItems: {},
+                permanentBonuses: {},
+                unlockedLocations: ['mercury'],
+                boboSkin: 'default',
+                dailyBonus: {
+                    lastClaimDate: null,
+                    currentDay: 1,
+                    totalClaimed: 0,
+                    streak: 0
+                }
+            };
+            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
-    } else {
-        console.warn('⚠️ [GAME] cloudInit function NOT found');
-    }
-    
-    if (hasLocal || window.isCloudAvailable) {
+
+        if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
+            window.gameMetrics = {
+                startTime: 0,
+                blocksDestroyed: 0,
+                upgradesBought: 0,
+                totalClicks: 0,
+                totalCrits: 0,
+                totalCoinsEarned: 0,
+                helpersBought: 0,
+                boostersUsed: 0,
+                maxCombo: 0,
+                rareBlocksDestroyed: 0,
+                sessions: 0
+            };
+        }
+
+        // ✅ Загружаем из облака (асинхронно)
+        // cloudInit сам вызывает loadGame() внутри себя
+        if (typeof window.cloudInit === 'function') {
+            console.log('☁️ [GAME] cloudInit вызывается...');
+            try {
+                await window.cloudInit();
+                console.log('☁️ [GAME] cloudInit завершён');
+            } catch (e) {
+                console.error('☁️ [GAME] cloudInit error:', e);
+            }
+        } else {
+            console.warn('⚠️ [GAME] cloudInit function NOT found');
+        }
+
+        // ✅ Запускаем игру с загруженными данными
         console.log('✅ [GAME] Load successful, starting game...');
+        console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
+        console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
+
         UI.updateHUD();
         UI.updateUpgradeButtons();
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
+
         if (window.showTooltip && window.formatString) {
-            const t = window.formatString('Игра загружена! Кристаллы: {coins}, Урон: {damage}', {
-                coins: Math.floor(window.gameState.coins).toLocaleString(),
-                damage: Math.floor(window.gameState.totalDamageDealt).toLocaleString()
+            const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
+                coins: Math.floor(window.gameState.coins || 0).toLocaleString()
             });
             window.showTooltip(t);
             setTimeout(window.hideTooltip, 3000);
         }
-    } else {
-        console.warn('⚠️ [GAME] No save found, starting new game');
-        if (window.showTooltip && window.translations) {
-            window.showTooltip(window.translations[window.currentLanguage].tooltips.noSave);
-            setTimeout(window.hideTooltip, 2000);
-        }
-    }
-},
+    },
 
-    restartGame: function() { 
-        this.startGame(true); 
+    restartGame: function() {
+        this.startGame(true);
     },
 
     initEventHandlers: function() {
@@ -543,7 +593,7 @@ continueGame: async function() {
             langBtn.addEventListener('click', window.switchLanguage);
             langBtn.addEventListener('touchstart', e => { e.preventDefault(); window.switchLanguage(); }, { passive: false });
         }
-        
+
         const startBtn = document.getElementById('startBtn');
         if (startBtn) {
             startBtn.addEventListener('click', () => {
@@ -558,7 +608,7 @@ continueGame: async function() {
                 this.startGame(true);
             }, { passive: false });
         }
-        
+
         const contBtn = document.getElementById('continueBtn');
         if (contBtn) {
             contBtn.addEventListener('click', () => {
@@ -573,7 +623,7 @@ continueGame: async function() {
                 this.continueGame();
             }, { passive: false });
         }
-        
+
         const add = (id, fn) => {
             const b = document.getElementById(id);
             if (b) {
@@ -581,13 +631,13 @@ continueGame: async function() {
                 b.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
             }
         };
-        
+
         add('upgradeClickBtn', () => FEAT.buyClickPower());
         add('upgradeHelperBtn', () => FEAT.buyHelper());
         add('upgradeCritChanceBtn', () => FEAT.buyCritChance());
         add('upgradeCritMultBtn', () => FEAT.buyCritMultiplier());
         add('upgradeHelperDmgBtn', () => FEAT.buyHelperDamage());
-        
+
         add('shareBtn', () => {
             if (!window.gameState) return;
             const txt = `🎮 Я нанес ${Math.floor(window.gameState.totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(window.gameState.coins)} Кристаллов! 🌌`;
@@ -600,9 +650,9 @@ continueGame: async function() {
                 });
             }
         });
-        
+
         add('saveBtn', () => { if (typeof window.saveGame === 'function') window.saveGame(); });
-        
+
         const tips = {
             upgradeClickBtn: 'tooltips.upgradeClick',
             upgradeHelperBtn: 'tooltips.upgradeHelper',
@@ -610,7 +660,7 @@ continueGame: async function() {
             upgradeCritMultBtn: 'tooltips.upgradeCritMult',
             upgradeHelperDmgBtn: 'tooltips.upgradeHelperDmg'
         };
-        
+
         Object.entries(tips).forEach(([id, tk]) => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -624,7 +674,7 @@ continueGame: async function() {
                 });
             }
         });
-        
+
         window.addEventListener('resize', () => {
             if (this.helperElement) this.moveHelperToRandomPosition();
         });
@@ -664,4 +714,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.updateLanguageFlag) window.updateLanguageFlag();
     if (window.updateContinueButton) window.updateContinueButton();
 });
+
 })();
