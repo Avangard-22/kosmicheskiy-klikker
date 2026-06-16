@@ -113,8 +113,8 @@ function createBonusIcon() {
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
         position: fixed;
-        top: 100px;
-        right: 20px;
+        bottom: 120px;     /* ✅ Левый нижний угол */
+        left: 20px;
         width: 60px;
         height: 60px;
         background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
@@ -135,6 +135,17 @@ function createBonusIcon() {
         <div id="dailyBonusDay" style="font-size: 0.65em; color: #FFD700; font-weight: bold; margin-bottom: 2px;">День 1</div>
         <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
     `;
+    
+    icon.addEventListener('click', claimDailyBonus);
+    icon.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        claimDailyBonus();
+    }, { passive: false });
+    
+    document.body.appendChild(icon);
+    iconCreated = true;
+    console.log('✅ Daily bonus icon created at bottom-left');
+}
     
     // Клик
     icon.addEventListener('click', claimDailyBonus);
