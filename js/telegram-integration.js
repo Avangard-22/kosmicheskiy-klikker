@@ -4,6 +4,55 @@
 
 const CLOUD_API_URL = 'https://d5de5jfdv68j295hgj7a.y3q8o1jq.apigw.yandexcloud.net';
 
+/**
+ * ✅ НОВОЕ: Безопасное извлечение данных пользователя из initData
+ * Решает проблему username = null
+ */
+function extractUserFromInitData(initData) {
+    if (!initData) return null;
+    
+    try {
+        // Парсим initData как URLSearchParams
+        const params = new URLSearchParams(initData);
+        const userJson = params.get('user');
+        
+        if (userJson) {
+            const user = JSON.parse(decodeURIComponent(userJson));
+            console.log('✅ [TELEGRAM] User extracted from initData:', user);
+            return user;
+        }
+        
+        return null;
+    } catch (e) {
+        console.error('❌ [TELEGRAM] Error extracting user from initData:', e);
+        return null;
+    }
+}
+
+/**
+ * ✅ НОВОЕ: Получение username с fallback
+ * Решает проблему username = null в облаке
+ */
+function getUsername(user) {
+    if (!user) return 'Anonymous';
+    
+    // Приоритет 1: username
+    if (user.username) return user.username;
+    
+    // Приоритет 2: first_name + last_name
+    if (user.first_name) {
+        return user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
+    }
+    
+    // Приоритет 3: id
+    if (user.id) return `User_${user.id}`;
+    
+    return 'Anonymous';
+}
+
+/**
+ * Извлечение initData из URL (резервный механизм)
+ */
 function extractInitDataFromURL() {
     try {
         const hash = window.location.hash;
@@ -13,24 +62,27 @@ function extractInitDataFromURL() {
         const tgWebAppData = params.get('tgWebAppData');
         
         if (tgWebAppData) {
-            console.log('✅ Found tgWebAppData in URL');
+            console.log('✅ [TELEGRAM] Found tgWebAppData in URL');
             return decodeURIComponent(tgWebAppData);
         }
         
         return null;
     } catch (e) {
-        console.error('❌ Error extracting initData from URL:', e);
+        console.error('❌ [TELEGRAM] Error extracting initData from URL:', e);
         return null;
     }
 }
 
+/**
+ * Отправка данных в облако
+ */
 async function sendToCloud(action, progressData, initData) {
-    console.log('🔍 DEBUG: sendToCloud called with action:', action);
-    console.log('🔍 DEBUG: initData available:', !!initData);
-    console.log('🔍 DEBUG: initData length:', initData?.length || 0);
+    console.log('🔍 [CLOUD] sendToCloud called with action:', action);
+    console.log('🔍 [CLOUD] initData available:', !!initData);
+    console.log('🔍 [CLOUD] initData length:', initData?.length || 0);
     
     if (!initData) {
-        console.error('❌ No initData available');
+        console.error('❌ [CLOUD] No initData available');
         return { success: false, error: 'No initData' };
     }
     
@@ -44,7 +96,7 @@ async function sendToCloud(action, progressData, initData) {
             body.progress = progressData;
         }
         
-        console.log('🔍 DEBUG: Request body:', JSON.stringify(body).substring(0, 200));
+        console.log('🔍 [CLOUD] Request body:', JSON.stringify(body).substring(0, 200));
         
         const response = await fetch(`${CLOUD_API_URL}/api/save`, {
             method: 'POST',
@@ -54,7 +106,7 @@ async function sendToCloud(action, progressData, initData) {
             body: JSON.stringify(body)
         });
         
-        console.log(' DEBUG: Response status:', response.status);
+        console.log('🔍 [CLOUD] Response status:', response.status);
         
         const result = await response.json();
         console.log('☁️ [CLOUD] Ответ:', result);
@@ -71,29 +123,33 @@ async function sendToCloud(action, progressData, initData) {
     }
 }
 
+/**
+ * Инициализация Telegram интеграции
+ */
 function initTelegramIntegration() {
-    console.log('🔍 Initializing Telegram integration...');
+    console.log('🔍 [TELEGRAM] Initializing Telegram integration...');
     
     const tg = window.Telegram?.WebApp;
     const isTelegram = !!tg;
     
-    console.log('🔍 Telegram WebApp available:', isTelegram);
-    console.log('🔍 User Agent:', navigator.userAgent);
+    console.log('🔍 [TELEGRAM] Telegram WebApp available:', isTelegram);
+    console.log('🔍 [TELEGRAM] User Agent:', navigator.userAgent);
     
     const initDataFromURL = extractInitDataFromURL();
-    console.log('🔍 initData from URL:', initDataFromURL ? 'exists (' + initDataFromURL.length + ' chars)' : 'null');
+    console.log('🔍 [TELEGRAM] initData from URL:', initDataFromURL ? 'exists (' + initDataFromURL.length + ' chars)' : 'null');
     
     window.isTelegramEnvironment = isTelegram;
     window.isCloudAvailable = false;
     
+    // ✅ НОВОЕ: Режим браузера (не в Telegram)
     if (!isTelegram && initDataFromURL) {
-        console.log('✅ Using initData from URL for cloud sync');
+        console.log('✅ [TELEGRAM] Using initData from URL for cloud sync');
         window.isTelegramEnvironment = true;
         window.isCloudAvailable = true;
     }
     
     if (!isTelegram) {
-        console.log('ℹ️ Telegram WebApp не обнаружен. Работа в режиме браузера.');
+        console.log('ℹ️ [TELEGRAM] Telegram WebApp не обнаружен. Работа в режиме браузера.');
         
         window.telegramHaptic = {
             light: () => {}, medium: () => {}, heavy: () => {},
@@ -123,27 +179,30 @@ function initTelegramIntegration() {
             }
         };
         
+        // ✅ НОВОЕ: Извлекаем пользователя из URL initData
         if (initDataFromURL) {
-            try {
-                const params = new URLSearchParams(initDataFromURL);
-                const userJson = params.get('user');
-                if (userJson) {
-                    window.telegramUser = JSON.parse(decodeURIComponent(userJson));
-                    console.log('✅ telegramUser from URL:', window.telegramUser);
-                }
-            } catch (e) {
-                console.error(' Error parsing user from URL:', e);
+            const userFromURL = extractUserFromInitData(initDataFromURL);
+            if (userFromURL) {
+                window.telegramUser = userFromURL;
+                window.telegramUsername = getUsername(userFromURL);
+                console.log('✅ [TELEGRAM] telegramUser from URL:', window.telegramUser);
+                console.log('✅ [TELEGRAM] telegramUsername:', window.telegramUsername);
             }
         }
+        
+        // ✅ НОВОЕ: Экспортируем функции для доступа из других модулей
+        window.getTelegramUser = () => window.telegramUser;
+        window.getTelegramUsername = () => window.telegramUsername || 'Anonymous';
         
         return;
     }
 
-    console.log('📱 Telegram WebApp detected. Initializing...');
+    console.log('📱 [TELEGRAM] Telegram WebApp detected. Initializing...');
 
     tg.ready();
     tg.expand();
 
+    // === ТЕМАТИЗАЦИЯ ===
     function applyThemeColors() {
         const root = document.documentElement;
         if (tg.themeParams) {
@@ -159,6 +218,7 @@ function initTelegramIntegration() {
     applyThemeColors();
     if (tg.onEvent) tg.onEvent('themeChanged', applyThemeColors);
 
+    // === HAPTIC FEEDBACK ===
     window.telegramHaptic = {
         light: () => { try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {} },
         medium: () => { try { tg.HapticFeedback.impactOccurred('medium'); } catch(e) {} },
@@ -169,6 +229,7 @@ function initTelegramIntegration() {
         selectionChanged: () => { try { tg.HapticFeedback.selectionChanged(); } catch(e) {} }
     };
 
+    // === MAIN BUTTON ===
     window.telegramMainButton = {
         show: (text, onClick) => {
             if (text) tg.MainButton.setText(text);
@@ -183,6 +244,7 @@ function initTelegramIntegration() {
         }
     };
 
+    // === BACK BUTTON ===
     window.telegramBackButton = {
         show: (onClick) => {
             if (onClick) { tg.BackButton.offClick(); tg.BackButton.onClick(onClick); }
@@ -191,17 +253,45 @@ function initTelegramIntegration() {
         hide: () => { tg.BackButton.hide(); tg.BackButton.offClick(); }
     };
 
-    window.telegramUser = tg.initDataUnsafe?.user || null;
+    // === ДАННЫЕ ПОЛЬЗОВАТЕЛЯ ===
+    // ✅ ИСПРАВЛЕНО: Безопасное извлечение с fallback
+    console.log('🔍 [TELEGRAM] tg.initDataUnsafe:', tg.initDataUnsafe);
+    console.log('🔍 [TELEGRAM] tg.initDataUnsafe.user:', tg.initDataUnsafe?.user);
+    console.log('🔍 [TELEGRAM] tg.initData length:', tg.initData?.length || 0);
+    
+    // Приоритет 1: из initDataUnsafe
+    if (tg.initDataUnsafe?.user) {
+        window.telegramUser = tg.initDataUnsafe.user;
+        console.log('✅ [TELEGRAM] User from initDataUnsafe:', window.telegramUser);
+    } 
+    // Приоритет 2: извлекаем из initData напрямую
+    else if (tg.initData) {
+        const userFromInitData = extractUserFromInitData(tg.initData);
+        if (userFromInitData) {
+            window.telegramUser = userFromInitData;
+            console.log('✅ [TELEGRAM] User extracted from initData:', window.telegramUser);
+        }
+    }
+    
+    // ✅ НОВОЕ: Получаем username с fallback
+    window.telegramUsername = getUsername(window.telegramUser);
     window.telegramInitData = tg.initData || '';
     
-    console.log('🔍 telegramUser:', window.telegramUser);
-    console.log('🔍 telegramInitData length:', window.telegramInitData?.length || 0);
+    console.log('🔍 [TELEGRAM] telegramUser:', window.telegramUser);
+    console.log('🔍 [TELEGRAM] telegramUsername:', window.telegramUsername);
+    console.log('🔍 [TELEGRAM] telegramInitData length:', window.telegramInitData?.length || 0);
 
+    // ✅ НОВОЕ: Экспортируем функции для доступа из других модулей
+    window.getTelegramUser = () => window.telegramUser;
+    window.getTelegramUsername = () => window.telegramUsername || 'Anonymous';
+
+    // === ☁️ ОБЛАЧНЫЕ ФУНКЦИИ ===
     window.telegramCloud = {
         isAvailable: true,
         
         saveProgress: async function(progressData) {
             console.log('☁️ [SAVE] Отправка:', progressData);
+            console.log('☁️ [SAVE] username:', window.telegramUsername);
             return sendToCloud('save', progressData, tg.initData);
         },
 
@@ -215,10 +305,16 @@ function initTelegramIntegration() {
         }
     };
 
-    console.log('✅ Telegram Integration initialized');
-    console.log('☁️ Cloud API:', CLOUD_API_URL);
+    // ✅ НОВОЕ: Устанавливаем флаг доступности облака
+    window.isCloudAvailable = true;
+    
+    console.log('✅ [TELEGRAM] Telegram Integration initialized');
+    console.log('☁️ [TELEGRAM] Cloud API:', CLOUD_API_URL);
+    console.log('👤 [TELEGRAM] User ID:', window.telegramUser?.id);
+    console.log('👤 [TELEGRAM] Username:', window.telegramUsername);
 }
 
+// Запуск инициализации
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTelegramIntegration);
 } else {
