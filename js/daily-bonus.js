@@ -56,7 +56,6 @@ function loadDailyBonusData() {
     try {
         console.log('🎁 [BONUS] Загрузка данных бонуса...');
         
-        // ✅ Приоритет 1: из gameState.dailyBonus (из облака)
         if (window.gameState && window.gameState.dailyBonus) {
             dailyBonusData = {
                 lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
@@ -66,18 +65,15 @@ function loadDailyBonusData() {
             };
             console.log('✅ [BONUS] Загружено из gameState.dailyBonus:', dailyBonusData);
             
-            // Сохраняем в localStorage для резерва
             localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
             return;
         }
         
-        // ✅ Приоритет 2: из localStorage
         const saved = localStorage.getItem('cosmicDailyBonus');
         if (saved) {
             dailyBonusData = JSON.parse(saved);
             console.log('✅ [BONUS] Загружено из localStorage:', dailyBonusData);
             
-            // Синхронизируем в gameState
             if (window.gameState) {
                 window.gameState.dailyBonus = { ...dailyBonusData };
             }
@@ -94,10 +90,8 @@ function saveDailyBonusData() {
     try {
         console.log('💾 [BONUS] Сохранение данных бонуса...');
         
-        // Сохраняем локально
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
         
-        // ✅ ВАЖНО: Сохраняем в gameState для облачной синхронизации
         if (window.gameState) {
             if (!window.gameState.dailyBonus) {
                 window.gameState.dailyBonus = {};
@@ -109,22 +103,20 @@ function saveDailyBonusData() {
         console.error('❌ [BONUS] Ошибка сохранения:', e);
     }
 }
+
 function resetDailyBonus() {
     dailyBonusData = { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 };
     saveDailyBonusData();
 }
 
-/**
- * 🎨 Создание иконки бонуса в рабочей зоне
- */
 function createBonusIcon() {
     if (iconCreated) return;
     
     const icon = document.createElement('div');
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
-      position: fixed;
-        bottom: 100px;     /* ✅ Левый нижний угол */
+        position: fixed;
+        bottom: 80px;
         left: 20px;
         width: 60px;
         height: 60px;
@@ -147,10 +139,8 @@ function createBonusIcon() {
         <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
     `;
     
-    // Клик
     icon.addEventListener('click', claimDailyBonus);
     
-    // Touch для мобильных
     icon.addEventListener('touchstart', (e) => {
         e.preventDefault();
         claimDailyBonus();
@@ -230,9 +220,6 @@ function updateTimerDisplay() {
     timerEl.style.color = '#4FC3F7';
 }
 
-/**
- * 🎁 Получение бонуса
- */
 function claimDailyBonus() {
     const today = new Date().toDateString();
     
@@ -255,10 +242,8 @@ function claimDailyBonus() {
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
     console.log('🎁 [BONUS] Награда:', reward.name);
 
-    // Применяем награду
     applyReward(reward);
 
-    // ✅ Обновляем данные
     dailyBonusData.lastClaimDate = today;
     dailyBonusData.streak++;
     dailyBonusData.totalClaimed++;
@@ -266,38 +251,25 @@ function claimDailyBonus() {
 
     console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
 
-    // Сохраняем
     saveDailyBonusData();
     updateIconDisplay();
     showRewardNotification(reward);
 
-    // Звук
     const sound = document.getElementById('upgradeSound');
     if (sound) {
         sound.currentTime = 0;
         sound.play().catch(() => {});
     }
 
-    // Тактильная отдача
     if (window.telegramHaptic?.success) {
         window.telegramHaptic.success();
     } else if (navigator.vibrate) {
         navigator.vibrate([100, 50, 100]);
     }
 
-    // ✅ Сохраняем игру
     if (typeof window.saveGame === 'function') {
         console.log('💾 [BONUS] Вызов saveGame()...');
         window.saveGame();
-    }
-    } finally {
-        // ✅ РАЗБЛОКИРУЕМ синхронизацию
-        setTimeout(() => {
-            if (typeof window.unlockSync === 'function') {
-                window.unlockSync();
-                console.log('🔓 [BONUS] Синхронизация разблокирована');
-            }
-        }, 300);
     }
 }
 
@@ -399,7 +371,6 @@ function showRewardNotification(reward) {
     }, 2000);
 }
 
-// CSS анимация
 const style = document.createElement('style');
 style.textContent = `
     @keyframes dailyBonusPulse {
@@ -422,7 +393,6 @@ window.dailyBonusSystem = {
     })
 };
 
-// ✅ Запуск с задержкой (ждём загрузки gameState из облака)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); }, 1000));
 } else {
