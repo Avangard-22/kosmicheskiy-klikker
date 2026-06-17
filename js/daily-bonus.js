@@ -113,7 +113,7 @@ function createBonusIcon() {
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
         position: fixed;
-        top: 130px;
+        top: 100px;
         right: 20px;
         width: 60px;
         height: 60px;
