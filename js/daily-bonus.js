@@ -9,7 +9,7 @@ const dailyRewards = [
     { day: 4, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 5, type: 'crystals', amount: 300, icon: '💎', name: '300 Кристаллов' },
     { day: 6, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
-    { day: 7, type: 'crystals', amount: 500, icon: '🎁', name: 'Бонус недели: 500 💎' },
+    { day: 7, type: 'crystals', amount: 500, icon: '', name: 'Бонус недели: 500 💎' },
     { day: 8, type: 'crystals', amount: 400, icon: '💎', name: '400 Кристаллов' },
     { day: 9, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 10, type: 'crystals', amount: 500, icon: '💎', name: '500 Кристаллов' },
@@ -17,13 +17,13 @@ const dailyRewards = [
     { day: 12, type: 'crystals', amount: 600, icon: '💎', name: '600 Кристаллов' },
     { day: 13, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
     { day: 14, type: 'crystals', amount: 1000, icon: '🎁', name: 'Бонус 2 недели: 1K 💎' },
-    { day: 15, type: 'crystals', amount: 800, icon: '💎', name: '800 Кристаллов' },
+    { day: 15, type: 'crystals', amount: 800, icon: '', name: '800 Кристаллов' },
     { day: 16, type: 'upgrade', upgrade: 'critChance', levels: 3, icon: '🎯', name: '+3 уровня Крита' },
     { day: 17, type: 'crystals', amount: 900, icon: '💎', name: '900 Кристаллов' },
     { day: 18, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 19, type: 'crystals', amount: 1000, icon: '💎', name: '1000 Кристаллов' },
     { day: 20, type: 'upgrade', upgrade: 'helperDamage', levels: 2, icon: '🤖', name: '+2 уровня Bobo' },
-    { day: 21, type: 'crystals', amount: 2000, icon: '🎁', name: 'Бонус 3 недели: 2K 💎' },
+    { day: 21, type: 'crystals', amount: 2000, icon: '', name: 'Бонус 3 недели: 2K 💎' },
     { day: 22, type: 'crystals', amount: 1500, icon: '💎', name: '1500 Кристаллов' },
     { day: 23, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 24, type: 'crystals', amount: 2000, icon: '💎', name: '2000 Кристаллов' },
@@ -58,7 +58,7 @@ function loadDailyBonusData() {
         console.log('🎁 [BONUS] gameState exists:', !!window.gameState);
         console.log('🎁 [BONUS] gameState.dailyBonus exists:', !!window.gameState?.dailyBonus);
         
-        // ✅ Приоритет 1: из gameState.dailyBonus (из облака)
+        // Приоритет 1: из gameState.dailyBonus (из облака)
         if (window.gameState && window.gameState.dailyBonus && window.gameState.dailyBonus.lastClaimDate !== undefined) {
             dailyBonusData = {
                 lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
@@ -68,28 +68,25 @@ function loadDailyBonusData() {
             };
             console.log('✅ [BONUS] Загружено из gameState.dailyBonus:', dailyBonusData);
             
-            // Сохраняем в localStorage для резерва
             localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
             return;
         }
         
-        // ✅ Приоритет 2: из localStorage
+        // Приоритет 2: из localStorage
         const saved = localStorage.getItem('cosmicDailyBonus');
         if (saved) {
             dailyBonusData = JSON.parse(saved);
             console.log('✅ [BONUS] Загружено из localStorage:', dailyBonusData);
             
-            // Синхронизируем в gameState
             if (window.gameState) {
                 if (!window.gameState.dailyBonus) {
                     window.gameState.dailyBonus = {};
                 }
                 window.gameState.dailyBonus = { ...dailyBonusData };
-                console.log('💾 [BONUS] Синхронизировано в gameState.dailyBonus');
+                console.log(' [BONUS] Синхронизировано в gameState.dailyBonus');
             }
         } else {
             console.log('ℹ️ [BONUS] Сохранение не найдено, используем дефолт');
-            // Инициализируем дефолтное значение в gameState
             if (window.gameState && !window.gameState.dailyBonus) {
                 window.gameState.dailyBonus = {
                     lastClaimDate: null,
@@ -100,7 +97,7 @@ function loadDailyBonusData() {
             }
         }
     } catch (e) {
-        console.error('❌ [BONUS] Ошибка загрузки:', e);
+        console.error(' [BONUS] Ошибка загрузки:', e);
         console.error('❌ [BONUS] Stack:', e.stack);
         resetDailyBonus();
     }
@@ -112,10 +109,8 @@ function saveDailyBonusData() {
         console.log('💾 [BONUS] dailyBonusData:', dailyBonusData);
         console.log('💾 [BONUS] gameState exists:', !!window.gameState);
         
-        // Сохраняем локально
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
         
-        // ✅ ВАЖНО: Сохраняем в gameState для облачной синхронизации
         if (window.gameState) {
             if (!window.gameState.dailyBonus) {
                 window.gameState.dailyBonus = {};
@@ -228,7 +223,7 @@ function updateTimerDisplay() {
     }
 
     if (dailyBonusData.currentDay > 30) {
-        timerEl.textContent = '🎉';
+        timerEl.textContent = '';
         timerEl.style.color = '#FFD700';
         return;
     }
@@ -269,34 +264,48 @@ function claimDailyBonus() {
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
     console.log('🎁 [BONUS] Награда:', reward.name);
 
-    applyReward(reward);
-
-    dailyBonusData.lastClaimDate = today;
-    dailyBonusData.streak++;
-    dailyBonusData.totalClaimed++;
-    if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
-
-    console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
-
-    saveDailyBonusData();
-    updateIconDisplay();
-    showRewardNotification(reward);
-
-    const sound = document.getElementById('upgradeSound');
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
+    // Блокируем синхронизацию
+    if (typeof window.lockSync === 'function') {
+        window.lockSync();
     }
 
-    if (window.telegramHaptic?.success) {
-        window.telegramHaptic.success();
-    } else if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-    }
+    try {
+        applyReward(reward);
 
-    if (typeof window.saveGame === 'function') {
-        console.log('💾 [BONUS] Вызов saveGame()...');
-        window.saveGame();
+        dailyBonusData.lastClaimDate = today;
+        dailyBonusData.streak++;
+        dailyBonusData.totalClaimed++;
+        if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
+
+        console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
+
+        saveDailyBonusData();
+        updateIconDisplay();
+        showRewardNotification(reward);
+
+        const sound = document.getElementById('upgradeSound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        }
+
+        if (window.telegramHaptic?.success) {
+            window.telegramHaptic.success();
+        } else if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+
+        if (typeof window.saveGame === 'function') {
+            console.log('💾 [BONUS] Вызов saveGame()...');
+            window.saveGame();
+        }
+    } finally {
+        setTimeout(() => {
+            if (typeof window.unlockSync === 'function') {
+                window.unlockSync();
+                console.log('🔓 [BONUS] Синхронизация разблокирована');
+            }
+        }, 300);
     }
 }
 
