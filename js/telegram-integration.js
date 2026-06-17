@@ -25,15 +25,21 @@ function extractUserFromInitData(initData) {
 }
 
 /**
- * Получение username с fallback
+ * Получение идентификатора пользователя (ID или username)
+ * ✅ ИСПРАВЛЕНО: используем ID как основной идентификатор
  */
-function getUsername(user) {
+function getUserIdentifier(user) {
     if (!user) return 'Anonymous';
+    
+    // Приоритет 1: username (если есть)
     if (user.username) return user.username;
-    if (user.first_name) {
-        return user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
-    }
+    
+    // Приоритет 2: first_name
+    if (user.first_name) return user.first_name;
+    
+    // Приоритет 3: ID (всегда есть)
     if (user.id) return `User_${user.id}`;
+    
     return 'Anonymous';
 }
 
@@ -70,8 +76,8 @@ function initTelegramIntegration() {
         
         window.telegramUser = null;
         window.telegramUsername = 'Anonymous';
-        window.getTelegramUser = () => window.telegramUser;
-        window.getTelegramUsername = () => window.telegramUsername;
+        window.getUserId = () => null;
+        window.getUserAvatar = () => null;
         
         return;
     }
@@ -151,17 +157,21 @@ function initTelegramIntegration() {
         }
     }
     
-    // Получаем username с fallback
-    window.telegramUsername = getUsername(window.telegramUser);
+    // ✅ НОВОЕ: Получаем идентификатор и аватарку
+    window.telegramUsername = getUserIdentifier(window.telegramUser);
     window.telegramInitData = tg.initData || '';
+    
+    // Функция для получения ID пользователя
+    window.getUserId = () => window.telegramUser?.id || null;
+    
+    // Функция для получения аватарки
+    window.getUserAvatar = () => window.telegramUser?.photo_url || null;
     
     console.log('🔍 [TELEGRAM] telegramUser:', window.telegramUser);
     console.log('🔍 [TELEGRAM] telegramUsername:', window.telegramUsername);
+    console.log('🔍 [TELEGRAM] telegramUserId:', window.getUserId());
+    console.log('🔍 [TELEGRAM] telegramUserAvatar:', window.getUserAvatar());
     console.log('🔍 [TELEGRAM] telegramInitData length:', window.telegramInitData?.length || 0);
-
-    // Экспортируем функции для доступа из других модулей
-    window.getTelegramUser = () => window.telegramUser;
-    window.getTelegramUsername = () => window.telegramUsername || 'Anonymous';
 
     // === ☁️ ОБЛАЧНЫЕ ФУНКЦИИ ===
     window.telegramCloud = {
@@ -170,6 +180,7 @@ function initTelegramIntegration() {
         saveProgress: async function(progressData) {
             console.log('☁️ [SAVE] Отправка:', progressData);
             console.log('☁️ [SAVE] username:', window.telegramUsername);
+            console.log('☁️ [SAVE] userId:', window.getUserId());
             try {
                 const response = await fetch(`${CLOUD_API_URL}/api/save`, {
                     method: 'POST',
@@ -229,13 +240,14 @@ function initTelegramIntegration() {
         }
     };
 
-    // Устанавливаем флаг доступности облака
+    // ✅ НОВОЕ: Устанавливаем флаг доступности облака
     window.isCloudAvailable = true;
     
     console.log('✅ [TELEGRAM] Telegram Integration initialized');
     console.log('☁️ [TELEGRAM] Cloud API:', CLOUD_API_URL);
-    console.log('👤 [TELEGRAM] User ID:', window.telegramUser?.id);
+    console.log('👤 [TELEGRAM] User ID:', window.getUserId());
     console.log('👤 [TELEGRAM] Username:', window.telegramUsername);
+    console.log('️ [TELEGRAM] Avatar:', window.getUserAvatar());
 }
 
 // Запуск инициализации
