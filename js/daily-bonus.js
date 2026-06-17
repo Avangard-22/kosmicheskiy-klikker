@@ -55,8 +55,11 @@ function init() {
 function loadDailyBonusData() {
     try {
         console.log('🎁 [BONUS] Загрузка данных бонуса...');
+        console.log('🎁 [BONUS] gameState exists:', !!window.gameState);
+        console.log('🎁 [BONUS] gameState.dailyBonus exists:', !!window.gameState?.dailyBonus);
         
-        if (window.gameState && window.gameState.dailyBonus) {
+        // ✅ Приоритет 1: из gameState.dailyBonus (из облака)
+        if (window.gameState && window.gameState.dailyBonus && window.gameState.dailyBonus.lastClaimDate !== undefined) {
             dailyBonusData = {
                 lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
                 currentDay: window.gameState.dailyBonus.currentDay || 1,
@@ -65,23 +68,40 @@ function loadDailyBonusData() {
             };
             console.log('✅ [BONUS] Загружено из gameState.dailyBonus:', dailyBonusData);
             
+            // Сохраняем в localStorage для резерва
             localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
             return;
         }
         
+        // ✅ Приоритет 2: из localStorage
         const saved = localStorage.getItem('cosmicDailyBonus');
         if (saved) {
             dailyBonusData = JSON.parse(saved);
             console.log('✅ [BONUS] Загружено из localStorage:', dailyBonusData);
             
+            // Синхронизируем в gameState
             if (window.gameState) {
+                if (!window.gameState.dailyBonus) {
+                    window.gameState.dailyBonus = {};
+                }
                 window.gameState.dailyBonus = { ...dailyBonusData };
+                console.log('💾 [BONUS] Синхронизировано в gameState.dailyBonus');
             }
         } else {
             console.log('ℹ️ [BONUS] Сохранение не найдено, используем дефолт');
+            // Инициализируем дефолтное значение в gameState
+            if (window.gameState && !window.gameState.dailyBonus) {
+                window.gameState.dailyBonus = {
+                    lastClaimDate: null,
+                    currentDay: 1,
+                    totalClaimed: 0,
+                    streak: 0
+                };
+            }
         }
     } catch (e) {
         console.error('❌ [BONUS] Ошибка загрузки:', e);
+        console.error('❌ [BONUS] Stack:', e.stack);
         resetDailyBonus();
     }
 }
@@ -89,18 +109,25 @@ function loadDailyBonusData() {
 function saveDailyBonusData() {
     try {
         console.log('💾 [BONUS] Сохранение данных бонуса...');
+        console.log('💾 [BONUS] dailyBonusData:', dailyBonusData);
+        console.log('💾 [BONUS] gameState exists:', !!window.gameState);
         
+        // Сохраняем локально
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
         
+        // ✅ ВАЖНО: Сохраняем в gameState для облачной синхронизации
         if (window.gameState) {
             if (!window.gameState.dailyBonus) {
                 window.gameState.dailyBonus = {};
             }
             window.gameState.dailyBonus = { ...dailyBonusData };
             console.log('💾 [BONUS] Сохранено в gameState.dailyBonus:', window.gameState.dailyBonus);
+        } else {
+            console.warn('⚠️ [BONUS] gameState не инициализирован!');
         }
     } catch (e) {
         console.error('❌ [BONUS] Ошибка сохранения:', e);
+        console.error('❌ [BONUS] Stack:', e.stack);
     }
 }
 
