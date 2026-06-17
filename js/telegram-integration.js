@@ -25,21 +25,25 @@ function extractUserFromInitData(initData) {
 }
 
 /**
- * Получение идентификатора пользователя (ID или username)
- * ✅ ИСПРАВЛЕНО: используем ID как основной идентификатор
+ * Получение username с fallback
  */
-function getUserIdentifier(user) {
+function getUsername(user) {
+    console.log('🔍 [TELEGRAM] getUsername called with user:', user);
     if (!user) return 'Anonymous';
-    
-    // Приоритет 1: username (если есть)
-    if (user.username) return user.username;
-    
-    // Приоритет 2: first_name
-    if (user.first_name) return user.first_name;
-    
-    // Приоритет 3: ID (всегда есть)
-    if (user.id) return `User_${user.id}`;
-    
+    if (user.username) {
+        console.log('✅ [TELEGRAM] Using username:', user.username);
+        return user.username;
+    }
+    if (user.first_name) {
+        const name = user.last_name ? `${user.first_name} ${user.last_name}` : user.first_name;
+        console.log('✅ [TELEGRAM] Using first_name:', name);
+        return name;
+    }
+    if (user.id) {
+        console.log('✅ [TELEGRAM] Using ID:', user.id);
+        return `User_${user.id}`;
+    }
+    console.log('⚠️ [TELEGRAM] No user data, returning Anonymous');
     return 'Anonymous';
 }
 
@@ -53,7 +57,10 @@ function initTelegramIntegration() {
     const isTelegram = !!tg;
     
     console.log('🔍 [TELEGRAM] Telegram WebApp available:', isTelegram);
-    console.log('🔍 [TELEGRAM] User Agent:', navigator.userAgent);
+    console.log('🔍 [TELEGRAM] tg object:', tg);
+    console.log('🔍 [TELEGRAM] tg.initDataUnsafe:', tg?.initDataUnsafe);
+    console.log('🔍 [TELEGRAM] tg.initDataUnsafe.user:', tg?.initDataUnsafe?.user);
+    console.log('🔍 [TELEGRAM] tg.initData length:', tg?.initData?.length || 0);
     
     window.isTelegramEnvironment = isTelegram;
     window.isCloudAvailable = false;
@@ -139,9 +146,7 @@ function initTelegramIntegration() {
     };
 
     // === ДАННЫЕ ПОЛЬЗОВАТЕЛЯ ===
-    console.log('🔍 [TELEGRAM] tg.initDataUnsafe:', tg.initDataUnsafe);
-    console.log('🔍 [TELEGRAM] tg.initDataUnsafe.user:', tg.initDataUnsafe?.user);
-    console.log('🔍 [TELEGRAM] tg.initData length:', tg.initData?.length || 0);
+    console.log('🔍 [TELEGRAM] Extracting user data...');
     
     // Приоритет 1: из initDataUnsafe
     if (tg.initDataUnsafe?.user) {
@@ -154,11 +159,15 @@ function initTelegramIntegration() {
         if (userFromInitData) {
             window.telegramUser = userFromInitData;
             console.log('✅ [TELEGRAM] User extracted from initData:', window.telegramUser);
+        } else {
+            console.warn('⚠️ [TELEGRAM] Could not extract user from initData');
         }
+    } else {
+        console.warn('⚠️ [TELEGRAM] No initData available');
     }
     
-    // ✅ НОВОЕ: Получаем идентификатор и аватарку
-    window.telegramUsername = getUserIdentifier(window.telegramUser);
+    // Получаем username с fallback
+    window.telegramUsername = getUsername(window.telegramUser);
     window.telegramInitData = tg.initData || '';
     
     // Функция для получения ID пользователя
@@ -240,7 +249,7 @@ function initTelegramIntegration() {
         }
     };
 
-    // ✅ НОВОЕ: Устанавливаем флаг доступности облака
+    // Устанавливаем флаг доступности облака
     window.isCloudAvailable = true;
     
     console.log('✅ [TELEGRAM] Telegram Integration initialized');
