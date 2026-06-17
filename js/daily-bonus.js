@@ -242,6 +242,10 @@ function updateTimerDisplay() {
     timerEl.style.color = '#4FC3F7';
 }
 
+/**
+ * 🎁 Получение ежедневного бонуса
+ * Проверяет, можно ли получить бонус сегодня, применяет награду и сохраняет прогресс
+ */
 function claimDailyBonus() {
     const today = new Date().toDateString();
     
@@ -250,12 +254,14 @@ function claimDailyBonus() {
     console.log('🎁 [BONUS] Последний раз получен:', dailyBonusData.lastClaimDate);
     console.log('🎁 [BONUS] gameState.dailyBonus:', window.gameState?.dailyBonus);
 
+    // ✅ Проверка: бонус уже получен сегодня?
     if (dailyBonusData.lastClaimDate === today) {
         console.log('⚠️ [BONUS] Бонус уже получен сегодня!');
         showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
         return;
     }
 
+    // ✅ Проверка: цикл бонусов завершён?
     if (dailyBonusData.currentDay > 30) {
         showSmallNotification('🎉 Цикл завершён!', '#4CAF50');
         return;
@@ -264,14 +270,18 @@ function claimDailyBonus() {
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
     console.log('🎁 [BONUS] Награда:', reward.name);
 
-    // Блокируем синхронизацию
+    // ✅ Блокируем синхронизацию на время применения бонуса
     if (typeof window.lockSync === 'function') {
         window.lockSync();
+        console.log('🔒 [BONUS] Синхронизация заблокирована');
     }
 
+    // ✅ ИСПРАВЛЕНО: добавлен try-finally для корректной разблокировки
     try {
+        // Применяем награду
         applyReward(reward);
 
+        // ✅ Обновляем данные бонуса
         dailyBonusData.lastClaimDate = today;
         dailyBonusData.streak++;
         dailyBonusData.totalClaimed++;
@@ -279,27 +289,32 @@ function claimDailyBonus() {
 
         console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
 
+        // Сохраняем данные
         saveDailyBonusData();
         updateIconDisplay();
         showRewardNotification(reward);
 
+        // Звук
         const sound = document.getElementById('upgradeSound');
         if (sound) {
             sound.currentTime = 0;
             sound.play().catch(() => {});
         }
 
+        // Тактильная отдача
         if (window.telegramHaptic?.success) {
             window.telegramHaptic.success();
         } else if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
         }
 
+        // ✅ Сохраняем игру в облако
         if (typeof window.saveGame === 'function') {
             console.log('💾 [BONUS] Вызов saveGame()...');
             window.saveGame();
         }
     } finally {
+        // ✅ РАЗБЛОКИРУЕМ синхронизацию (выполнится даже при ошибке)
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') {
                 window.unlockSync();
