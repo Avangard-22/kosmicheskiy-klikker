@@ -112,9 +112,9 @@ function createBonusIcon() {
     const icon = document.createElement('div');
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
-        position: fixed;
-        top: 180px;
-        right: 20px;
+      position: fixed;
+        bottom: 120px;     /* ✅ Левый нижний угол */
+        left: 20px;
         width: 60px;
         height: 60px;
         background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
