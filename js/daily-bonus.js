@@ -124,7 +124,7 @@ function createBonusIcon() {
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
       position: fixed;
-        bottom: 80px;     /* ✅ Левый нижний угол */
+        bottom: 100px;     /* ✅ Левый нижний угол */
         left: 20px;
         width: 60px;
         height: 60px;
