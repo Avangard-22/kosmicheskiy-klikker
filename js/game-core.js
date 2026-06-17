@@ -529,7 +529,11 @@ window.GAME_CORE = {
                     totalClaimed: 0,
                     streak: 0
                 }
-            };
+                 // ✅ Показываем информацию о пользователе
+    if (typeof window.updateUserInfo === 'function') {
+        window.updateUserInfo();
+    }
+        };
             console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
 
