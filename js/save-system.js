@@ -121,13 +121,12 @@ function extractCloudData() {
         unlocked.push(planetOrder[i]);
     }
     
-    // ✅ ИСПРАВЛЕНО: получаем username из telegramUser
-    const username = window.getTelegramUsername ? window.getTelegramUsername() : 
-                     (window.telegramUser?.username || 
-                      window.telegramUser?.first_name || 
-                      'Anonymous');
+    // ✅ ИСПРАВЛЕНО: используем userId как основной идентификатор
+    const userId = window.getUserId ? window.getUserId() : null;
+    const username = window.telegramUsername || 'Anonymous';
     
     console.log('☁️ [SAVE] Извлечение данных для облака...');
+    console.log('☁️ [SAVE] userId:', userId);
     console.log('☁️ [SAVE] username:', username);
     console.log('☁️ [SAVE] telegramUser:', window.telegramUser);
 
@@ -137,6 +136,7 @@ function extractCloudData() {
         score: Math.floor(window.gameState.totalDamageDealt || 0),
         unlocked_locations: unlocked,
         bobo_skin: window.gameState.boboSkin || 'default',
+        user_id: userId, // ✅ Добавляем userId
         username: username,
         timestamp: Date.now(),
         full_game_state: JSON.parse(JSON.stringify(window.gameState))
