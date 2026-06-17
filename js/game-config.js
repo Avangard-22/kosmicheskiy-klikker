@@ -129,6 +129,33 @@ window.GAME_CONFIG = {
         }, {});
     })(),
 
+// ==========================================
+// 💰 РАСЧЁТ СТОИМОСТИ УЛУЧШЕНИЙ
+// ==========================================
+/**
+ * Единая функция расчёта стоимости улучшения
+ * @param {string} type - Тип улучшения: 'clickPower', 'critChance', 'critMultiplier', 'helper', 'helperDamage'
+ * @param {number} level - Текущий уровень улучшения
+ * @returns {number} Стоимость в кристаллах
+ */
+getUpgradeCost: function(type, level) {
+    const configs = {
+        clickPower:      { base: 80,   factor: 1.5  },
+        critChance:      { base: 500,  factor: 1.3  },
+        critMultiplier:  { base: 800,  factor: 1.25 },
+        helper:          { base: 1500, factor: 1.4  },
+        helperDamage:    { base: 1000, factor: 1.8  }
+    };
+    
+    const config = configs[type];
+    if (!config) {
+        console.warn('⚠️ [CONFIG] Неизвестный тип улучшения:', type);
+        return 0;
+    }
+    
+    return Math.floor(config.base * Math.pow(config.factor, level));
+},
+
     // ✅ ГЕНЕРАТОР ЭКЗОПЛАНЕТ (Для пост-Плутон контента)
     generateExoplanet: function(seed, distanceFromPluto) {
         const types = ['ice_giant', 'super_earth', 'pulsar', 'nebula', 'black_hole'];

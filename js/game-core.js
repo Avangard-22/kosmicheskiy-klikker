@@ -2,12 +2,31 @@
 (function() {
 'use strict';
 
+// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
+if (!window.GAME_CONFIG) {
+    throw new Error('[GAME_CORE] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
+}
+if (!window.GAME_UI) {
+    throw new Error('[GAME_CORE] GAME_UI не загружен. Проверьте порядок скриптов в index.html');
+}
+if (!window.GAME_FEATURES) {
+    throw new Error('[GAME_CORE] GAME_FEATURES не загружен. Проверьте порядок скриптов в index.html');
+}
+
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-window.gameState = {};
-window.gameMetrics = {};
+// ✅ gameState и gameMetrics инициализируются в save-system.js
+// Здесь только проверка на случай, если save-system не загрузился
+if (!window.gameState) {
+    console.warn('️ [CORE] gameState не инициализирован save-system.js');
+    window.gameState = {};
+}
+if (!window.gameMetrics) {
+    console.warn('⚠️ [CORE] gameMetrics не инициализирован save-system.js');
+    window.gameMetrics = {};
+}
 
 window.GAME_CORE = {
     currentBlock: null,
@@ -140,165 +159,90 @@ window.GAME_CORE = {
         move();
     },
 
-    hitBlock: function(block, damage) {
-        if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
-        if (navigator.vibrate) navigator.vibrate(50);
-        if (window.telegramHaptic) window.telegramHaptic.light();
-        this.playSound('clickSound');
-        block.style.transform = 'translateX(-50%) scale(0.85)';
-        setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
+   /**
+ * Обработка удара по блоку
+ * ✅ Делегирует расчёт урона в CombatSystem
+ */
+hitBlock: function(block, damage) {
+    // Делегируем в CombatSystem
+    const result = window.CombatSystem?.hit(block, damage);
+    
+    if (!result || result.damage === 0) return;
+    
+    // Визуализация (остаётся в game-core)
+   UI.createDamageText(result.damage, block, result.isCrit ? '#FFD700' : '#ff4444');
+    
+    // Достижения
+    if (result.isCrit && window.EventBus) {
+        window.EventBus.emit('game:critMade', 1);
+    }
+    
+    // Проверка разрушения
+    if (result.destroyed) {
+        this.destroyBlock(block);
+    } else {
+        block.textContent = Math.floor(this.currentBlockHealth);
+        UI.updateCracks(block, this.currentBlockHealth);
+    }
+},
 
-        let finalDamage = damage * this.getBonus('getDamageMultiplier', 1);
-        let isCrit = false;
-        let critChance = window.gameState.critChance * this.getBonus('getCritChanceMultiplier', 1);
-        let critMult = window.gameState.critMultiplier * this.getBonus('getCritMultMultiplier', 1);
-        critChance = Math.min(1.0, critChance);
-
-        if (Math.random() < critChance) {
-            finalDamage = Math.round(finalDamage * critMult);
-            isCrit = true;
-            if (window.achievementsSystem) window.achievementsSystem.incrementCrits(1);
-        } else {
-            finalDamage = Math.round(finalDamage);
+   /**
+ * Обработка разрушения блока
+ * ✅ Делегирует расчёт награды в CombatSystem
+ */
+destroyBlock: function(block) {
+    // Делегируем в CombatSystem
+    const result = window.CombatSystem?.destroy(block);
+    
+    if (!result) return;
+    
+    // Визуализация
+    if (result.comboCount > 1) {
+        UI.showComboText(result.comboCount, result.comboBonus, block);
+        this.playSound('comboSound');
+    }
+    
+    UI.showRewardText(result.reward, block);
+    FEAT.createExplosion(block);
+    
+    // Достижения
+   if (window.EventBus) {
+        const currentPlanet = window.gameState.currentLocation;
+        
+        // Событие: заработаны кристаллы
+        window.EventBus.emit('game:coinsEarned', result.reward);
+        
+        // Событие: разрушен блок на планете
+        window.EventBus.emit('game:blockDestroyed', { 
+            planet: currentPlanet, 
+            isRare: result.isRare 
+        });
+        
+        // Событие: обновлено комбо
+        if (result.comboCount > (window.gameMetrics.maxCombo || 0)) {
+            window.gameMetrics.maxCombo = result.comboCount;
+            window.EventBus.emit('game:comboUpdated', {
+                combo: result.comboCount,
+                planet: currentPlanet
+            });
         }
+    }
+    
+    // Обновление UI
+    UI.updateHUD();
+    UI.updateUpgradeButtons();
+    this.playSound('breakSound');
+    
+    // Удаление блока
+    const ga = document.getElementById('gameArea');
+    if (ga?.contains(block)) ga.removeChild(block);
+    this.currentBlock = null;
+    this.currentBlockHealth = 0;
+    
+    setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
+},
 
-        this.currentBlockHealth -= finalDamage;
-        window.gameState.totalDamageDealt += finalDamage;
-
-        if (window.achievementsSystem) {
-            window.achievementsSystem.incrementTotalDamage(finalDamage);
-            window.achievementsSystem.incrementTotalClicks(1);
-        }
-
-        this.createDamageText(finalDamage, block, isCrit ? '#FFD700' : '#ff4444');
-        UI.checkLocationUpgrade();
-
-        if (this.currentBlockHealth <= 0) this.destroyBlock(block);
-        else {
-            block.textContent = Math.floor(this.currentBlockHealth);
-            this.updateCracks(block, this.currentBlockHealth);
-        }
-    },
-
-    destroyBlock: function(block) {
-        if (!window.gameState) return;
-        const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
-        window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
-        window.gameState.lastDestroyTime = now;
-
-        let r = Math.floor((25 + CFG.astronomicalUnits[window.gameState.currentLocation] * 100) * CFG.balanceConfig.rewardMultiplier);
-        r = Math.floor(r * (CFG.balanceConfig.randomBonusRange.min + Math.random() * (CFG.balanceConfig.randomBonusRange.max - CFG.balanceConfig.randomBonusRange.min)));
-        if (window.gameState.boboCoinBonus > 0) r = Math.floor(r * (1 + window.gameState.boboCoinBonus));
-        r = Math.floor(r * this.getBonus('getRewardMultiplier', 1));
-
-        let isRare = false;
-        for (const k in CFG.rareBlocks) {
-            if (block.classList.contains(CFG.rareBlocks[k].className)) {
-                r = Math.floor(r * CFG.rareBlocks[k].multiplier);
-                isRare = true;
-                break;
-            }
-        }
-
-        if (window.gameState.comboCount > 1) {
-            let comboMult = CFG.balanceConfig.comboMultiplier * this.getBonus('getComboMultiplier', 1);
-            const bns = Math.floor(r * (window.gameState.comboCount * comboMult));
-            r += bns;
-            this.showComboText(window.gameState.comboCount, bns, block);
-            this.playSound('comboSound');
-        }
-
-        window.gameState.coins += r;
-
-        if (window.achievementsSystem) {
-            const currentPlanet = window.gameState.currentLocation;
-            window.achievementsSystem.incrementCoinsEarned(r);
-            window.achievementsSystem.incrementPlanetBlocks(currentPlanet, 1);
-            if (isRare) {
-                window.achievementsSystem.incrementRareBlocks(1);
-                window.achievementsSystem.incrementPlanetRareBlocks(currentPlanet, 1);
-            }
-            if (window.gameState.comboCount > (window.gameMetrics.maxCombo || 0)) {
-                window.gameMetrics.maxCombo = window.gameState.comboCount;
-                window.achievementsSystem.updateCombo(window.gameState.comboCount);
-                window.achievementsSystem.updatePlanetCombo(currentPlanet, window.gameState.comboCount);
-            }
-        }
-
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        this.playSound('breakSound');
-        this.showRewardText(r, block);
-        FEAT.createExplosion(block);
-
-        const ga = document.getElementById('gameArea');
-        if (ga?.contains(block)) ga.removeChild(block);
-        this.currentBlock = null;
-        this.currentBlockHealth = 0;
-        setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
-    },
-
-    createDamageText: function(dmg, block, col) {
-        const r = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'damage-text';
-        t.textContent = `-${dmg}`;
-        t.style.color = col;
-        let l = r.left + r.width / 2, tp = r.top;
-        if (l < 50) l = 50;
-        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        let op = 1, y = tp;
-        const anim = () => {
-            op -= 0.02;
-            y -= 2;
-            t.style.opacity = op;
-            t.style.top = y + 'px';
-            if (op > 0) requestAnimationFrame(anim);
-            else if (t.parentNode) document.body.removeChild(t);
-        };
-        anim();
-    },
-
-    showComboText: function(c, b, block) {
-        const r = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'combo-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
-        let l = r.left + r.width / 2, tp = r.top;
-        if (l < 75) l = 75;
-        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
-    },
-
-    showRewardText: function(r, block) {
-        const rct = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'reward-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
-        let l = rct.left + rct.width / 2, tp = rct.top + rct.height / 2;
-        if (l < 60) l = 60;
-        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
-    },
-
-    updateCracks: function(block, health) {
-        if (!block) return;
-        const ex = block.querySelector('.crack-overlay');
-        if (ex) block.removeChild(ex);
-        const max = parseInt(block.dataset.maxHealth), rat = 1 - (health / max);
-        if (rat > 0.7) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-3' }));
-        else if (rat > 0.4) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-2' }));
-        else if (rat > 0.1) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-1' }));
-    },
+ 
 
     createHelperElement: function() {
         if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
@@ -391,17 +335,17 @@ window.GAME_CORE = {
         this.currentBlockHealth -= dmg;
         window.gameState.totalDamageDealt += dmg;
 
-        if (window.achievementsSystem) {
-            window.achievementsSystem.incrementTotalDamage(dmg);
-        }
+         if (window.EventBus) {
+        window.EventBus.emit('game:damageDealt', dmg);
+    }
 
-        this.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
+        UI.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
         UI.checkLocationUpgrade();
 
         if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock);
         else {
             this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
-            this.updateCracks(this.currentBlock, this.currentBlockHealth);
+            UI.updateCracks(this.currentBlock, this.currentBlockHealth);
         }
     },
 
@@ -425,8 +369,9 @@ window.GAME_CORE = {
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
 
-        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
-        UI.updateProgressBar();
+        if (window.EventBus) {
+        window.EventBus.emit('game:planetVisited', CFG.planetOrder.indexOf(loc) + 1);
+       }
     },
 
     startGame: function(reset = true) {
@@ -529,11 +474,7 @@ window.GAME_CORE = {
                     totalClaimed: 0,
                     streak: 0
                 }
-                 // ✅ Показываем информацию о пользователе
-    if (typeof window.updateUserInfo === 'function') {
-        window.updateUserInfo();
-    }
-        };
+            };
             console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
 
@@ -695,9 +636,9 @@ window.gameFunctions = {
     updateUpgradeButtons: () => UI.updateUpgradeButtons(),
     updateProgressBar: () => UI.updateProgressBar(),
     checkLocationUpgrade: () => UI.checkLocationUpgrade(),
-    createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
-    showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
-    showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
+   createDamageText: (d, b, c) => UI.createDamageText(d, b, c),
+    showComboText: (c, b, bl) => UI.showComboText(c, b, bl),
+    showRewardText: (r, bl) => UI.showRewardText(r, bl),
     createExplosion: bl => FEAT.createExplosion(bl),
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),

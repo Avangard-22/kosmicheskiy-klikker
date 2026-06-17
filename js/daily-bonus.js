@@ -2,6 +2,10 @@
 (function() {
 'use strict';
 
+// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
+// daily-bonus.js запускается с задержкой 1000мс, к этому моменту все модули должны быть загружены
+// Проверка выполняется в init()
+
 const dailyRewards = [
     { day: 1, type: 'crystals', amount: 100, icon: '💎', name: '100 Кристаллов' },
     { day: 2, type: 'crystals', amount: 150, icon: '💎', name: '150 Кристаллов' },
@@ -9,7 +13,7 @@ const dailyRewards = [
     { day: 4, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 5, type: 'crystals', amount: 300, icon: '💎', name: '300 Кристаллов' },
     { day: 6, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
-    { day: 7, type: 'crystals', amount: 500, icon: '', name: 'Бонус недели: 500 💎' },
+    { day: 7, type: 'crystals', amount: 500, icon: '🎁', name: 'Бонус недели: 500 💎' },
     { day: 8, type: 'crystals', amount: 400, icon: '💎', name: '400 Кристаллов' },
     { day: 9, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 10, type: 'crystals', amount: 500, icon: '💎', name: '500 Кристаллов' },
@@ -17,13 +21,13 @@ const dailyRewards = [
     { day: 12, type: 'crystals', amount: 600, icon: '💎', name: '600 Кристаллов' },
     { day: 13, type: 'boost', boost: 'crystalBoost', icon: '💰', name: 'Усилитель кристаллов' },
     { day: 14, type: 'crystals', amount: 1000, icon: '🎁', name: 'Бонус 2 недели: 1K 💎' },
-    { day: 15, type: 'crystals', amount: 800, icon: '', name: '800 Кристаллов' },
+    { day: 15, type: 'crystals', amount: 800, icon: '💎', name: '800 Кристаллов' },
     { day: 16, type: 'upgrade', upgrade: 'critChance', levels: 3, icon: '🎯', name: '+3 уровня Крита' },
     { day: 17, type: 'crystals', amount: 900, icon: '💎', name: '900 Кристаллов' },
     { day: 18, type: 'boost', boost: 'powerSurge', icon: '⚡', name: 'Скачок силы' },
     { day: 19, type: 'crystals', amount: 1000, icon: '💎', name: '1000 Кристаллов' },
     { day: 20, type: 'upgrade', upgrade: 'helperDamage', levels: 2, icon: '🤖', name: '+2 уровня Bobo' },
-    { day: 21, type: 'crystals', amount: 2000, icon: '', name: 'Бонус 3 недели: 2K 💎' },
+    { day: 21, type: 'crystals', amount: 2000, icon: '🎁', name: 'Бонус 3 недели: 2K 💎' },
     { day: 22, type: 'crystals', amount: 1500, icon: '💎', name: '1500 Кристаллов' },
     { day: 23, type: 'boost', boost: 'timeWarp', icon: '⏳', name: 'Искажение времени' },
     { day: 24, type: 'crystals', amount: 2000, icon: '💎', name: '2000 Кристаллов' },
@@ -54,75 +58,47 @@ function init() {
 
 function loadDailyBonusData() {
     try {
-        console.log('🎁 [BONUS] Загрузка данных бонуса...');
-        console.log('🎁 [BONUS] gameState exists:', !!window.gameState);
-        console.log('🎁 [BONUS] gameState.dailyBonus exists:', !!window.gameState?.dailyBonus);
-        
-        // Приоритет 1: из gameState.dailyBonus (из облака)
-        if (window.gameState && window.gameState.dailyBonus && window.gameState.dailyBonus.lastClaimDate !== undefined) {
+        // ✅ Приоритет 1: из gameState (из облака)
+        if (window.gameState && window.gameState.dailyBonus && 
+            window.gameState.dailyBonus.lastClaimDate !== undefined) {
             dailyBonusData = {
                 lastClaimDate: window.gameState.dailyBonus.lastClaimDate || null,
                 currentDay: window.gameState.dailyBonus.currentDay || 1,
                 totalClaimed: window.gameState.dailyBonus.totalClaimed || 0,
                 streak: window.gameState.dailyBonus.streak || 0
             };
-            console.log('✅ [BONUS] Загружено из gameState.dailyBonus:', dailyBonusData);
-            
-            localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
+            console.log('✅ dailyBonusData загружен из gameState (облако):', dailyBonusData);
             return;
         }
         
-        // Приоритет 2: из localStorage
+        // ✅ Приоритет 2: из localStorage
         const saved = localStorage.getItem('cosmicDailyBonus');
         if (saved) {
             dailyBonusData = JSON.parse(saved);
-            console.log('✅ [BONUS] Загружено из localStorage:', dailyBonusData);
+            console.log('✅ dailyBonusData загружен из localStorage:', dailyBonusData);
             
+            // Синхронизируем в gameState
             if (window.gameState) {
-                if (!window.gameState.dailyBonus) {
-                    window.gameState.dailyBonus = {};
-                }
                 window.gameState.dailyBonus = { ...dailyBonusData };
-                console.log(' [BONUS] Синхронизировано в gameState.dailyBonus');
-            }
-        } else {
-            console.log('ℹ️ [BONUS] Сохранение не найдено, используем дефолт');
-            if (window.gameState && !window.gameState.dailyBonus) {
-                window.gameState.dailyBonus = {
-                    lastClaimDate: null,
-                    currentDay: 1,
-                    totalClaimed: 0,
-                    streak: 0
-                };
             }
         }
     } catch (e) {
-        console.error(' [BONUS] Ошибка загрузки:', e);
-        console.error('❌ [BONUS] Stack:', e.stack);
+        console.error('❌ Ошибка загрузки ежедневного бонуса:', e);
         resetDailyBonus();
     }
 }
 
 function saveDailyBonusData() {
     try {
-        console.log('💾 [BONUS] Сохранение данных бонуса...');
-        console.log('💾 [BONUS] dailyBonusData:', dailyBonusData);
-        console.log('💾 [BONUS] gameState exists:', !!window.gameState);
-        
         localStorage.setItem('cosmicDailyBonus', JSON.stringify(dailyBonusData));
         
+        // ✅ Сохраняем в gameState для облачной синхронизации
         if (window.gameState) {
-            if (!window.gameState.dailyBonus) {
-                window.gameState.dailyBonus = {};
-            }
             window.gameState.dailyBonus = { ...dailyBonusData };
-            console.log('💾 [BONUS] Сохранено в gameState.dailyBonus:', window.gameState.dailyBonus);
-        } else {
-            console.warn('⚠️ [BONUS] gameState не инициализирован!');
+            console.log('💾 dailyBonusData сохранён в gameState для облака');
         }
     } catch (e) {
-        console.error('❌ [BONUS] Ошибка сохранения:', e);
-        console.error('❌ [BONUS] Stack:', e.stack);
+        console.error('❌ Ошибка сохранения ежедневного бонуса:', e);
     }
 }
 
@@ -131,6 +107,9 @@ function resetDailyBonus() {
     saveDailyBonusData();
 }
 
+/**
+ * 🎨 Создание иконки бонуса в рабочей зоне
+ */
 function createBonusIcon() {
     if (iconCreated) return;
     
@@ -138,8 +117,8 @@ function createBonusIcon() {
     icon.id = 'dailyBonusIcon';
     icon.style.cssText = `
         position: fixed;
-        bottom: 80px;
-        left: 20px;
+        top: 180px;
+        right: 20px;
         width: 60px;
         height: 60px;
         background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
@@ -161,8 +140,10 @@ function createBonusIcon() {
         <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
     `;
     
+    // Клик
     icon.addEventListener('click', claimDailyBonus);
     
+    // Touch для мобильных
     icon.addEventListener('touchstart', (e) => {
         e.preventDefault();
         claimDailyBonus();
@@ -223,7 +204,7 @@ function updateTimerDisplay() {
     }
 
     if (dailyBonusData.currentDay > 30) {
-        timerEl.textContent = '';
+        timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         return;
     }
@@ -243,87 +224,82 @@ function updateTimerDisplay() {
 }
 
 /**
- * 🎁 Получение ежедневного бонуса
- * Проверяет, можно ли получить бонус сегодня, применяет награду и сохраняет прогресс
+ * Получение ежедневного бонуса
+ * ✅ Добавлена блокировка синхронизации
  */
 function claimDailyBonus() {
     const today = new Date().toDateString();
     
     console.log('🎁 [BONUS] Попытка получения бонуса...');
-    console.log('🎁 [BONUS] Сегодня (UTC):', today);
+    console.log('🎁 [BONUS] Сегодня:', today);
     console.log('🎁 [BONUS] Последний раз получен:', dailyBonusData.lastClaimDate);
-    console.log('🎁 [BONUS] gameState.dailyBonus:', window.gameState?.dailyBonus);
-
-    // ✅ Проверка: бонус уже получен сегодня?
+    
     if (dailyBonusData.lastClaimDate === today) {
         console.log('⚠️ [BONUS] Бонус уже получен сегодня!');
-        showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
+        showSmallNotification(' Уже получено сегодня!', '#ff9800');
         return;
     }
-
-    // ✅ Проверка: цикл бонусов завершён?
+    
     if (dailyBonusData.currentDay > 30) {
         showSmallNotification('🎉 Цикл завершён!', '#4CAF50');
         return;
     }
-
+    
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
     console.log('🎁 [BONUS] Награда:', reward.name);
-
-    // ✅ Блокируем синхронизацию на время применения бонуса
+    
+    // ✅ БЛОКИРУЕМ синхронизацию
     if (typeof window.lockSync === 'function') {
         window.lockSync();
         console.log('🔒 [BONUS] Синхронизация заблокирована');
     }
-
-    // ✅ ИСПРАВЛЕНО: добавлен try-finally для корректной разблокировки
+    
     try {
         // Применяем награду
         applyReward(reward);
-
-        // ✅ Обновляем данные бонуса
+        
+        // Обновляем данные
         dailyBonusData.lastClaimDate = today;
         dailyBonusData.streak++;
         dailyBonusData.totalClaimed++;
         if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
-
+        
         console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
-
-        // Сохраняем данные
+        
+        // Сохраняем
         saveDailyBonusData();
         updateIconDisplay();
         showRewardNotification(reward);
-
+        
         // Звук
         const sound = document.getElementById('upgradeSound');
         if (sound) {
             sound.currentTime = 0;
             sound.play().catch(() => {});
         }
-
+        
         // Тактильная отдача
         if (window.telegramHaptic?.success) {
             window.telegramHaptic.success();
         } else if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
         }
-
-        // ✅ Сохраняем игру в облако
+        
+        // Сохраняем игру
         if (typeof window.saveGame === 'function') {
             console.log('💾 [BONUS] Вызов saveGame()...');
             window.saveGame();
         }
     } finally {
-        // ✅ РАЗБЛОКИРУЕМ синхронизацию (выполнится даже при ошибке)
+        // ✅ РАЗБЛОКИРУЕМ синхронизацию через 300мс
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') {
                 window.unlockSync();
-                console.log('🔓 [BONUS] Синхронизация разблокирована');
+                console.log(' [BONUS] Синхронизация разблокирована');
             }
         }, 300);
     }
 }
-
 function applyReward(reward) {
     if (!window.gameState) {
         console.warn('⚠️ [BONUS] gameState не инициализирован');
@@ -422,6 +398,7 @@ function showRewardNotification(reward) {
     }, 2000);
 }
 
+// CSS анимация
 const style = document.createElement('style');
 style.textContent = `
     @keyframes dailyBonusPulse {
@@ -444,6 +421,7 @@ window.dailyBonusSystem = {
     })
 };
 
+// ✅ Запуск с задержкой (ждём загрузки gameState из облака)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); }, 1000));
 } else {

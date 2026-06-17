@@ -2,6 +2,11 @@
 (function() {
 'use strict';
 
+// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
+if (!window.GAME_CONFIG) {
+    throw new Error('[GAME_FEATURES] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
+}
+
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 
@@ -181,15 +186,15 @@ window.GAME_FEATURES = {
 
         if (window.gameState.clickUpgradeLevel === undefined) window.gameState.clickUpgradeLevel = 0;
 
-        const cost = Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel));
+        const cost = CFG.getUpgradeCost('clickPower', window.gameState.clickUpgradeLevel);
 
         if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.clickUpgradeLevel++;
             window.gameState.clickPower = core.calculateClickPower();
             
-            window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
-            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
+         window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
+if (window.EventBus) window.EventBus.emit('game:upgradeBought', 1);
 
             UI.updateHUD();
             UI.updateUpgradeButtons();
@@ -223,7 +228,7 @@ window.GAME_FEATURES = {
             return;
         }
 
-        const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel || 0));
+       const baseCost = CFG.getUpgradeCost('helper', window.gameState.helperUpgradeLevel || 0);
         const actBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
         const cost = Math.floor(baseCost * (1 + actBonus * 0.2));
 
@@ -232,7 +237,7 @@ window.GAME_FEATURES = {
             window.gameState.helperActivations = (window.gameState.helperActivations || 0) + 1;
             window.gameMetrics.helpersBought = (window.gameMetrics.helpersBought || 0) + 1;
 
-            if (window.achievementsSystem) window.achievementsSystem.incrementHelpers(1);
+            if (window.EventBus) window.EventBus.emit('game:helperBought', 1);
 
             const btn = document.getElementById('upgradeHelperBtn');
             if (btn) {
@@ -253,7 +258,7 @@ window.GAME_FEATURES = {
         if (!window.gameState || !core) return;
 
         if (window.gameState.critChanceUpgradeLevel === undefined) window.gameState.critChanceUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel));
+        const cost = CFG.getUpgradeCost('critChance', window.gameState.critChanceUpgradeLevel);
 
         if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
@@ -261,7 +266,7 @@ window.GAME_FEATURES = {
             window.gameState.critChanceUpgradeLevel++;
             
             window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
-            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
+            if (window.EventBus) window.EventBus.emit('game:upgradeBought', 1);
 
             UI.updateHUD();
             UI.updateUpgradeButtons();
@@ -287,7 +292,7 @@ window.GAME_FEATURES = {
         if (!window.gameState || !core) return;
 
         if (window.gameState.critMultiplierUpgradeLevel === undefined) window.gameState.critMultiplierUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel));
+      const cost = CFG.getUpgradeCost('critMultiplier', window.gameState.critMultiplierUpgradeLevel);
 
         if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
@@ -295,7 +300,7 @@ window.GAME_FEATURES = {
             window.gameState.critMultiplierUpgradeLevel++;
             
             window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
-            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
+            if (window.EventBus) window.EventBus.emit('game:upgradeBought', 1);
 
             UI.updateHUD();
             UI.updateUpgradeButtons();
@@ -321,14 +326,14 @@ window.GAME_FEATURES = {
         if (!window.gameState || !core) return;
 
         if (window.gameState.helperUpgradeLevel === undefined) window.gameState.helperUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel));
+     const cost = CFG.getUpgradeCost('helperDamage', window.gameState.helperUpgradeLevel);
 
         if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.helperUpgradeLevel++;
             
             window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
-            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
+            if (window.EventBus) window.EventBus.emit('game:upgradeBought', 1);
 
             UI.updateHUD();
             UI.updateUpgradeButtons();

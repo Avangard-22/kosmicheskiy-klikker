@@ -2,6 +2,13 @@
 (function() {
     'use strict';
 
+// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
+// achievements.js использует safeInit(), который ждёт gameState и GAME_CORE,
+// поэтому здесь только предупреждение
+if (!window.GAME_CONFIG) {
+    console.warn('⚠️ [ACHIEVEMENTS] GAME_CONFIG не загружен.');
+}
+
     // ═══════════════════════════════════════════════
     // 🌍 ЛОКАЦИОННЫЕ ДОСТИЖЕНИЯ
     // ═══════════════════════════════════════════════
@@ -353,15 +360,61 @@
         document.head.appendChild(style);
     }
 
-    function init() {
-        injectStyles();
-        calculateTotalAchievements();
-        createAchievementsPanel();
-        setupEventHandlers();
-        checkSavedAchievements();
-        updateAchievementsDisplay();
-        console.log('🏆 Achievements initialized. Total:', totalAchievements);
+function init() {
+    injectStyles();
+    calculateTotalAchievements();
+    createAchievementsPanel();
+    setupEventHandlers();
+    checkSavedAchievements();
+    updateAchievementsDisplay();
+    
+    // ✅ Подписка на события через EventBus
+    if (window.EventBus) {
+        window.EventBus.on('game:damageDealt', function(damage) {
+            window.achievementsSystem.incrementTotalDamage(damage);
+        });
+        
+        window.EventBus.on('game:clickMade', function(count) {
+            window.achievementsSystem.incrementTotalClicks(count);
+        });
+
+window.EventBus.on('game:upgradeBought', function(count) {
+    window.achievementsSystem.incrementUpgrades(count);
+});
+
+window.EventBus.on('game:helperBought', function(count) {
+    window.achievementsSystem.incrementHelpers(count);
+});
+        
+window.EventBus.on('game:boosterUsed', function(count) {
+    window.achievementsSystem.incrementBoosters(count);
+});
+
+        window.EventBus.on('game:critMade', function(count) {
+            window.achievementsSystem.incrementCrits(count);
+        });
+        
+        window.EventBus.on('game:coinsEarned', function(amount) {
+            window.achievementsSystem.incrementCoinsEarned(amount);
+        });
+        
+        window.EventBus.on('game:blockDestroyed', function(data) {
+            window.achievementsSystem.incrementPlanetBlocks(data.planet, 1);
+            if (data.isRare) {
+                window.achievementsSystem.incrementRareBlocks(1);
+                window.achievementsSystem.incrementPlanetRareBlocks(data.planet, 1);
+            }
+        });
+        
+        window.EventBus.on('game:comboUpdated', function(combo) {
+            window.achievementsSystem.updateCombo(combo);
+        });
+        
+        console.log('📡 [ACHIEVEMENTS] Подписка на события EventBus выполнена');
     }
+    
+    console.log('🏆 Achievements initialized. Total:', totalAchievements);
+}
 
     function calculateTotalAchievements() {
         totalAchievements = 0;
@@ -766,17 +819,18 @@
             }
         }
 
-        syncGlobal('combatMastery', gs.totalDamageDealt);
-        syncGlobal('resourceCollector', gm.totalCoinsEarned);
-        syncGlobal('explorer', gm.planetsVisited || 1);
-        syncGlobal('comboLegend', gm.maxCombo);
-        syncGlobal('critMaster', gm.totalCrits);
-        syncGlobal('upgradeEnthusiast', gm.upgradesBought);
-        syncGlobal('helperCommander', gm.helpersBought);
-        syncGlobal('boosterUser', gm.boostersUsed);
-        syncGlobal('timeInvestor', Math.floor((Date.now() - (gm.startTime || Date.now())) / 1000));
-        syncGlobal('rareHunter', gm.rareBlocksDestroyed);
-        syncGlobal('clickMaster', gm.totalClicks);
+        // ✅ ИСПРАВЛЕНО: используем реальные значения без fallback на 1
+syncGlobal('combatMastery', gs.totalDamageDealt || 0);
+syncGlobal('resourceCollector', gm.totalCoinsEarned || 0);
+syncGlobal('explorer', gm.planetsVisited || 0);  // ✅ Теперь 0 если не посещал
+syncGlobal('comboLegend', gm.maxCombo || 0);
+syncGlobal('critMaster', gm.totalCrits || 0);
+syncGlobal('upgradeEnthusiast', gm.upgradesBought || 0);
+syncGlobal('helperCommander', gm.helpersBought || 0);
+syncGlobal('boosterUser', gm.boostersUsed || 0);
+syncGlobal('timeInvestor', Math.floor((Date.now() - (gm.startTime || Date.now())) / 1000));
+syncGlobal('rareHunter', gm.rareBlocksDestroyed || 0);
+syncGlobal('clickMaster', gm.totalClicks || 0);
 
         for (var p in planetAchievements) {
             if (planetAchievements.hasOwnProperty(p)) {
