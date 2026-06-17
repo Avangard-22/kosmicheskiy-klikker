@@ -66,7 +66,13 @@ function loadDailyBonusData() {
             console.log('✅ dailyBonusData загружен из gameState (облако):', dailyBonusData);
             return;
         }
-                  
+        
+        // ✅ Приоритет 2: из localStorage
+        const saved = localStorage.getItem('cosmicDailyBonus');
+        if (saved) {
+            dailyBonusData = JSON.parse(saved);
+            console.log('✅ dailyBonusData загружен из localStorage:', dailyBonusData);
+            
             // Синхронизируем в gameState
             if (window.gameState) {
                 window.gameState.dailyBonus = { ...dailyBonusData };
@@ -97,36 +103,87 @@ function resetDailyBonus() {
     saveDailyBonusData();
 }
 
-function checkDailyBonus() {
-    updateTimerDisplay();
-    updateWelcomeButton();
-}
-
 /**
  * 🎨 Создание иконки бонуса в рабочей зоне
  */
-function updateWelcomeButton() {
-    const btn = document.getElementById('dailyBonusWelcomeBtn');
-    if (!btn) return;
-
-    const today = new Date().toDateString();
-    const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
-
-    if (isAvailable) {
-        btn.classList.add('available');
-        btn.classList.remove('claimed');
-    } else {
-        btn.classList.remove('available');
-        btn.classList.add('claimed');
-    }
+function createBonusIcon() {
+    if (iconCreated) return;
+    
+    const icon = document.createElement('div');
+    icon.id = 'dailyBonusIcon';
+    icon.style.cssText = `
+        position: fixed;
+        top: 130px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
+        border: 2px solid #FFD700;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+        font-family: 'Orbitron', sans-serif;
+    `;
+    
+    icon.innerHTML = `
+        <div id="dailyBonusDay" style="font-size: 0.65em; color: #FFD700; font-weight: bold; margin-bottom: 2px;">День 1</div>
+        <div id="dailyBonusTimer" style="font-size: 0.5em; color: #fff; font-weight: bold;">00:00:00</div>
+    `;
+    
+    // Клик
+    icon.addEventListener('click', claimDailyBonus);
+    
+    // Touch для мобильных
+    icon.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        claimDailyBonus();
+    }, { passive: false });
+    
+    document.body.appendChild(icon);
+    iconCreated = true;
+    console.log('✅ Daily bonus icon created');
 }
 
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
-    
     timerInterval = setInterval(() => {
-        updateTimerDisplay();
+        updateIconDisplay();
     }, 1000);
+}
+
+function updateIconDisplay() {
+    const dayEl = document.getElementById('dailyBonusDay');
+    const timerEl = document.getElementById('dailyBonusTimer');
+    const icon = document.getElementById('dailyBonusIcon');
+    
+    if (!dayEl || !timerEl || !icon) return;
+
+    const today = new Date().toDateString();
+    const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
+
+    dayEl.textContent = `День ${dailyBonusData.currentDay}`;
+
+    if (isAvailable) {
+        timerEl.textContent = '✅';
+        timerEl.style.color = '#4CAF50';
+        icon.style.borderColor = '#4CAF50';
+        icon.style.animation = 'dailyBonusPulse 2s infinite';
+    } else if (dailyBonusData.currentDay > 30) {
+        timerEl.textContent = '🎉';
+        timerEl.style.color = '#FFD700';
+        icon.style.borderColor = '#FFD700';
+        icon.style.animation = 'none';
+    } else {
+        updateTimerDisplay();
+        icon.style.borderColor = '#FFD700';
+        icon.style.animation = 'none';
+    }
 }
 
 function updateTimerDisplay() {
@@ -137,13 +194,13 @@ function updateTimerDisplay() {
     const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
 
     if (isAvailable) {
-        timerEl.textContent = '✅ Доступно!';
+        timerEl.textContent = '✅';
         timerEl.style.color = '#4CAF50';
         return;
     }
 
     if (dailyBonusData.currentDay > 30) {
-        timerEl.textContent = '🎉 Завершено';
+        timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         return;
     }
@@ -162,432 +219,81 @@ function updateTimerDisplay() {
     timerEl.style.color = '#4FC3F7';
 }
 
-function injectStyles() {
-    if (document.getElementById('daily-bonus-welcome-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'daily-bonus-welcome-styles';
-    style.textContent = `
-        .daily-bonus-container {
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .daily-bonus-welcome-btn {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
-            border: 2px solid #FFD700;
-            border-radius: 15px;
-            padding: 15px 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            min-width: 200px;
-            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-        }
-
-        .daily-bonus-welcome-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.5);
-        }
-
-        .daily-bonus-welcome-btn:active {
-            transform: scale(0.95);
-        }
-
-        .daily-bonus-welcome-btn.available {
-            animation: dailyBonusPulse 2s infinite;
-        }
-
-        .daily-bonus-welcome-btn.claimed {
-            opacity: 0.6;
-            border-color: #666;
-            background: rgba(100, 100, 100, 0.2);
-        }
-
-        .daily-bonus-icon {
-            font-size: 3em;
-            filter: drop-shadow(0 2px 8px rgba(255, 215, 0, 0.6));
-        }
-
-        .daily-bonus-label {
-            color: #FFD700;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            font-size: 1em;
-        }
-
-        .daily-bonus-timer {
-            font-family: 'Orbitron', monospace;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-
-        @keyframes dailyBonusPulse {
-            0%, 100% { 
-                transform: scale(1); 
-                box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-            }
-            50% { 
-                transform: scale(1.05); 
-                box-shadow: 0 6px 25px rgba(255, 215, 0, 0.6);
-            }
-        }
-
-        .daily-bonus-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 3000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .daily-bonus-modal.visible {
-            display: flex;
-            opacity: 1;
-        }
-
-        .daily-bonus-modal-content {
-            background: linear-gradient(135deg, rgba(20, 20, 40, 0.98), rgba(10, 10, 30, 0.98));
-            border: 3px solid #FFD700;
-            border-radius: 20px;
-            padding: 25px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.4);
-            position: relative;
-            transform: scale(0.9);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .daily-bonus-modal.visible .daily-bonus-modal-content {
-            transform: scale(1);
-        }
-
-        .daily-bonus-close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
-            font-size: 1.5em;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .daily-bonus-close-btn:hover {
-            background: rgba(255, 0, 0, 0.3);
-        }
-
-        .daily-bonus-modal-title {
-            text-align: center;
-            color: #FFD700;
-            font-size: 1.6em;
-            margin: 0 0 15px 0;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .daily-bonus-streak {
-            text-align: center;
-            color: #fff;
-            font-size: 1em;
-            margin-bottom: 20px;
-            padding: 12px;
-            background: rgba(255, 215, 0, 0.1);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
-        }
-
-        .daily-bonus-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .daily-bonus-cell {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 12px 8px;
-            text-align: center;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s;
-            cursor: default;
-        }
-
-        .daily-bonus-cell.claimed {
-            opacity: 0.5;
-            filter: grayscale(100%);
-            border-color: #4CAF50;
-        }
-
-        .daily-bonus-cell.current {
-            border: 2px solid #FFD700;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-            animation: dailyBonusPulse 2s infinite;
-            background: rgba(255, 215, 0, 0.1);
-        }
-
-        .daily-bonus-cell.locked {
-            opacity: 0.4;
-        }
-
-        .daily-bonus-cell-icon {
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .daily-bonus-cell-day {
-            font-size: 0.75em;
-            color: #FFD700;
-            font-weight: bold;
-            margin-bottom: 3px;
-        }
-
-        .daily-bonus-cell-name {
-            font-size: 0.65em;
-            color: #fff;
-            line-height: 1.2;
-        }
-
-        .daily-bonus-claim-btn {
-            width: 100%;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            background: linear-gradient(135deg, #4CAF50, #45a049);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.5);
-            transition: all 0.2s;
-            min-height: 50px;
-        }
-
-        .daily-bonus-claim-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
-        }
-
-        .daily-bonus-claim-btn:active:not(:disabled) {
-            transform: scale(0.98);
-        }
-
-        .daily-bonus-claim-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        @media (max-width: 480px) {
-            .daily-bonus-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 8px;
-            }
-            .daily-bonus-cell {
-                padding: 10px 6px;
-            }
-            .daily-bonus-cell-icon {
-                font-size: 1.6em;
-            }
-            .daily-bonus-cell-name {
-                font-size: 0.6em;
-            }
-            .daily-bonus-welcome-btn {
-                min-width: 160px;
-                padding: 12px 20px;
-            }
-            .daily-bonus-icon {
-                font-size: 2.5em;
-            }
-        }
-
-        @keyframes dailyBonusSlideDown {
-            from { top: -100px; opacity: 0; transform: translateX(-50%) scale(0.8); }
-            to { top: 20%; opacity: 1; transform: translateX(-50%) scale(1); }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-function setupEventHandlers() {
-    const welcomeBtn = document.getElementById('dailyBonusWelcomeBtn');
-    const closeBtn = document.getElementById('dailyBonusCloseBtn');
-    const claimBtn = document.getElementById('dailyBonusClaimBtn');
-    const modal = document.getElementById('dailyBonusModal');
-
-    if (welcomeBtn) {
-        welcomeBtn.addEventListener('click', showModal);
-        welcomeBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            showModal();
-        }, { passive: false });
-    }
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', hideModal);
-        closeBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            hideModal();
-        }, { passive: false });
-    }
-
-    if (claimBtn) {
-        claimBtn.addEventListener('click', claimDailyBonus);
-        claimBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            claimDailyBonus();
-        }, { passive: false });
-    }
-
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) hideModal();
-        });
-    }
-}
-
-function showModal() {
-    const modal = document.getElementById('dailyBonusModal');
-    if (!modal) return;
-
-    updateModalContent();
-    modal.classList.add('visible');
-    modalVisible = true;
-}
-
-function hideModal() {
-    const modal = document.getElementById('dailyBonusModal');
-    if (!modal) return;
-
-    modal.classList.remove('visible');
-    modalVisible = false;
-}
-
-function updateModalContent() {
-    const grid = document.getElementById('dailyBonusGrid');
-    const streakInfo = document.getElementById('dailyBonusStreak');
-    const claimBtn = document.getElementById('dailyBonusClaimBtn');
-
-    if (!grid || !streakInfo || !claimBtn) return;
-
-    grid.innerHTML = '';
-    streakInfo.textContent = `🔥 Серия: ${dailyBonusData.streak} дн. | ✅ Получено: ${dailyBonusData.totalClaimed}/30`;
-
-    dailyRewards.forEach((reward, index) => {
-        const day = index + 1;
-        const cell = document.createElement('div');
-        cell.className = 'daily-bonus-cell';
-
-        const isClaimed = dailyBonusData.currentDay > day;
-        const isCurrent = dailyBonusData.currentDay === day;
-
-        if (isClaimed) {
-            cell.classList.add('claimed');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">✅</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-            `;
-        } else if (isCurrent) {
-            cell.classList.add('current');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">${reward.icon}</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-                <div class="daily-bonus-cell-name">${reward.name}</div>
-            `;
-        } else {
-            cell.classList.add('locked');
-            cell.innerHTML = `
-                <div class="daily-bonus-cell-icon">🔒</div>
-                <div class="daily-bonus-cell-day">День ${day}</div>
-            `;
-        }
-
-        grid.appendChild(cell);
-    });
-
-    const today = new Date().toDateString();
-    const isAvailable = dailyBonusData.lastClaimDate !== today && dailyBonusData.currentDay <= 30;
-
-    if (isAvailable) {
-        claimBtn.disabled = false;
-        claimBtn.textContent = ` Получить: ${dailyRewards[dailyBonusData.currentDay - 1].name}`;
-    } else {
-        claimBtn.disabled = true;
-        claimBtn.textContent = dailyBonusData.currentDay > 30 ? '🎉 Цикл завершён!' : '✅ Уже получено сегодня';
-    }
-}
-
+/**
+ * 🎁 Получение бонуса
+ */
 function claimDailyBonus() {
     const today = new Date().toDateString();
 
     if (dailyBonusData.lastClaimDate === today) {
-        showNotification('⏰ Вы уже получили бонус сегодня!', '#ff9800');
+        showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
         return;
     }
 
     if (dailyBonusData.currentDay > 30) {
-        showNotification('🎉 Цикл бонусов завершён!', '#4CAF50');
+        showSmallNotification('🎉 Цикл завершён!', '#4CAF50');
         return;
     }
 
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
-    applyReward(reward);
 
-    dailyBonusData.lastClaimDate = today;
-    dailyBonusData.streak++;
-    dailyBonusData.totalClaimed++;
-    if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
-
-    saveDailyBonusData();
-    updateModalContent();
-    updateWelcomeButton();
-    showRewardNotification(reward);
-
-    const sound = document.getElementById('upgradeSound');
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(() => {});
+    // ✅ БЛОКИРУЕМ синхронизацию
+    if (typeof window.lockSync === 'function') {
+        window.lockSync();
+        console.log('🔒 [BONUS] Синхронизация заблокирована');
     }
 
-    if (window.telegramHaptic && window.telegramHaptic.success) {
-        window.telegramHaptic.success();
-    } else if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-    }
+    try {
+        applyReward(reward);
 
-    if (typeof window.saveGame === 'function') window.saveGame();
+        dailyBonusData.lastClaimDate = today;
+        dailyBonusData.streak++;
+        dailyBonusData.totalClaimed++;
+        if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
+
+        saveDailyBonusData();
+        updateIconDisplay();
+        showRewardNotification(reward);
+
+        const sound = document.getElementById('upgradeSound');
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        }
+
+        if (window.telegramHaptic?.success) {
+            window.telegramHaptic.success();
+        } else if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+
+        // ✅ Сохраняем игру
+        if (typeof window.saveGame === 'function') {
+            console.log('💾 [BONUS] Сохранение после получения бонуса...');
+            window.saveGame();
+        }
+    } finally {
+        // ✅ РАЗБЛОКИРУЕМ синхронизацию
+        setTimeout(() => {
+            if (typeof window.unlockSync === 'function') {
+                window.unlockSync();
+                console.log('🔓 [BONUS] Синхронизация разблокирована');
+            }
+        }, 300);
+    }
 }
 
 function applyReward(reward) {
-    if (!window.gameState) return;
+    if (!window.gameState) {
+        console.warn('⚠️ [BONUS] gameState не инициализирован');
+        return;
+    }
     if (!window.gameState.shopItems) window.gameState.shopItems = {};
 
     switch (reward.type) {
         case 'crystals':
             window.gameState.coins += reward.amount;
+            console.log(`💎 [BONUS] +${reward.amount} кристаллов`);
             break;
         case 'boost':
             const duration = window.shopSystem?.config?.[reward.boost]?.duration || getBoostDuration(reward.boost);
@@ -597,6 +303,7 @@ function applyReward(reward) {
             window.gameState.shopItems[reward.boost].active = true;
             window.gameState.shopItems[reward.boost].timeLeft = duration;
             window.gameState.shopItems[reward.boost].purchased = true;
+            console.log(`⚡ [BONUS] Активирован бустер ${reward.boost}`);
             if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
             break;
         case 'upgrade':
@@ -605,6 +312,7 @@ function applyReward(reward) {
                 window.gameState.critChanceUpgradeLevel += reward.levels;
                 window.gameState.critMultiplierUpgradeLevel += reward.levels;
                 window.gameState.helperUpgradeLevel += reward.levels;
+                console.log(`🚀 [BONUS] +${reward.levels} ко ВСЕМ улучшениям`);
             } else if (reward.upgrade === 'clickPower') {
                 window.gameState.clickUpgradeLevel += reward.levels;
             } else if (reward.upgrade === 'critChance') {
@@ -622,10 +330,8 @@ function applyReward(reward) {
             break;
     }
 
-    if (window.gameFunctions) {
-        if (window.gameFunctions.updateHUD) window.gameFunctions.updateHUD();
-        if (window.gameFunctions.updateUpgradeButtons) window.gameFunctions.updateUpgradeButtons();
-    }
+    if (window.UI?.updateHUD) window.UI.updateHUD();
+    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
 }
 
 function getBoostDuration(boostId) {
@@ -633,67 +339,63 @@ function getBoostDuration(boostId) {
     return durations[boostId] || 30000;
 }
 
-function showNotification(text, color) {
+function showSmallNotification(text, color) {
     const notif = document.createElement('div');
     notif.textContent = text;
     notif.style.cssText = `
-        position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: ${color || '#4CAF50'}; color: #fff;
-        padding: 15px 25px; border-radius: 12px; z-index: 4000;
+        padding: 12px 20px; border-radius: 10px; z-index: 10000;
         text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.5); border: 2px solid #fff;
-        animation: dailyBonusSlideDown 0.5s ease-out;
-        max-width: 90%; width: 350px; pointer-events: none;
+        font-size: 0.9em; box-shadow: 0 4px 20px rgba(0,0,0,0.5); border: 2px solid #fff;
+        opacity: 0; transition: opacity 0.3s; pointer-events: none;
     `;
     document.body.appendChild(notif);
+    setTimeout(() => { notif.style.opacity = '1'; }, 10);
     setTimeout(() => {
-        notif.style.transition = 'opacity 0.5s';
         notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
-    }, 2500);
+        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 300);
+    }, 1500);
 }
 
 function showRewardNotification(reward) {
     const notif = document.createElement('div');
     notif.style.cssText = `
-        position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
         background: linear-gradient(135deg, rgba(255,215,0,0.95), rgba(255,140,0,0.95));
-        color: #000; padding: 20px 30px; border-radius: 15px; z-index: 4000;
+        color: #000; padding: 15px 25px; border-radius: 12px; z-index: 10000;
         text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold;
-        box-shadow: 0 10px 40px rgba(255,215,0,0.5); border: 3px solid #fff;
-        animation: dailyBonusSlideDown 0.5s ease-out; max-width: 90%; width: 400px;
+        box-shadow: 0 6px 30px rgba(255,215,0,0.6); border: 3px solid #fff;
+        opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 280px;
     `;
     notif.innerHTML = `
-        <div style="font-size:2em;margin-bottom:10px;">${reward.icon}</div>
-        <div style="font-size:1.3em;margin-bottom:5px;">🎁 ЕЖЕДНЕВНЫЙ БОНУС!</div>
-        <div style="font-size:1.1em;margin-bottom:10px;">День ${dailyBonusData.totalClaimed}/30</div>
-        <div style="font-size:1.2em;color:#fff;">${reward.name}</div>
+        <div style="font-size:2em;margin-bottom:8px;">${reward.icon}</div>
+        <div style="font-size:1em;margin-bottom:5px;">🎁 День ${dailyBonusData.totalClaimed}/30</div>
+        <div style="font-size:0.9em;color:#fff;">${reward.name}</div>
     `;
     document.body.appendChild(notif);
+    setTimeout(() => { notif.style.opacity = '1'; }, 10);
     setTimeout(() => {
-        notif.style.transition = 'all 0.5s ease-in';
-        notif.style.top = '-100px';
         notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 500);
-    }, 3000);
+        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 300);
+    }, 2000);
 }
 
-function checkOnLoad() {
-    const today = new Date().toDateString();
-    if (dailyBonusData.lastClaimDate) {
-        const lastDate = new Date(dailyBonusData.lastClaimDate);
-        const todayDate = new Date(today);
-        const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
-        if (diffDays > 1) dailyBonusData.streak = 0;
+// CSS анимация
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes dailyBonusPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
     }
-    saveDailyBonusData();
-}
+    #dailyBonusIcon:hover { transform: scale(1.1); }
+    #dailyBonusIcon:active { transform: scale(0.95); }
+`;
+document.head.appendChild(style);
 
 window.dailyBonusSystem = {
     init,
     claimDailyBonus,
-    showModal,
-    hideModal,
     resetDailyBonus,
     getProgress: () => ({
         currentDay: dailyBonusData.currentDay,
@@ -702,9 +404,10 @@ window.dailyBonusSystem = {
     })
 };
 
+// ✅ Запуск с задержкой (ждём загрузки gameState из облака)
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); checkOnLoad(); }, 500));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { init(); }, 1000));
 } else {
-    setTimeout(() => { init(); checkOnLoad(); }, 500);
+    setTimeout(() => { init(); }, 1000);
 }
 })();
