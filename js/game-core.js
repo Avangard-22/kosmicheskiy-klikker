@@ -433,92 +433,76 @@ destroyBlock: function(block) {
 
     /**
      * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
-     * - Убран вызов window.loadGame() (он больше не нужен)
-     * - cloudInit сам загружает данные из облака
-     * - gameState инициализируется дефолтными значениями до cloudInit
-     */
     continueGame: async function() {
-        console.log('🔄 [GAME] Starting continueGame...');
-
-        // ✅ Инициализируем gameState дефолтными значениями
-        // (на случай, если облако пустое — игра начнётся с нуля)
-        if (!window.gameState || Object.keys(window.gameState).length === 0) {
-            window.gameState = {
-                coins: 0,
-                clickPower: 1,
-                critChance: 0.001,
-                critMultiplier: 2.0,
-                currentLocation: 'mercury',
-                totalDamageDealt: 0,
-                clickUpgradeLevel: 0,
-                critChanceUpgradeLevel: 0,
-                critMultiplierUpgradeLevel: 0,
-                helperUpgradeLevel: 0,
-                helperActivations: 0,
-                helperActive: false,
-                helperTimeLeft: 0,
-                helperDamageBonus: 0,
-                boboCoinBonus: 0,
-                comboCount: 0,
-                lastDestroyTime: 0,
-                gameActive: false,
-                gamePaused: false,
-                achievements: {},
-                shopItems: {},
-                permanentBonuses: {},
-                unlockedLocations: ['mercury'],
-                boboSkin: 'default',
-                dailyBonus: {
-                    lastClaimDate: null,
-                    currentDay: 1,
-                    totalClaimed: 0,
-                    streak: 0
-                }
-            };
-            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
-        }
-
-        if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
-            window.gameMetrics = {
-                startTime: 0,
-                blocksDestroyed: 0,
-                upgradesBought: 0,
-                totalClicks: 0,
-                totalCrits: 0,
-                totalCoinsEarned: 0,
-                helpersBought: 0,
-                boostersUsed: 0,
-                maxCombo: 0,
-                rareBlocksDestroyed: 0,
-                sessions: 0
-            };
-        }
-
-        // ✅ Загружаем из облака (асинхронно)
-        // cloudInit сам вызывает loadGame() внутри себя
-        if (typeof window.cloudInit === 'function') {
-            console.log('☁️ [GAME] cloudInit вызывается...');
-            try {
-                await window.cloudInit();
-                console.log('☁️ [GAME] cloudInit завершён');
-            } catch (e) {
-                console.error('☁️ [GAME] cloudInit error:', e);
+    console.log('🔄 [GAME] Starting continueGame...');
+    
+    // ✅ Проверяем, что gameState инициализирован
+    if (!window.gameState || !window.gameState.coins) {
+        console.warn('⚠️ [GAME] gameState не инициализирован, создаём дефолтный');
+        window.gameState = {
+            coins: 0,
+            clickPower: 1,
+            critChance: 0.001,
+            critMultiplier: 2.0,
+            currentLocation: 'mercury',
+            totalDamageDealt: 0,
+            clickUpgradeLevel: 0,
+            critChanceUpgradeLevel: 0,
+            critMultiplierUpgradeLevel: 0,
+            helperUpgradeLevel: 0,
+            helperActivations: 0,
+            helperActive: false,
+            helperTimeLeft: 0,
+            helperDamageBonus: 0,
+            boboCoinBonus: 0,
+            comboCount: 0,
+            lastDestroyTime: 0,
+            gameActive: false,
+            gamePaused: false,
+            achievements: {},
+            shopItems: {},
+            permanentBonuses: {},
+            unlockedLocations: ['mercury'],
+            boboSkin: 'default',
+            dailyBonus: {
+                lastClaimDate: null,
+                currentDay: 1,
+                totalClaimed: 0,
+                streak: 0
             }
-        } else {
-            console.warn('⚠️ [GAME] cloudInit function NOT found');
+        };
+    }
+    
+    // ☁️ Облачная инициализация
+    if (typeof window.cloudInit === 'function') {
+        console.log('☁️ [GAME] Вызов cloudInit...');
+        try {
+            await window.cloudInit();
+            console.log('☁️ [GAME] cloudInit завершён');
+        } catch (e) {
+            console.error('☁️ [GAME] cloudInit error:', e);
         }
-
-        // ✅ Запускаем игру с загруженными данными
+    } else {
+        console.warn('⚠️ [GAME] cloudInit function NOT found');
+    }
+    
+    // ✅ Проверяем, что gameState заполнен
+    console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
+    console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
+    
+    if (window.gameState.coins !== undefined && window.gameState.currentLocation) {
         console.log('✅ [GAME] Load successful, starting game...');
-        console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
-        console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
-
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        UI.updateProgressBar();
+        
+        // ✅ Проверяем, что UI существует
+        if (typeof UI !== 'undefined' && UI.updateHUD) {
+            UI.updateHUD();
+            UI.updateUpgradeButtons();
+            UI.updateProgressBar();
+        }
+        
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
-
+        
         if (window.showTooltip && window.formatString) {
             const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
                 coins: Math.floor(window.gameState.coins || 0).toLocaleString()
@@ -526,7 +510,11 @@ destroyBlock: function(block) {
             window.showTooltip(t);
             setTimeout(window.hideTooltip, 3000);
         }
-    },
+    } else {
+        console.warn('⚠️ [GAME] No valid save found, starting new game');
+        this.startGame(true);
+    }
+},
 
     restartGame: function() {
         this.startGame(true);
