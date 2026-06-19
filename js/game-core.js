@@ -242,8 +242,6 @@ destroyBlock: function(block) {
     setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
 },
 
- 
-
     createHelperElement: function() {
         if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
         this.helperElement = document.createElement('div');
@@ -431,8 +429,7 @@ destroyBlock: function(block) {
         setTimeout(() => this.createMovingBlock(), 500);
     },
 
-    /**
-    continueGame: async function() {
+      continueGame: async function() {
     console.log('🔄 [GAME] Starting continueGame...');
     
     // ☁️ Облачная инициализация
