@@ -432,13 +432,25 @@ destroyBlock: function(block) {
     },
 
     /**
-     * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
     continueGame: async function() {
     console.log('🔄 [GAME] Starting continueGame...');
     
-    // ✅ Проверяем, что gameState инициализирован
-    if (!window.gameState || !window.gameState.coins) {
-        console.warn('⚠️ [GAME] gameState не инициализирован, создаём дефолтный');
+    // ☁️ Облачная инициализация
+    if (typeof window.cloudInit === 'function') {
+        console.log('☁️ [GAME] Вызов cloudInit...');
+        try {
+            await window.cloudInit();
+            console.log('☁️ [GAME] cloudInit завершён');
+        } catch (e) {
+            console.error('☁️ [GAME] cloudInit error:', e);
+        }
+    } else {
+        console.warn('⚠️ [GAME] cloudInit function NOT found');
+    }
+    
+    // ✅ Защита: если gameState пустой после загрузки — используем дефолт
+    if (!window.gameState || !window.gameState.currentLocation) {
+        console.warn('⚠️ [GAME] gameState пустой, используем дефолт');
         window.gameState = {
             coins: 0,
             clickPower: 1,
@@ -450,7 +462,6 @@ destroyBlock: function(block) {
             critChanceUpgradeLevel: 0,
             critMultiplierUpgradeLevel: 0,
             helperUpgradeLevel: 0,
-            helperActivations: 0,
             helperActive: false,
             helperTimeLeft: 0,
             helperDamageBonus: 0,
@@ -473,46 +484,26 @@ destroyBlock: function(block) {
         };
     }
     
-    // ☁️ Облачная инициализация
-    if (typeof window.cloudInit === 'function') {
-        console.log('☁️ [GAME] Вызов cloudInit...');
-        try {
-            await window.cloudInit();
-            console.log('☁️ [GAME] cloudInit завершён');
-        } catch (e) {
-            console.error('☁️ [GAME] cloudInit error:', e);
-        }
-    } else {
-        console.warn('⚠️ [GAME] cloudInit function NOT found');
-    }
-    
-    // ✅ Проверяем, что gameState заполнен
     console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
     console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
+    console.log('✅ [GAME] Load successful, starting game...');
     
-    if (window.gameState.coins !== undefined && window.gameState.currentLocation) {
-        console.log('✅ [GAME] Load successful, starting game...');
-        
-        // ✅ Проверяем, что UI существует
-        if (typeof UI !== 'undefined' && UI.updateHUD) {
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            UI.updateProgressBar();
-        }
-        
-        this.setLocation(window.gameState.currentLocation);
-        this.startGame(false);
-        
-        if (window.showTooltip && window.formatString) {
-            const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
-                coins: Math.floor(window.gameState.coins || 0).toLocaleString()
-            });
-            window.showTooltip(t);
-            setTimeout(window.hideTooltip, 3000);
-        }
-    } else {
-        console.warn('⚠️ [GAME] No valid save found, starting new game');
-        this.startGame(true);
+    // Обновляем UI
+    if (window.UI) {
+        if (window.UI.updateHUD) window.UI.updateHUD();
+        if (window.UI.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+        if (window.UI.updateProgressBar) window.UI.updateProgressBar();
+    }
+    
+    this.setLocation(window.gameState.currentLocation);
+    this.startGame(false);
+    
+    if (window.showTooltip && window.formatString) {
+        const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
+            coins: Math.floor(window.gameState.coins || 0).toLocaleString()
+        });
+        window.showTooltip(t);
+        setTimeout(window.hideTooltip, 3000);
     }
 },
 
