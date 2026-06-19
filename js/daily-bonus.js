@@ -299,7 +299,7 @@ else if (typeof window.saveGame === 'function') {
     console.log('💾 [BONUS] Вызов saveGame() (fallback)...');
     window.saveGame();
 }
-    } 
+    } finally {
         // ✅ РАЗБЛОКИРУЕМ синхронизацию через 300мс
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') {
