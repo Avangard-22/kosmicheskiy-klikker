@@ -286,10 +286,19 @@ function claimDailyBonus() {
         }
         
         // Сохраняем игру
-        if (typeof window.saveGame === 'function') {
-            console.log('💾 [BONUS] Вызов saveGame()...');
-            window.saveGame();
-        }
+      // ✅ НОВОЕ: Публикуем событие — save-system сам подпишется и сохранит
+if (window.EventBus) {
+    window.EventBus.emit('bonus:claimed', {
+        reward: reward.name,
+        day: dailyBonusData.currentDay
+    });
+    console.log(' [BONUS] Событие bonus:claimed опубликовано');
+} 
+// ✅ Fallback: если EventBus недоступен, вызываем напрямую
+else if (typeof window.saveGame === 'function') {
+    console.log('💾 [BONUS] Вызов saveGame() (fallback)...');
+    window.saveGame();
+}
     } finally {
         // ✅ РАЗБЛОКИРУЕМ синхронизацию через 300мс
         setTimeout(() => {
