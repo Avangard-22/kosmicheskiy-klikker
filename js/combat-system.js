@@ -1,11 +1,6 @@
 // js/combat-system.js
 (function() {
     'use strict';
-
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-if (!window.GAME_CONFIG) {
-    throw new Error('[COMBAT_SYSTEM] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
-}
     
     const CFG = window.GAME_CONFIG;
 

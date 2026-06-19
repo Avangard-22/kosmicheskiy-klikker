@@ -24,99 +24,56 @@ function extractInitDataFromURL() {
     }
 }
 
-/**
- * Отправка данных в облако с retry механизмом
- * @param {string} action - 'save' или 'load'
- * @param {Object} progressData - данные для сохранения (опционально)
- * @param {string} initData - initData Telegram
- * @param {number} maxRetries - максимальное количество попыток (по умолчанию 3)
- */
-async function sendToCloud(action, progressData, initData, maxRetries = 3) {
-    console.log('🔍 [CLOUD] sendToCloud called with action:', action);
-    console.log(' [CLOUD] initData available:', !!initData);
-    console.log('🔍 [CLOUD] initData length:', initData?.length || 0);
+async function sendToCloud(action, progressData, initData) {
+    console.log('🔍 DEBUG: sendToCloud called with action:', action);
+    console.log('🔍 DEBUG: initData available:', !!initData);
+    console.log('🔍 DEBUG: initData length:', initData?.length || 0);
     
     if (!initData) {
-        console.error('❌ [CLOUD] No initData available');
+        console.error('❌ No initData available');
         return { success: false, error: 'No initData' };
     }
-
-    const body = {
-        initData: initData,
-        action: action
-    };
     
-    if (progressData) {
-        body.progress = progressData;
-    }
-
-    // ✅ НОВОЕ: Retry цикл с экспоненциальной задержкой
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            console.log(`🔍 [CLOUD] Попытка ${attempt}/${maxRetries} для action=${action}`);
-            
-            const response = await fetch(`${CLOUD_API_URL}/api/save`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'text/plain'
-                },
-                body: JSON.stringify(body)
-            });
-
-            console.log('🔍 [CLOUD] Response status:', response.status);
-
-            // ✅ НОВОЕ: Повтор при серверных ошибках (5xx)
-            if (response.status >= 500 && attempt < maxRetries) {
-                const delay = 1000 * attempt; // 1с, 2с, 3с
-                console.warn(`⚠️ [CLOUD] Серверная ошибка ${response.status}, повтор через ${delay}мс`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue; // Переходим к следующей попытке
-            }
-
-            // ✅ НОВОЕ: Повтор при таймаутах и сетевых ошибках
-            if (!response.ok && attempt < maxRetries) {
-                const delay = 1000 * attempt;
-                console.warn(`⚠️ [CLOUD] HTTP ошибка ${response.status}, повтор через ${delay}мс`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                continue;
-            }
-
-            const result = await response.json();
-            console.log('☁️ [CLOUD] Ответ:', result);
-
-            if (result.success) {
-                window.isCloudAvailable = true;
-            }
-
-            return result;
-        } catch (error) {
-            console.error(`❌ [CLOUD] Ошибка на попытке ${attempt}:`, error.message);
-            
-            // ✅ НОВОЕ: Если это последняя попытка — возвращаем ошибку
-            if (attempt >= maxRetries) {
-                console.error('❌ [CLOUD] Все попытки исчерпаны');
-                return { success: false, error: error.message };
-            }
-            
-            // ✅ НОВОЕ: Задержка перед следующей попыткой
-            const delay = 1000 * attempt;
-            console.warn(`⚠️ [CLOUD] Сетевая ошибка, повтор через ${delay}мс`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+    try {
+        const body = {
+            initData: initData,
+            action: action
+        };
+        
+        if (progressData) {
+            body.progress = progressData;
         }
+        
+        console.log('🔍 DEBUG: Request body:', JSON.stringify(body).substring(0, 200));
+        
+        const response = await fetch(`${CLOUD_API_URL}/api/save`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'text/plain'
+            },
+            body: JSON.stringify(body)
+        });
+        
+        console.log(' DEBUG: Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('☁️ [CLOUD] Ответ:', result);
+        
+        if (result.success) {
+            window.isCloudAvailable = true;
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('❌ [CLOUD] Ошибка:', error.message);
+        console.error('❌ [CLOUD] Stack:', error.stack);
+        return { success: false, error: error.message };
     }
-    
-    // На случай, если цикл завершился без return (не должно произойти)
-    return { success: false, error: 'Unexpected retry loop exit' };
 }
 
 function initTelegramIntegration() {
-    // ✅ Защита от повторной инициализации
-    if (window.telegramCloud && window.telegramCloud.isAvailable) {
-        console.log('ℹ️ [TELEGRAM] Уже инициализирован, пропускаем');
-        return;
-    }
+    console.log('🔍 Initializing Telegram integration...');
     
-    console.log(' [TELEGRAM] Initializing Telegram integration...');
     const tg = window.Telegram?.WebApp;
     const isTelegram = !!tg;
     

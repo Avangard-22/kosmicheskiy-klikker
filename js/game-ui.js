@@ -2,11 +2,6 @@
 (function() {
 'use strict';
 
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-if (!window.GAME_CONFIG) {
-    throw new Error('[GAME_UI] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
-}
-
 const CFG = window.GAME_CONFIG;
 
 // ✅ Единая конфигурация прогресса локаций
@@ -25,38 +20,22 @@ window.GAME_UI = {
     // ==========================================
     
     updateHUD: function() {
-    // ✅ Проверяем, что gameState существует
-    if (!window.gameState) {
-        console.warn('⚠️ [UI] gameState не инициализирован');
-        return;
-    }
-    
-    const coinsEl = document.getElementById('coins-value');
-    const clickPowerEl = document.getElementById('clickPower-value');
-    const critChanceEl = document.getElementById('critChance-value');
-    const critMultEl = document.getElementById('critMultiplier-value');
-    
-    // ✅ Проверяем, что значения существуют перед toFixed
-    if (coinsEl) {
-        const coins = window.gameState.coins || 0;
-        coinsEl.textContent = Math.floor(coins).toLocaleString();
-    }
-    
-    if (clickPowerEl) {
-        const power = window.gameState.clickPower || 1;
-        clickPowerEl.textContent = typeof power === 'number' ? power.toFixed(1) : '1';
-    }
-    
-    if (critChanceEl) {
-        const chance = window.gameState.critChance || 0.001;
-        critChanceEl.textContent = typeof chance === 'number' ? (chance * 100).toFixed(1) + '%' : '0.1%';
-    }
-    
-    if (critMultEl) {
-        const mult = window.gameState.critMultiplier || 2.0;
-        critMultEl.textContent = typeof mult === 'number' ? 'x' + mult.toFixed(1) : 'x2.0';
-    }
-},
+        if (!window.gameState) return;
+        
+        const el = (id) => document.getElementById(id);
+        
+        const coinsEl = el('coins-value');
+        if (coinsEl) coinsEl.textContent = Math.floor(window.gameState.coins).toLocaleString();
+        
+        const powerEl = el('clickPower-value');
+        if (powerEl) powerEl.textContent = Math.round(window.gameState.clickPower);
+        
+        const critChanceEl = el('critChance-value');
+        if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
+        
+        const critMultEl = el('critMultiplier-value');
+        if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
+    },
 
     updateUpgradeButtons: function() {
         if (!window.gameState) return;
@@ -75,14 +54,14 @@ window.GAME_UI = {
         };
         
         // Сила удара
-      setBtn(
-    'upgradeClickBtn',
-    CFG.getUpgradeCost('clickPower', window.gameState.clickUpgradeLevel),
-    'Увеличить силу удара'
-);
+        setBtn(
+            'upgradeClickBtn',
+            Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel)),
+            'Увеличить силу удара'
+        );
         
         // ✅ BOBO (с блокировкой во время активности + таймер)
-        const baseHelperCost = CFG.getUpgradeCost('helper', window.gameState.helperUpgradeLevel);
+        const baseHelperCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel));
         const activationBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
         const helperCost = Math.floor(baseHelperCost * (1 + activationBonus * 0.2));
         
@@ -108,25 +87,25 @@ window.GAME_UI = {
         }
         
         // Шанс крита
-      setBtn(
-    'upgradeCritChanceBtn',
-    CFG.getUpgradeCost('critChance', window.gameState.critChanceUpgradeLevel),
-    'Увеличить шанс крита'
-);
+        setBtn(
+            'upgradeCritChanceBtn',
+            Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel)),
+            'Увеличить шанс крита'
+        );
         
         // Множитель крита
-       setBtn(
-    'upgradeCritMultBtn',
-    CFG.getUpgradeCost('critMultiplier', window.gameState.critMultiplierUpgradeLevel),
-    'Увеличить множитель крита'
-);
+        setBtn(
+            'upgradeCritMultBtn',
+            Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel)),
+            'Увеличить множитель крита'
+        );
         
         // Урон Bobo
-   setBtn(
-    'upgradeHelperDmgBtn',
-    CFG.getUpgradeCost('helperDamage', window.gameState.helperUpgradeLevel),
-    'Увеличить урон Bobo'
-);
+        setBtn(
+            'upgradeHelperDmgBtn',
+            Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel)),
+            'Увеличить урон Bobo'
+        );
     },
 
     // ==========================================

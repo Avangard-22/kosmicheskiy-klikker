@@ -2,10 +2,6 @@
 (function() {
 'use strict';
 
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-// daily-bonus.js запускается с задержкой 1000мс, к этому моменту все модули должны быть загружены
-// Проверка выполняется в init()
-
 const dailyRewards = [
     { day: 1, type: 'crystals', amount: 100, icon: '💎', name: '100 Кристаллов' },
     { day: 2, type: 'crystals', amount: 150, icon: '💎', name: '150 Кристаллов' },
@@ -224,91 +220,69 @@ function updateTimerDisplay() {
 }
 
 /**
- * Получение ежедневного бонуса
- * ✅ Добавлена блокировка синхронизации
+ * 🎁 Получение бонуса
  */
 function claimDailyBonus() {
     const today = new Date().toDateString();
-    
-    console.log('🎁 [BONUS] Попытка получения бонуса...');
-    console.log('🎁 [BONUS] Сегодня:', today);
-    console.log('🎁 [BONUS] Последний раз получен:', dailyBonusData.lastClaimDate);
-    
+
     if (dailyBonusData.lastClaimDate === today) {
-        console.log('⚠️ [BONUS] Бонус уже получен сегодня!');
-        showSmallNotification(' Уже получено сегодня!', '#ff9800');
+        showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
         return;
     }
-    
+
     if (dailyBonusData.currentDay > 30) {
         showSmallNotification('🎉 Цикл завершён!', '#4CAF50');
         return;
     }
-    
+
     const reward = dailyRewards[dailyBonusData.currentDay - 1];
-    console.log('🎁 [BONUS] Награда:', reward.name);
-    
+
     // ✅ БЛОКИРУЕМ синхронизацию
     if (typeof window.lockSync === 'function') {
         window.lockSync();
         console.log('🔒 [BONUS] Синхронизация заблокирована');
     }
-    
+
     try {
-        // Применяем награду
         applyReward(reward);
-        
-        // Обновляем данные
+
         dailyBonusData.lastClaimDate = today;
         dailyBonusData.streak++;
         dailyBonusData.totalClaimed++;
         if (dailyBonusData.currentDay < 30) dailyBonusData.currentDay++;
-        
-        console.log('🎁 [BONUS] Новые данные:', dailyBonusData);
-        
-        // Сохраняем
+
         saveDailyBonusData();
         updateIconDisplay();
         showRewardNotification(reward);
-        
-        // Звук
+
         const sound = document.getElementById('upgradeSound');
         if (sound) {
             sound.currentTime = 0;
             sound.play().catch(() => {});
         }
-        
-        // Тактильная отдача
+
         if (window.telegramHaptic?.success) {
             window.telegramHaptic.success();
         } else if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100]);
         }
-        
-        // Сохраняем игру
-      // ✅ НОВОЕ: Публикуем событие — save-system сам подпишется и сохранит
-if (window.EventBus) {
-    window.EventBus.emit('bonus:claimed', {
-        reward: reward.name,
-        day: dailyBonusData.currentDay
-    });
-    console.log(' [BONUS] Событие bonus:claimed опубликовано');
-} 
-// ✅ Fallback: если EventBus недоступен, вызываем напрямую
-else if (typeof window.saveGame === 'function') {
-    console.log('💾 [BONUS] Вызов saveGame() (fallback)...');
-    window.saveGame();
-}
+
+        // ✅ Сохраняем игру
+        if (typeof window.saveGame === 'function') {
+            console.log('💾 [BONUS] Сохранение после получения бонуса...');
+            window.saveGame();
+        }
     } finally {
-        // ✅ РАЗБЛОКИРУЕМ синхронизацию через 300мс
+        // ✅ РАЗБЛОКИРУЕМ синхронизацию
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') {
                 window.unlockSync();
-                console.log(' [BONUS] Синхронизация разблокирована');
+                console.log('🔓 [BONUS] Синхронизация разблокирована');
             }
         }, 300);
     }
 }
+
 function applyReward(reward) {
     if (!window.gameState) {
         console.warn('⚠️ [BONUS] gameState не инициализирован');

@@ -2,12 +2,11 @@
 (function() {
     'use strict';
 
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-// Canvas проверяется ниже, но добавим проверку на случай отсутствия
-const canvas = document.getElementById('planetBackgroundCanvas');
-if (!canvas) {
-    console.warn('⚠️ [PLANET_BG] Canvas #planetBackgroundCanvas не найден в DOM');
-}
+    const canvas = document.getElementById('planetBackgroundCanvas');
+    if (!canvas) {
+        console.warn('⚠️ planet-background.js: Canvas not found');
+        return;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) {

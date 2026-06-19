@@ -2,11 +2,6 @@
 (function() {
     'use strict';
 
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-if (!window.GAME_CONFIG) {
-    throw new Error('[SHOP] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
-}
-
     const CFG = window.GAME_CONFIG;
 
     // === КОНФИГУРАЦИЯ МАГАЗИНА ===
@@ -211,10 +206,10 @@ if (!window.GAME_CONFIG) {
         startBoostTimer(boostId);
 
         // Обновляем метрики
-       window.gameMetrics.boostersUsed = (window.gameMetrics.boostersUsed || 0) + 1;
-if (window.EventBus) {
-    window.EventBus.emit('game:boosterUsed', 1);
-}
+        window.gameMetrics.boostersUsed = (window.gameMetrics.boostersUsed || 0) + 1;
+        if (window.achievementsSystem) {
+            window.achievementsSystem.incrementBoosters(1);
+        }
 
         // EventBus уведомление
         if (window.EventBus) {
