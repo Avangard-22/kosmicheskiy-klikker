@@ -21,11 +21,11 @@ const FEAT = window.GAME_FEATURES;
 // Здесь только проверка на случай, если save-system не загрузился
 if (!window.gameState) {
     console.warn('️ [CORE] gameState не инициализирован save-system.js');
-    window.gameState = {};
+    window.gameState = window.gameState || {};
 }
 if (!window.gameMetrics) {
     console.warn('⚠️ [CORE] gameMetrics не инициализирован save-system.js');
-    window.gameMetrics = {};
+    window.gameMetrics = window.gameMetrics || {};
 }
 
 window.GAME_CORE = {
