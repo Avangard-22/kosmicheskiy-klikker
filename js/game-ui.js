@@ -25,22 +25,38 @@ window.GAME_UI = {
     // ==========================================
     
     updateHUD: function() {
-        if (!window.gameState) return;
-        
-        const el = (id) => document.getElementById(id);
-        
-        const coinsEl = el('coins-value');
-        if (coinsEl) coinsEl.textContent = Math.floor(window.gameState.coins).toLocaleString();
-        
-        const powerEl = el('clickPower-value');
-        if (powerEl) powerEl.textContent = Math.round(window.gameState.clickPower);
-        
-        const critChanceEl = el('critChance-value');
-        if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
-        
-        const critMultEl = el('critMultiplier-value');
-        if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
-    },
+    // ✅ Проверяем, что gameState существует
+    if (!window.gameState) {
+        console.warn('⚠️ [UI] gameState не инициализирован');
+        return;
+    }
+    
+    const coinsEl = document.getElementById('coins-value');
+    const clickPowerEl = document.getElementById('clickPower-value');
+    const critChanceEl = document.getElementById('critChance-value');
+    const critMultEl = document.getElementById('critMultiplier-value');
+    
+    // ✅ Проверяем, что значения существуют перед toFixed
+    if (coinsEl) {
+        const coins = window.gameState.coins || 0;
+        coinsEl.textContent = Math.floor(coins).toLocaleString();
+    }
+    
+    if (clickPowerEl) {
+        const power = window.gameState.clickPower || 1;
+        clickPowerEl.textContent = typeof power === 'number' ? power.toFixed(1) : '1';
+    }
+    
+    if (critChanceEl) {
+        const chance = window.gameState.critChance || 0.001;
+        critChanceEl.textContent = typeof chance === 'number' ? (chance * 100).toFixed(1) + '%' : '0.1%';
+    }
+    
+    if (critMultEl) {
+        const mult = window.gameState.critMultiplier || 2.0;
+        critMultEl.textContent = typeof mult === 'number' ? 'x' + mult.toFixed(1) : 'x2.0';
+    }
+},
 
     updateUpgradeButtons: function() {
         if (!window.gameState) return;
