@@ -392,9 +392,8 @@ function init() {
     console.log('💾 gameState.coins:', window.gameState.coins);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
+// ✅ Инициализируем gameState СРАЗУ при загрузке скрипта
+// Это необходимо, чтобы gameState был доступен для game-core.js
+init();
 }
 })();
