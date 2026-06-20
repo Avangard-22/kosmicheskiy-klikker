@@ -42,50 +42,39 @@
          * @returns {{ destroyed: boolean, damage: number, isCrit: boolean, block: HTMLElement }}
          */
         hit: function(block, baseDamage) {
-            if (!window.gameState || !window.gameState.gameActive || window.GAME_CORE?.isGamePaused) {
-                return { destroyed: false, damage: 0, isCrit: false, block: block };
-            }
+    if (!window.gameState || !window.gameState.gameActive || window.GAME_CORE?.isGamePaused) {
+        return { destroyed: false, damage: 0, isCrit: false, block: block };
+    }
 
-            // Вибрация и звук делегируются в game-core, здесь только логика
-            // Но для совместимости с текущей архитектурой оставляем базовые вызовы
-            if (navigator.vibrate) navigator.vibrate(50);
-            if (window.telegramHaptic?.light) window.telegramHaptic.light();
-            window.GAME_CORE?.playSound('clickSound');
+    // ✅ ИСПРАВЛЕНО: Вибрация, звук и анимация — ответственность game-core.js
+    // CombatSystem занимается ТОЛЬКО математикой боя
+    // (визуальный и тактильный отклик делегируется в game-core)
 
-            // Анимация нажатия (минимальный DOM для отзывчивости)
-            if (block) {
-                block.style.transform = 'translateX(-50%) scale(0.85)';
-                setTimeout(() => { 
-                    if (block) block.style.transform = 'translateX(-50%) scale(1)'; 
-                }, 100);
-            }
+    // Расчёт урона (чистая математика)
+    const result = this.calculateHit(baseDamage);
 
-            // Расчёт урона
-            const result = this.calculateHit(baseDamage);
+    // Обновляем метрики
+    if (result.isCrit) {
+        window.gameMetrics.totalCrits = (window.gameMetrics.totalCrits || 0) + 1;
+    }
+    window.gameMetrics.totalClicks = (window.gameMetrics.totalClicks || 0) + 1;
 
-            // Обновляем метрики
-            if (result.isCrit) {
-                window.gameMetrics.totalCrits = (window.gameMetrics.totalCrits || 0) + 1;
-                // Достижения обновляются через EventBus или прямой вызов из core
-            }
-            window.gameMetrics.totalClicks = (window.gameMetrics.totalClicks || 0) + 1;
+    // Применяем урон к состоянию
+    if (window.GAME_CORE) {
+        window.GAME_CORE.currentBlockHealth -= result.finalDamage;
+    }
+    window.gameState.totalDamageDealt += result.finalDamage;
 
-            // Применяем урон к состоянию
-            if (window.GAME_CORE) {
-                window.GAME_CORE.currentBlockHealth -= result.finalDamage;
-            }
-            window.gameState.totalDamageDealt += result.finalDamage;
+    // Проверяем разрушение
+    const destroyed = window.GAME_CORE?.currentBlockHealth <= 0;
 
-            // Проверяем разрушение
-            const destroyed = window.GAME_CORE?.currentBlockHealth <= 0;
-
-            return { 
-                destroyed: destroyed, 
-                damage: result.finalDamage, 
-                isCrit: result.isCrit,
-                block: block
-            };
-        },
+    return { 
+        destroyed: destroyed, 
+        damage: result.finalDamage, 
+        isCrit: result.isCrit,
+        block: block
+    };
+},
 
         /**
          * Рассчитывает награду за разрушение блока
