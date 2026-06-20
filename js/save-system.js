@@ -5,8 +5,9 @@
 // ============================================
 // КОНСТАНТЫ
 // ============================================
-const AUTO_SAVE_INTERVAL = 30000;  // 30 секунд
-const CLOUD_SYNC_COOLDOWN = 5000;  // 5 секунд между синхронизациями
+const AUTO_SAVE_INTERVAL = 30000;      // 30 секунд — автосохранение
+const CLOUD_SYNC_COOLDOWN = 5000;      // 5 секунд — минимальный интервал между запросами
+const CLOUD_SAVE_DEBOUNCE = 3000;      // ✅ НОВОЕ: 3 секунды — задержка перед отправкой в облако
 
 // ============================================
 // СОСТОЯНИЕ СИСТЕМЫ
@@ -18,6 +19,9 @@ let isSyncing = false;
 // ✅ Блокировка синхронизации для критических операций (бонусы, покупки)
 let isOperationLocked = false;
 let pendingOperations = [];
+
+// ✅ НОВОЕ: Debounce для облачного сохранения
+let cloudSaveTimeout = null;
 
 /**
  * 🔒 Блокировка синхронизации (вызывается при получении бонуса)
@@ -149,9 +153,12 @@ function extractCloudData() {
         unlocked.push(planetOrder[i]);
     }
     
-    const username = window.telegramUser?.username || 
-                      window.telegramUser?.first_name || 
-                      'Anonymous';
+    // ✅ Получаем username через экспортируемую функцию (если доступна)
+    const username = (typeof window.getTelegramUsername === 'function') 
+        ? window.getTelegramUsername()
+        : (window.telegramUser?.username || 
+           window.telegramUser?.first_name || 
+           'Anonymous');
 
     return {
         crystals: Math.floor(window.gameState.coins || 0),
@@ -216,8 +223,8 @@ function applyCloudData(cloudData) {
 // ============================================
 
 /**
- * 💾 Сохранить игру ТОЛЬКО в облако
- * ✅ УБРАНО: localStorage
+ * 💾 Сохранить игру в облако (с debounce)
+ * ✅ НОВОЕ: использует debounce для группировки частых вызовов
  */
 window.saveGame = function() {
     try {
@@ -226,22 +233,57 @@ window.saveGame = function() {
             return false;
         }
 
-        console.log('💾 [SAVE] Сохранение в облако...');
+        console.log('💾 [SAVE] Сохранение запрошено...');
         
         // ✅ Если синхронизация заблокирована — добавляем в очередь
         if (isOperationLocked) {
             console.log('⏳ [SAVE] Синхронизация заблокирована, добавляем в очередь');
-            pendingOperations.push(() => cloudSaveAsync());
+            pendingOperations.push(() => debouncedCloudSave());
             return true;
         }
 
-        // Отправляем в облако
-        cloudSaveAsync();
+        // ✅ Используем debounce для группировки вызовов
+        debouncedCloudSave();
         return true;
     } catch (e) {
         console.error('❌ Ошибка сохранения игры:', e);
         return false;
     }
+};
+
+/**
+ * ✅ НОВОЕ: Debounce для облачного сохранения
+ * Группирует частые вызовы saveGame() в один запрос к облаку
+ */
+function debouncedCloudSave() {
+    // Отменяем предыдущий таймер если есть
+    if (cloudSaveTimeout) {
+        clearTimeout(cloudSaveTimeout);
+    }
+    
+    // Устанавливаем новый таймер
+    cloudSaveTimeout = setTimeout(() => {
+        cloudSaveTimeout = null;
+        cloudSaveAsync();
+    }, CLOUD_SAVE_DEBOUNCE);
+    
+    console.log('⏱️ [SAVE] Debounce: сохранение через ' + (CLOUD_SAVE_DEBOUNCE / 1000) + ' сек');
+}
+
+/**
+ * ✅ НОВОЕ: Принудительное немедленное сохранение
+ * Используется при закрытии вкладки/сворачивании — минуя debounce
+ */
+window.flushCloudSave = function() {
+    // Отменяем отложенное сохранение
+    if (cloudSaveTimeout) {
+        clearTimeout(cloudSaveTimeout);
+        cloudSaveTimeout = null;
+        console.log('⚡ [SAVE] Debounce отменён — принудительное сохранение');
+    }
+    
+    // Выполняем немедленное сохранение
+    cloudSaveAsync();
 };
 
 /**
@@ -260,7 +302,10 @@ async function cloudSaveAsync() {
     }
     
     const now = Date.now();
-    if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
+    if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) {
+        console.log('⏳ [CLOUD] Cooldown, пропускаем');
+        return;
+    }
     if (isSyncing) return;
 
     isSyncing = true;
@@ -298,7 +343,6 @@ async function cloudSaveAsync() {
 
 /**
  * 📥 Загрузить игру ТОЛЬКО из облака
- * ✅ УБРАНО: localStorage
  */
 window.loadGame = async function() {
     if (!window.telegramCloud?.isAvailable) {
@@ -480,21 +524,31 @@ function init() {
 
     startAutoSave();
 
-    // ✅ Сохраняем в облако при закрытии вкладки
+    // ✅ Сохраняем в облако при закрытии вкладки (принудительно, минуя debounce)
     window.addEventListener('beforeunload', () => {
         if (window.gameState && window.gameState.gameActive) {
-            window.saveGame();
+            // ✅ НОВОЕ: принудительное сохранение перед закрытием
+            if (typeof window.flushCloudSave === 'function') {
+                window.flushCloudSave();
+            } else {
+                window.saveGame();
+            }
         }
     });
 
-    // ✅ Сохраняем в облако при сворачивании
+    // ✅ Сохраняем в облако при сворачивании (принудительно, минуя debounce)
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && window.gameState && window.gameState.gameActive) {
-            window.saveGame();
+            // ✅ НОВОЕ: принудительное сохранение при сворачивании
+            if (typeof window.flushCloudSave === 'function') {
+                window.flushCloudSave();
+            } else {
+                window.saveGame();
+            }
         }
     });
 
-    console.log('💾 Save System initialized (CLOUD ONLY)');
+    console.log('💾 Save System initialized (CLOUD ONLY + DEBOUNCE)');
     console.log('💾 gameState.coins:', window.gameState.coins);
     console.log('💾 gameState.currentLocation:', window.gameState.currentLocation);
     console.log('🎁 gameState.dailyBonus:', window.gameState.dailyBonus);
