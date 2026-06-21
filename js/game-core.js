@@ -2,106 +2,13 @@
 (function() {
 'use strict';
 
-// === ПРОВЕРКА ЗАВИСИМОСТЕЙ ===
-if (!window.GAME_CONFIG) {
-    throw new Error('[GAME_CORE] GAME_CONFIG не загружен. Проверьте порядок скриптов в index.html');
-}
-if (!window.GAME_UI) {
-    throw new Error('[GAME_CORE] GAME_UI не загружен. Проверьте порядок скриптов в index.html');
-}
-if (!window.GAME_FEATURES) {
-    throw new Error('[GAME_CORE] GAME_FEATURES не загружен. Проверьте порядок скриптов в index.html');
-}
-
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-// ✅ ИСПРАВЛЕНО: НЕ перезаписываем gameState и gameMetrics
-// Они инициализируются в save-system.js. Здесь только проверка.
-if (!window.gameState) {
-    console.warn('⚠️ [CORE] gameState не инициализирован save-system.js');
-    window.gameState = {};
-}
-if (!window.gameMetrics) {
-    console.warn('⚠️ [CORE] gameMetrics не инициализирован save-system.js');
-    window.gameMetrics = {};
-}
+window.gameState = {};
+window.gameMetrics = {};
 
-// ==========================================
-// ✅ НОВОЕ: ГЛОБАЛЬНЫЙ CANVAS ДЛЯ ЭФФЕКТОВ
-// Решает утечку памяти в createHelperEffect
-// ==========================================
-let effectsCanvas = null;
-let effectsCtx = null;
-let activeEffects = [];
-let effectsAnimationRunning = false;
-
-function initEffectsCanvas() {
-    if (effectsCanvas) return;
-    
-    effectsCanvas = document.createElement('canvas');
-    effectsCanvas.id = 'effectsCanvas';
-    effectsCanvas.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 13;
-    `;
-    document.body.appendChild(effectsCanvas);
-    
-    resizeEffectsCanvas();
-    window.addEventListener('resize', resizeEffectsCanvas);
-}
-
-function resizeEffectsCanvas() {
-    if (!effectsCanvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    effectsCanvas.width = window.innerWidth * dpr;
-    effectsCanvas.height = window.innerHeight * dpr;
-    effectsCtx = effectsCanvas.getContext('2d');
-    effectsCtx.scale(dpr, dpr);
-}
-
-function renderEffects() {
-    if (!effectsCtx || activeEffects.length === 0) {
-        effectsAnimationRunning = false;
-        return;
-    }
-    
-    effectsCtx.clearRect(0, 0, effectsCanvas.width, effectsCanvas.height);
-    
-    activeEffects = activeEffects.filter(effect => {
-        const elapsed = Date.now() - effect.startTime;
-        const progress = Math.min(elapsed / effect.duration, 1);
-        
-        if (progress >= 1) return false;
-        
-        effect.draw(effectsCtx, progress);
-        return true;
-    });
-    
-    if (activeEffects.length > 0) {
-        requestAnimationFrame(renderEffects);
-    } else {
-        effectsAnimationRunning = false;
-    }
-}
-
-function addEffect(effect) {
-    activeEffects.push(effect);
-    if (!effectsAnimationRunning) {
-        effectsAnimationRunning = true;
-        requestAnimationFrame(renderEffects);
-    }
-}
-
-// ==========================================
-// ОСНОВНОЙ ОБЪЕКТ GAME_CORE
-// ==========================================
 window.GAME_CORE = {
     currentBlock: null,
     currentBlockHealth: 0,
@@ -218,9 +125,8 @@ window.GAME_CORE = {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
         const move = () => {
-            // ✅ ИСПРАВЛЕНО: проверка на удаление блока из DOM
-            if (!block.parentNode || this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
-                return;
+            if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
+                requestAnimationFrame(move); return;
             }
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
@@ -234,104 +140,165 @@ window.GAME_CORE = {
         move();
     },
 
-    /**
-     * ✅ ИСПРАВЛЕНО: Делегирует расчёт урона в CombatSystem
-     * Визуализацию — в UI
-     * Уведомления — через EventBus
-     */
     hitBlock: function(block, damage) {
         if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
-        
-        // Визуальный и тактильный отклик (ответственность game-core)
         if (navigator.vibrate) navigator.vibrate(50);
         if (window.telegramHaptic) window.telegramHaptic.light();
         this.playSound('clickSound');
-        
         block.style.transform = 'translateX(-50%) scale(0.85)';
         setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
 
-        // ✅ Делегируем расчёт урона в CombatSystem
-        const result = window.CombatSystem?.hit(block, damage);
-        
-        if (!result || result.damage === 0) return;
-        
-        // ✅ Визуализация через UI (не дублируем)
-        UI.createDamageText(result.damage, block, result.isCrit ? '#FFD700' : '#ff4444');
-        UI.checkLocationUpgrade();
-        
-        // ✅ Уведомления через EventBus (слабая связность)
-        if (window.EventBus) {
-            window.EventBus.emit('game:damageDealt', result.damage);
-            window.EventBus.emit('game:clickMade', 1);
-            if (result.isCrit) {
-                window.EventBus.emit('game:critMade', 1);
-            }
-        }
-        
-        // Проверка разрушения
-        if (result.destroyed) {
-            this.destroyBlock(block);
+        let finalDamage = damage * this.getBonus('getDamageMultiplier', 1);
+        let isCrit = false;
+        let critChance = window.gameState.critChance * this.getBonus('getCritChanceMultiplier', 1);
+        let critMult = window.gameState.critMultiplier * this.getBonus('getCritMultMultiplier', 1);
+        critChance = Math.min(1.0, critChance);
+
+        if (Math.random() < critChance) {
+            finalDamage = Math.round(finalDamage * critMult);
+            isCrit = true;
+            if (window.achievementsSystem) window.achievementsSystem.incrementCrits(1);
         } else {
+            finalDamage = Math.round(finalDamage);
+        }
+
+        this.currentBlockHealth -= finalDamage;
+        window.gameState.totalDamageDealt += finalDamage;
+
+        if (window.achievementsSystem) {
+            window.achievementsSystem.incrementTotalDamage(finalDamage);
+            window.achievementsSystem.incrementTotalClicks(1);
+        }
+
+        this.createDamageText(finalDamage, block, isCrit ? '#FFD700' : '#ff4444');
+        UI.checkLocationUpgrade();
+
+        if (this.currentBlockHealth <= 0) this.destroyBlock(block);
+        else {
             block.textContent = Math.floor(this.currentBlockHealth);
-            UI.updateCracks(block, this.currentBlockHealth);
+            this.updateCracks(block, this.currentBlockHealth);
         }
     },
 
-    /**
-     * ✅ ИСПРАВЛЕНО: Делегирует расчёт награды в CombatSystem
-     * Визуализацию — в UI
-     * Уведомления — через EventBus
-     */
     destroyBlock: function(block) {
         if (!window.gameState) return;
-        
-        // ✅ Делегируем расчёт награды в CombatSystem
-        const result = window.CombatSystem?.destroy(block);
-        if (!result) return;
-        
-        // Визуализация
-        if (result.comboCount > 1) {
-            UI.showComboText(result.comboCount, result.comboBonus, block);
-            this.playSound('comboSound');
-        }
-        
-        UI.showRewardText(result.reward, block);
-        FEAT.createExplosion(block);
-        
-        // ✅ Уведомления через EventBus (слабая связность)
-        if (window.EventBus) {
-            const currentPlanet = window.gameState.currentLocation;
-            window.EventBus.emit('game:coinsEarned', result.reward);
-            window.EventBus.emit('game:blockDestroyed', { 
-                planet: currentPlanet, 
-                isRare: result.isRare 
-            });
-            
-            if (result.comboCount > (window.gameMetrics.maxCombo || 0)) {
-                window.gameMetrics.maxCombo = result.comboCount;
-                window.EventBus.emit('game:comboUpdated', {
-                    combo: result.comboCount,
-                    planet: currentPlanet
-                });
+        const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
+        window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
+        window.gameState.lastDestroyTime = now;
+
+        let r = Math.floor((25 + CFG.astronomicalUnits[window.gameState.currentLocation] * 100) * CFG.balanceConfig.rewardMultiplier);
+        r = Math.floor(r * (CFG.balanceConfig.randomBonusRange.min + Math.random() * (CFG.balanceConfig.randomBonusRange.max - CFG.balanceConfig.randomBonusRange.min)));
+        if (window.gameState.boboCoinBonus > 0) r = Math.floor(r * (1 + window.gameState.boboCoinBonus));
+        r = Math.floor(r * this.getBonus('getRewardMultiplier', 1));
+
+        let isRare = false;
+        for (const k in CFG.rareBlocks) {
+            if (block.classList.contains(CFG.rareBlocks[k].className)) {
+                r = Math.floor(r * CFG.rareBlocks[k].multiplier);
+                isRare = true;
+                break;
             }
         }
-        
-        // Обновление UI
+
+        if (window.gameState.comboCount > 1) {
+            let comboMult = CFG.balanceConfig.comboMultiplier * this.getBonus('getComboMultiplier', 1);
+            const bns = Math.floor(r * (window.gameState.comboCount * comboMult));
+            r += bns;
+            this.showComboText(window.gameState.comboCount, bns, block);
+            this.playSound('comboSound');
+        }
+
+        window.gameState.coins += r;
+
+        if (window.achievementsSystem) {
+            const currentPlanet = window.gameState.currentLocation;
+            window.achievementsSystem.incrementCoinsEarned(r);
+            window.achievementsSystem.incrementPlanetBlocks(currentPlanet, 1);
+            if (isRare) {
+                window.achievementsSystem.incrementRareBlocks(1);
+                window.achievementsSystem.incrementPlanetRareBlocks(currentPlanet, 1);
+            }
+            if (window.gameState.comboCount > (window.gameMetrics.maxCombo || 0)) {
+                window.gameMetrics.maxCombo = window.gameState.comboCount;
+                window.achievementsSystem.updateCombo(window.gameState.comboCount);
+                window.achievementsSystem.updatePlanetCombo(currentPlanet, window.gameState.comboCount);
+            }
+        }
+
         UI.updateHUD();
         UI.updateUpgradeButtons();
         this.playSound('breakSound');
-        
-        // Удаление блока
+        this.showRewardText(r, block);
+        FEAT.createExplosion(block);
+
         const ga = document.getElementById('gameArea');
         if (ga?.contains(block)) ga.removeChild(block);
         this.currentBlock = null;
         this.currentBlockHealth = 0;
-        
         setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
     },
 
-    // ✅ УДАЛЕНЫ: createDamageText, showComboText, showRewardText, updateCracks
-    // Теперь эти функции есть только в game-ui.js (нет дублирования)
+    createDamageText: function(dmg, block, col) {
+        const r = block.getBoundingClientRect(), t = document.createElement('div');
+        t.className = 'damage-text';
+        t.textContent = `-${dmg}`;
+        t.style.color = col;
+        let l = r.left + r.width / 2, tp = r.top;
+        if (l < 50) l = 50;
+        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
+        if (tp < 50) tp = 50;
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
+        document.body.appendChild(t);
+        let op = 1, y = tp;
+        const anim = () => {
+            op -= 0.02;
+            y -= 2;
+            t.style.opacity = op;
+            t.style.top = y + 'px';
+            if (op > 0) requestAnimationFrame(anim);
+            else if (t.parentNode) document.body.removeChild(t);
+        };
+        anim();
+    },
+
+    showComboText: function(c, b, block) {
+        const r = block.getBoundingClientRect(), t = document.createElement('div');
+        t.className = 'combo-text';
+        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+        let l = r.left + r.width / 2, tp = r.top;
+        if (l < 75) l = 75;
+        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
+        if (tp < 50) tp = 50;
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
+        document.body.appendChild(t);
+        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
+    },
+
+    showRewardText: function(r, block) {
+        const rct = block.getBoundingClientRect(), t = document.createElement('div');
+        t.className = 'reward-text';
+        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
+        let l = rct.left + rct.width / 2, tp = rct.top + rct.height / 2;
+        if (l < 60) l = 60;
+        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
+        if (tp < 50) tp = 50;
+        t.style.left = l + 'px';
+        t.style.top = tp + 'px';
+        document.body.appendChild(t);
+        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
+    },
+
+    updateCracks: function(block, health) {
+        if (!block) return;
+        const ex = block.querySelector('.crack-overlay');
+        if (ex) block.removeChild(ex);
+        const max = parseInt(block.dataset.maxHealth), rat = 1 - (health / max);
+        if (rat > 0.7) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-3' }));
+        else if (rat > 0.4) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-2' }));
+        else if (rat > 0.1) block.appendChild(Object.assign(document.createElement('div'), { className: 'crack-overlay crack-1' }));
+    },
 
     createHelperElement: function() {
         if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
@@ -360,50 +327,57 @@ window.GAME_CORE = {
         this.helperElement.style.top = this.helperPosition.y + 'px';
     },
 
-    /**
-     * ✅ ИСПРАВЛЕНО: Использует глобальный canvas для эффектов
-     * Больше не создаёт новый canvas при каждом выстреле Bobo
-     */
     createHelperEffect: function() {
         if (!this.currentBlock || !this.helperElement) return;
-        
-        initEffectsCanvas();
-        
-        const br = this.currentBlock.getBoundingClientRect();
-        const hr = this.helperElement.getBoundingClientRect();
-        
-        const startX = hr.left + hr.width / 2;
-        const startY = hr.top + hr.height / 2;
-        const endX = br.left + br.width / 2;
-        const endY = br.top + br.height / 2;
-        
-        const effect = {
-            startTime: Date.now(),
-            duration: 300,
-            draw: (ctx, progress) => {
-                const currentX = startX + (endX - startX) * progress;
-                const currentY = startY + (endY - startY) * progress;
-                
-                const gradient = ctx.createLinearGradient(startX, startY, currentX, currentY);
-                gradient.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
-                gradient.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
-                gradient.addColorStop(1, 'rgba(105, 240, 174, 0)');
-                
+        const br = this.currentBlock.getBoundingClientRect(),
+              hr = this.helperElement.getBoundingClientRect();
+        const c = document.createElement('div');
+        c.className = 'helper-beam';
+        c.style.position = 'absolute';
+        c.style.zIndex = '13';
+        c.style.pointerEvents = 'none';
+        document.body.appendChild(c);
+
+        const sx = hr.left + hr.width / 2,
+              sy = hr.top + hr.height / 2,
+              ex = br.left + br.width / 2,
+              ey = br.top + br.height / 2;
+        const cv = document.createElement('canvas'),
+              mx = Math.max(window.innerWidth, window.innerHeight);
+        cv.width = mx;
+        cv.height = mx;
+        cv.style.pointerEvents = 'none';
+        c.appendChild(cv);
+        c.style.left = '0px';
+        c.style.top = '0px';
+
+        const ctx = cv.getContext('2d');
+        let p = 0, st = Date.now();
+        const an = () => {
+            const el = Date.now() - st;
+            p = Math.min(el / 300, 1);
+            ctx.clearRect(0, 0, mx, mx);
+            if (p > 0) {
+                const cx = sx + (ex - sx) * p, cy = sy + (ey - sy) * p;
+                const g = ctx.createLinearGradient(sx, sy, cx, cy);
+                g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
+                g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
+                g.addColorStop(1, 'rgba(105, 240, 174, 0)');
                 ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(currentX, currentY);
-                ctx.lineWidth = 4 + (4 * (1 - progress));
-                ctx.strokeStyle = gradient;
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(cx, cy);
+                ctx.lineWidth = 4 + (4 * (1 - p));
+                ctx.strokeStyle = g;
                 ctx.stroke();
-                
                 ctx.beginPath();
-                ctx.arc(currentX, currentY, 8 * (1 - progress), 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - progress)})`;
+                ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
                 ctx.fill();
             }
+            if (p < 1) requestAnimationFrame(an);
+            else setTimeout(() => { if (c.parentNode) document.body.removeChild(c); }, 200);
         };
-        
-        addEffect(effect);
+        an();
         this.playSound('helperSound');
     },
 
@@ -417,18 +391,17 @@ window.GAME_CORE = {
         this.currentBlockHealth -= dmg;
         window.gameState.totalDamageDealt += dmg;
 
-        // ✅ Уведомление через EventBus
-        if (window.EventBus) {
-            window.EventBus.emit('game:damageDealt', dmg);
+        if (window.achievementsSystem) {
+            window.achievementsSystem.incrementTotalDamage(dmg);
         }
 
-        UI.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
+        this.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
         UI.checkLocationUpgrade();
 
         if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock);
         else {
             this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
-            UI.updateCracks(this.currentBlock, this.currentBlockHealth);
+            this.updateCracks(this.currentBlock, this.currentBlockHealth);
         }
     },
 
@@ -452,11 +425,7 @@ window.GAME_CORE = {
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
 
-        // ✅ Уведомление через EventBus
-        if (window.EventBus) {
-            window.EventBus.emit('game:planetVisited', CFG.planetOrder.indexOf(loc) + 1);
-        }
-        
+        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
         UI.updateProgressBar();
     },
 
@@ -518,8 +487,8 @@ window.GAME_CORE = {
     },
 
     /**
-     * ✅ ИСПРАВЛЕНО: continueGame работает ТОЛЬКО с облаком
-     * - Убран синхронный вызов loadGame()
+     * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
+     * - Убран вызов window.loadGame() (он больше не нужен)
      * - cloudInit сам загружает данные из облака
      * - gameState инициализируется дефолтными значениями до cloudInit
      */
@@ -581,6 +550,7 @@ window.GAME_CORE = {
         }
 
         // ✅ Загружаем из облака (асинхронно)
+        // cloudInit сам вызывает loadGame() внутри себя
         if (typeof window.cloudInit === 'function') {
             console.log('☁️ [GAME] cloudInit вызывается...');
             try {
@@ -711,7 +681,6 @@ window.GAME_CORE = {
     }
 };
 
-// ✅ ИСПРАВЛЕНО: gameFunctions теперь делегирует визуализацию в UI
 window.gameFunctions = {
     startGame: () => window.GAME_CORE.startGame(true),
     continueGame: () => window.GAME_CORE.continueGame(),
@@ -722,11 +691,9 @@ window.gameFunctions = {
     updateUpgradeButtons: () => UI.updateUpgradeButtons(),
     updateProgressBar: () => UI.updateProgressBar(),
     checkLocationUpgrade: () => UI.checkLocationUpgrade(),
-    // ✅ Делегируем визуализацию в UI (больше нет дублирования)
-    createDamageText: (d, b, c) => UI.createDamageText(d, b, c),
-    showComboText: (c, b, bl) => UI.showComboText(c, b, bl),
-    showRewardText: (r, bl) => UI.showRewardText(r, bl),
-    updateCracks: (b, h) => UI.updateCracks(b, h),
+    createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
+    showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
+    showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
     createExplosion: bl => FEAT.createExplosion(bl),
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
