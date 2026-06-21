@@ -112,14 +112,16 @@ window.GAME_CORE = {
         return null;
     },
 
-    announceRareBlock: function(name) {
-        const el = document.createElement('div');
-        el.className = 'rare-block-announce';
-        el.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.8em;font-weight:bold;color:gold;z-index:50;text-shadow:0 0 10px black;animation:fadeInOut 2s;';
-        el.textContent = `🌟 ${name} блок! 🌟`;
-        document.body.appendChild(el);
-        setTimeout(() => el.parentNode?.removeChild(el), 2000);
-    },
+ announceRareBlock: function(name) {
+    const el = document.createElement('div');
+    el.className = 'rare-block-announce';
+    el.textContent = `🌟 ${name} блок! 🌟`;
+    document.body.appendChild(el);
+    
+    el.addEventListener('animationend', () => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    });
+},
 
     animateBlock: function(block) {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
@@ -239,56 +241,74 @@ window.GAME_CORE = {
     },
 
     createDamageText: function(dmg, block, col) {
-        const r = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'damage-text';
-        t.textContent = `-${dmg}`;
-        t.style.color = col;
-        let l = r.left + r.width / 2, tp = r.top;
-        if (l < 50) l = 50;
-        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        let op = 1, y = tp;
-        const anim = () => {
-            op -= 0.02;
-            y -= 2;
-            t.style.opacity = op;
-            t.style.top = y + 'px';
-            if (op > 0) requestAnimationFrame(anim);
-            else if (t.parentNode) document.body.removeChild(t);
-        };
-        anim();
-    },
+    const r = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'damage-text';
+    t.textContent = `-${dmg}`;
+    t.style.color = col;
+    
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    
+    if (l < 50) l = 50;
+    if (l > window.innerWidth - 50) l = window.innerWidth - 50;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
     showComboText: function(c, b, block) {
-        const r = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'combo-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
-        let l = r.left + r.width / 2, tp = r.top;
-        if (l < 75) l = 75;
-        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
-    },
+    const r = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'combo-text';
+    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+    
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    
+    if (l < 75) l = 75;
+    if (l > window.innerWidth - 75) l = window.innerWidth - 75;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
-    showRewardText: function(r, block) {
-        const rct = block.getBoundingClientRect(), t = document.createElement('div');
-        t.className = 'reward-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
-        let l = rct.left + rct.width / 2, tp = rct.top + rct.height / 2;
-        if (l < 60) l = 60;
-        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
-        if (tp < 50) tp = 50;
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
-    },
+showRewardText: function(r, block) {
+    const rct = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'reward-text';
+    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
+    
+    let l = rct.left + rct.width / 2;
+    let tp = rct.top + rct.height / 2;
+    
+    if (l < 60) l = 60;
+    if (l > window.innerWidth - 60) l = window.innerWidth - 60;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
     updateCracks: function(block, health) {
         if (!block) return;
@@ -327,59 +347,77 @@ window.GAME_CORE = {
         this.helperElement.style.top = this.helperPosition.y + 'px';
     },
 
-    createHelperEffect: function() {
-        if (!this.currentBlock || !this.helperElement) return;
-        const br = this.currentBlock.getBoundingClientRect(),
-              hr = this.helperElement.getBoundingClientRect();
-        const c = document.createElement('div');
-        c.className = 'helper-beam';
-        c.style.position = 'absolute';
-        c.style.zIndex = '13';
-        c.style.pointerEvents = 'none';
-        document.body.appendChild(c);
-
-        const sx = hr.left + hr.width / 2,
-              sy = hr.top + hr.height / 2,
-              ex = br.left + br.width / 2,
-              ey = br.top + br.height / 2;
-        const cv = document.createElement('canvas'),
-              mx = Math.max(window.innerWidth, window.innerHeight);
-        cv.width = mx;
-        cv.height = mx;
-        cv.style.pointerEvents = 'none';
-        c.appendChild(cv);
-        c.style.left = '0px';
-        c.style.top = '0px';
-
-        const ctx = cv.getContext('2d');
-        let p = 0, st = Date.now();
-        const an = () => {
-            const el = Date.now() - st;
-            p = Math.min(el / 300, 1);
-            ctx.clearRect(0, 0, mx, mx);
-            if (p > 0) {
-                const cx = sx + (ex - sx) * p, cy = sy + (ey - sy) * p;
-                const g = ctx.createLinearGradient(sx, sy, cx, cy);
-                g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
-                g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
-                g.addColorStop(1, 'rgba(105, 240, 174, 0)');
-                ctx.beginPath();
-                ctx.moveTo(sx, sy);
-                ctx.lineTo(cx, cy);
-                ctx.lineWidth = 4 + (4 * (1 - p));
-                ctx.strokeStyle = g;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
-                ctx.fill();
-            }
-            if (p < 1) requestAnimationFrame(an);
-            else setTimeout(() => { if (c.parentNode) document.body.removeChild(c); }, 200);
+initEffectCanvas: function() {
+    if (!this.effectCanvas) {
+        this.effectCanvas = document.createElement('canvas');
+        this.effectCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';
+        document.body.appendChild(this.effectCanvas);
+        
+        const resize = () => {
+            this.effectCanvas.width = window.innerWidth;
+            this.effectCanvas.height = window.innerHeight;
         };
-        an();
-        this.playSound('helperSound');
-    },
+        resize();
+        window.addEventListener('resize', resize);
+    }
+},
+
+  createHelperEffect: function() {
+    if (!this.currentBlock || !this.helperElement) return;
+    
+    // Инициализируем глобальный canvas, если ещё не создан
+    this.initEffectCanvas();
+    
+    const br = this.currentBlock.getBoundingClientRect();
+    const hr = this.helperElement.getBoundingClientRect();
+    
+    const sx = hr.left + hr.width / 2;
+    const sy = hr.top + hr.height / 2;
+    const ex = br.left + br.width / 2;
+    const ey = br.top + br.height / 2;
+    
+    const cv = this.effectCanvas;
+    const ctx = cv.getContext('2d');
+    
+    let st = Date.now();
+    const an = () => {
+        const el = Date.now() - st;
+        const p = Math.min(el / 300, 1);
+        
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        
+        if (p > 0) {
+            const cx = sx + (ex - sx) * p;
+            const cy = sy + (ey - sy) * p;
+            
+            const g = ctx.createLinearGradient(sx, sy, cx, cy);
+            g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
+            g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
+            g.addColorStop(1, 'rgba(105, 240, 174, 0)');
+            
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(cx, cy);
+            ctx.lineWidth = 4 + (4 * (1 - p));
+            ctx.strokeStyle = g;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
+            ctx.fill();
+        }
+        
+        if (p < 1) {
+            requestAnimationFrame(an);
+        } else {
+            ctx.clearRect(0, 0, cv.width, cv.height);
+        }
+    };
+    
+    an();
+    this.playSound('helperSound');
+},
 
     helperAttack: function() {
         if (!this.currentBlock || !window.gameState || !window.gameState.helperActive || !this.helperElement || this.isGamePaused) return;
