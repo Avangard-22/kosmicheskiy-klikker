@@ -4,7 +4,7 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    volume: 0.3,
+    volume: 0.7,
     fadeDuration: 1.5,     // секунды
     preloadAll: false      // если true — грузит все треки сразу
 };
