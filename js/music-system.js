@@ -15,8 +15,8 @@ let currentTrack = null;     // Текущий Audio объект
 let currentPlanet = null;    // Текущая планета
 let isMuted = false;         // Состояние mute
 let isPlaying = false;       // Играет ли музыка
-let fadeTimeout = null;      // Таймер для fade
 let musicStarted = false;
+let fadeTimeout = null;      // Таймер для fade
     
 // === ПЛАНЕТЫ ===
 const PLANETS = [
@@ -50,7 +50,7 @@ function init() {
     // Создаём кнопку mute в UI
     createMuteButton();
 
-    // ✅ ИСПРАВЛЕНО: Запускаем музыку ТОЛЬКО после первого взаимодействия
+    // ✅ ИСПРАВЛЕНО: Запускаем музыку ТОЛЬКО после первого клика
     // Браузеры блокируют автовоспроизведение без жеста пользователя
     const startMusic = function() {
         if (window.gameState && window.gameState.currentLocation && !musicStarted) {
