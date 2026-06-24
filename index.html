@@ -143,37 +143,34 @@
     <!-- ========================================== -->
     <!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
     <!-- ========================================== -->
+<!-- 0. Шина событий -->
+<script src="js/event-bus.js"></script>
 
-    <!-- 0. Шина событий (должна быть первой!) -->
-    <script src="js/event-bus.js"></script>
+<!-- 1. Базовые системы -->
+<script src="js/translations.js"></script>
+<script src="js/telegram-integration.js?v=13"></script>
 
-    <!-- 1. Базовые системы -->
-    <script src="js/translations.js"></script>
-    <script src="js/telegram-integration.js?v=13"></script>
+<!-- 2. Данные и сохранение -->
+<script src="js/save-system.js?v=16"></script>
+<script src="js/game-config.js?v=8"></script>
 
-    <!-- 2. Данные и сохранение -->
-    <script src="js/save-system.js?v=33"></script>
-    <script src="js/game-config.js?v=18"></script>
+<!-- 3. UI и механики -->
+<script src="js/game-ui.js"></script>
+<script src="js/combat-system.js"></script>
+<script src="js/game-features.js"></script>
+<script src="js/planet-background.js"></script>
+<script src="js/shop.js"></script>
 
-    <!-- 3. UI и механики -->
-    <script src="js/game-ui.js?v=18"></script>
-    <script src="js/combat-system.js"></script>
-    <script src="js/game-features.js?v=18"></script>
-    <script src="js/planet-background.js"></script>
-    <script src="js/shop.js"></script>
-
-    <!-- 4. Ядро игры (ПОСЛЕ всех зависимостей!) -->
-    <script src="js/game-core.js?v=33"></script>
+<!-- 4. Ядро игры -->
+<script src="js/game-core.js?v=26"></script>
 
 <!-- ✅ НОВОЕ: Музыкальная система -->
-<script src="js/music-system.js?v=4"></script>
+<script src="js/music-system.js?v=1"></script>
 
-    <!-- 5. Дополнительные системы -->
-    <script src="js/achievements.js?v=35"></script>
-    <script src="js/daily-bonus.js?v=33"></script>
-
-    <!-- 6. Модуль Вояджеров -->
-    <script src="js/voyager-tracker.js"></script>
+<!-- 5. Дополнительные системы -->
+<script src="js/achievements.js"></script>
+<script src="js/daily-bonus.js?v=28"></script>
+<script src="js/voyager-tracker.js"></script>
  
 </body>
 </html>
