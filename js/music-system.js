@@ -2,13 +2,13 @@
 (function() {
 'use strict';
 
-// === НАСТРОЙКИ ===
+// === CONFIG ===
 const MUSIC_CONFIG = {
     volume: 0.4,
-    fadeDuration: 1.5  // ✅ Увеличено с 0.1 до 1.5 сек
+    fadeDuration: 1.5
 };
 
-// === СОСТОЯНИЕ ===
+// === STATE ===
 let audioContext = null;
 let currentBuffer = null;
 let currentSource = null;
@@ -17,39 +17,44 @@ let isMuted = false;
 let isMusicStarted = false;
 let gainNode = null;
 
-// === КЭШ БУФЕРОВ ===
+// === BUFFER CACHE ===
 const bufferCache = {};
 
-// === ПЛАНЕТЫ ===
+// === PLANETS ===
 const PLANETS = [
     'mercury', 'venus', 'earth', 'mars',
     'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'
 ];
 
 // ==========================================
-// 🎵 ИНИЦИАЛИЗАЦИЯ AUDIO CONTEXT
+// AUDIO CONTEXT INIT
 // ==========================================
 
 function initAudioContext() {
     if (audioContext) return audioContext;
     
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) {
-        console.warn('⚠️ [MUSIC] Web Audio API не поддерживается');
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            console.warn('[MUSIC] Web Audio API not supported');
+            return null;
+        }
+        
+        audioContext = new AudioCtx();
+        gainNode = audioContext.createGain();
+        gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
+        gainNode.connect(audioContext.destination);
+        
+        console.log('[MUSIC] AudioContext initialized');
+        return audioContext;
+    } catch (e) {
+        console.warn('[MUSIC] AudioContext creation error:', e);
         return null;
     }
-    
-    audioContext = new AudioCtx();
-    gainNode = audioContext.createGain();
-    gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
-    gainNode.connect(audioContext.destination);
-    
-    console.log('🎵 [MUSIC] AudioContext initialized');
-    return audioContext;
 }
 
 // ==========================================
-// 📥 ЗАГРУЗКА АУДИО БУФЕРА
+// LOAD AUDIO BUFFER
 // ==========================================
 
 async function loadAudioBuffer(planet) {
@@ -59,49 +64,71 @@ async function loadAudioBuffer(planet) {
     if (!ctx) return null;
     
     try {
-        console.log('🎵 [MUSIC] Loading:', `audio/${planet}.mp3`);
-        const response = await fetch(`audio/${planet}.mp3`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        console.log('[MUSIC] Loading:', 'audio/' + planet + '.mp3');
+        const response = await fetch('audio/' + planet + '.mp3');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
         
         bufferCache[planet] = audioBuffer;
-        console.log('✅ [MUSIC] Loaded:', planet, `(${audioBuffer.duration.toFixed(1)}s)`);
+        console.log('[MUSIC] Loaded:', planet, '(' + audioBuffer.duration.toFixed(1) + 's)');
         return audioBuffer;
     } catch (e) {
-        console.error('❌ [MUSIC] Failed to load:', planet, e);
+        console.error('[MUSIC] Failed to load:', planet, e);
         return null;
     }
 }
 
 // ==========================================
-// 🔁 ПРОСТОЕ ЗИКЛИВАНИЕ (без scheduling!)
+// SEAMLESS LOOPING
 // ==========================================
 
-function startLoop(buffer) {
+function startSeamlessLoop(buffer) {
     if (!audioContext || !buffer) return;
     
-    // Останавливаем предыдущий источник
     stopCurrentSource();
-    
     currentBuffer = buffer;
+    const duration = buffer.duration;
     
-    // ✅ Создаём новый источник с loop = true
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;  // ✅ Нативное зацикливание Web Audio API
-    source.connect(gainNode);
-    source.start(0);
+    scheduleLoop(buffer, audioContext.currentTime, duration);
+}
+
+function scheduleLoop(buffer, startTime, duration) {
+    if (!audioContext || !buffer || currentBuffer !== buffer) return;
     
-    currentSource = source;
-    
-    console.log('🔁 [MUSIC] Loop started:', buffer.duration.toFixed(1), 's');
+    try {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.loop = false;
+        source.connect(gainNode);
+        
+        source.start(startTime);
+        source.onended = () => {
+            if (currentSource === source) {
+                currentSource = null;
+            }
+        };
+        
+        currentSource = source;
+        
+        const nextStartTime = startTime + duration;
+        const delay = (nextStartTime - audioContext.currentTime) * 1000;
+        
+        setTimeout(() => {
+            if (currentBuffer === buffer) {
+                scheduleLoop(buffer, nextStartTime, duration);
+            }
+        }, Math.max(0, delay - 200));
+    } catch (e) {
+        console.warn('[MUSIC] scheduleLoop error:', e);
+    }
 }
 
 function stopCurrentSource() {
     if (currentSource) {
         try {
+            currentSource.onended = null;
             currentSource.stop();
         } catch (e) {}
         currentSource = null;
@@ -109,10 +136,11 @@ function stopCurrentSource() {
 }
 
 // ==========================================
-// 🎚️ FADE IN / FADE OUT
+// FADE IN / FADE OUT
 // ==========================================
 
-function fadeIn(duration = MUSIC_CONFIG.fadeDuration) {
+function fadeIn(duration) {
+    duration = duration || MUSIC_CONFIG.fadeDuration;
     if (!gainNode || !audioContext) return;
     
     const now = audioContext.currentTime;
@@ -121,7 +149,8 @@ function fadeIn(duration = MUSIC_CONFIG.fadeDuration) {
     gainNode.gain.linearRampToValueAtTime(MUSIC_CONFIG.volume, now + duration);
 }
 
-function fadeOut(duration = MUSIC_CONFIG.fadeDuration, callback) {
+function fadeOut(duration, callback) {
+    duration = duration || MUSIC_CONFIG.fadeDuration;
     if (!gainNode || !audioContext) {
         if (callback) callback();
         return;
@@ -138,16 +167,15 @@ function fadeOut(duration = MUSIC_CONFIG.fadeDuration, callback) {
 }
 
 // ==========================================
-// 🎵 ПЕРЕКЛЮЧЕНИЕ ТРЕКОВ (CROSSFADE)
+// PLAY PLANET MUSIC
 // ==========================================
 
 async function playPlanetMusic(planet) {
     if (!PLANETS.includes(planet)) {
-        console.warn('⚠️ [MUSIC] Unknown planet:', planet);
+        console.warn('[MUSIC] Unknown planet:', planet);
         return;
     }
     
-    // Если планета не изменилась — ничего не делаем
     if (currentPlanet === planet && currentSource) {
         return;
     }
@@ -157,22 +185,21 @@ async function playPlanetMusic(planet) {
     const buffer = await loadAudioBuffer(planet);
     if (!buffer) return;
     
-    // Если уже играет — делаем crossfade
     if (currentSource) {
         fadeOut(MUSIC_CONFIG.fadeDuration, () => {
-            startLoop(buffer);
+            startSeamlessLoop(buffer);
             fadeIn(MUSIC_CONFIG.fadeDuration);
         });
     } else {
-        startLoop(buffer);
+        startSeamlessLoop(buffer);
         fadeIn(MUSIC_CONFIG.fadeDuration);
     }
     
-    console.log('🎵 [MUSIC] Playing:', planet);
+    console.log('[MUSIC] Playing:', planet);
 }
 
 // ==========================================
-// 🔇 MUTE / UNMUTE
+// MUTE / UNMUTE
 // ==========================================
 
 function toggleMute() {
@@ -193,69 +220,51 @@ function toggleMute() {
     }
     
     updateMuteButton();
-    console.log('🔇 [MUSIC] Mute:', isMuted);
+    console.log('[MUSIC] Mute:', isMuted);
 }
 
 // ==========================================
-// 🎨 UI КНОПКА
+// UI BUTTON
 // ==========================================
 
 function createMuteButton() {
-    // Удаляем старую кнопку если есть
     const existing = document.getElementById('musicMuteBtn');
     if (existing) existing.remove();
     
     const btn = document.createElement('button');
     btn.id = 'musicMuteBtn';
-    btn.title = isMuted ? 'Включить музыку' : 'Выключить музыку';
-    btn.innerHTML = isMuted ? '🔇' : '🎵';
-    btn.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 60px;
-        width: 40px;
-        height: 40px;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.2em;
-        cursor: pointer;
-        z-index: 30;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        transition: transform 0.1s, background 0.2s;
-    `;
+    btn.title = isMuted ? 'Enable music' : 'Disable music';
+    btn.innerHTML = isMuted ? '\uD83D\uDD07' : '\uD83C\uDFB5';
+    btn.style.cssText = 'position:fixed;top:10px;right:60px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);color:white;transition:transform 0.1s,background 0.2s;';
     
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', function(e) {
         e.stopPropagation();
         toggleMute();
     });
     
-    btn.addEventListener('touchstart', (e) => {
+    btn.addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
         toggleMute();
     }, { passive: false });
     
     document.body.appendChild(btn);
+    console.log('[MUSIC] Mute button created');
 }
 
 function updateMuteButton() {
     const btn = document.getElementById('musicMuteBtn');
     if (btn) {
-        btn.innerHTML = isMuted ? '🔇' : '🎵';
-        btn.title = isMuted ? 'Включить музыку' : 'Выключить музыку';
+        btn.innerHTML = isMuted ? '\uD83D\uDD07' : '\uD83C\uDFB5';
+        btn.title = isMuted ? 'Enable music' : 'Disable music';
     }
 }
 
 // ==========================================
-// 🚀 ИНИЦИАЛИЗАЦИЯ
+// INIT
 // ==========================================
 
 function init() {
-    // Загружаем состояние mute
     try {
         const savedMute = localStorage.getItem('cosmicMusicMuted');
         isMuted = savedMute === 'true';
@@ -263,7 +272,6 @@ function init() {
         isMuted = false;
     }
     
-    // Подписываемся на смену планеты
     if (window.EventBus) {
         window.EventBus.on('game:planetChanged', function(planet) {
             if (isMusicStarted) {
@@ -274,46 +282,43 @@ function init() {
     
     createMuteButton();
     
-    // Возобновление AudioContext после user gesture (требование браузеров)
-    const resumeOnGesture = () => {
-        if (audioContext && audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
+    const startOnFirstInteraction = async function() {
+        if (isMusicStarted) return;
         
-        // Запускаем музыку при первом взаимодействии
-        if (!isMusicStarted && window.gameState && window.gameState.currentLocation) {
-            initAudioContext();
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
+        if (window.gameState && window.gameState.currentLocation) {
+            const ctx = initAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                try { await ctx.resume(); } catch (e) {}
             }
-            playPlanetMusic(window.gameState.currentLocation);
+            
+            await playPlanetMusic(window.gameState.currentLocation);
             isMusicStarted = true;
-            console.log('🎵 [MUSIC] Started for planet:', window.gameState.currentLocation);
+            console.log('[MUSIC] Started for planet:', window.gameState.currentLocation);
         }
     };
     
-    document.addEventListener('click', resumeOnGesture, { once: true });
-    document.addEventListener('touchstart', resumeOnGesture, { once: true });
-    document.addEventListener('keydown', resumeOnGesture, { once: true });
+    document.addEventListener('click', startOnFirstInteraction, { once: true });
+    document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
+    document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('🎵 Music System initialized');
+    console.log('[MUSIC] Music System initialized');
 }
 
 // ==========================================
-// 🚀 ПУБЛИЧНЫЙ API
+// PUBLIC API
 // ==========================================
 
 window.MusicSystem = {
     init: init,
     playPlanetMusic: playPlanetMusic,
     toggleMute: toggleMute,
-    isMuted: () => isMuted,
-    getCurrentPlanet: () => currentPlanet
+    isMuted: function() { return isMuted; },
+    getCurrentPlanet: function() { return currentPlanet; }
 };
 
-// Автозапуск
+// Auto-start
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 500));
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 500); });
 } else {
     setTimeout(init, 500);
 }
