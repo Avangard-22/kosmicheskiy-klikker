@@ -4,7 +4,7 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    fadeDuration: 0,05      // Длительность перехода (с) — уменьшите для быстрого перехода
+    fadeDuration: 0,1      // Длительность перехода (с) — уменьшите для быстрого перехода
     volume: 0.6,             // Громкость (0.0 - 1.0) — увеличьте для громче
     loop: true,              // Зацикливание трека
     cycleDuration: 30,     // ✅ НОВОЕ: длина одного цикла в секундах
@@ -137,8 +137,8 @@ function scheduleLoop(buffer, startTime, duration) {
     // source.start(when, offset, duration)
     source.start(startTime, 0, duration);
     
-    // За 0.05 сек до конца — планируем следующий цикл
-    const nextStartTime = startTime + duration - 0.05;
+    // За 0.1 сек до конца — планируем следующий цикл
+    const nextStartTime = startTime + duration - 0.1;
     
     source.onended = () => {
         // Если источник закончился, но мы уже запланировали следующий — ничего не делаем
@@ -251,7 +251,7 @@ function toggleMute() {
         const now = audioContext.currentTime;
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.6);
+        gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.3);
     }
     
     updateMuteButton();
