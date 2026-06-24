@@ -27,6 +27,7 @@ window.GAME_CORE = {
     autoClickInterval: null,
     magnetInterval: null,
     blockSpeed: CFG.isMobile ? 25 : 20,
+    lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
     getBonus: function(type, fallback = 1) {
         if (window.shopSystem && typeof window.shopSystem[type] === 'function') return window.shopSystem[type]();
@@ -150,10 +151,17 @@ window.GAME_CORE = {
     },
 
     hitBlock: function(block, damage) {
-        if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+    if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+    
+    // ✅ Throttling вибрации — не чаще 1 раза в 100мс
+    const now = Date.now();
+    if (!this.lastHapticTime || now - this.lastHapticTime > 100) {
         if (navigator.vibrate) navigator.vibrate(50);
         if (window.telegramHaptic) window.telegramHaptic.light();
-        this.playSound('clickSound');
+        this.lastHapticTime = now;
+    }
+    
+    this.playSound('clickSound');
         block.style.transform = 'translateX(-50%) scale(0.85)';
         setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
 
