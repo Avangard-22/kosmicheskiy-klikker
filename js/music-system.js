@@ -123,7 +123,7 @@ function startSeamlessLoop(buffer) {
 }
 
 /**
- * Планирует следующий цикл за 0.1 сек до конца текущего
+ * Планирует следующий цикл за 0.05 сек до конца текущего
  */
 function scheduleLoop(buffer, startTime, duration) {
     if (!audioContext || !buffer) return;
@@ -137,8 +137,8 @@ function scheduleLoop(buffer, startTime, duration) {
     // source.start(when, offset, duration)
     source.start(startTime, 0, duration);
     
-    // За 0.1 сек до конца — планируем следующий цикл
-    const nextStartTime = startTime + duration - 0.1;
+    // За 0.05 сек до конца — планируем следующий цикл
+    const nextStartTime = startTime + duration - 0.05;
     
     source.onended = () => {
         // Если источник закончился, но мы уже запланировали следующий — ничего не делаем
@@ -251,7 +251,7 @@ function toggleMute() {
         const now = audioContext.currentTime;
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.3);
+        gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.6);
     }
     
     updateMuteButton();
