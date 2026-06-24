@@ -4,20 +4,23 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    volume: 0.7,
-    fadeDuration: 1.5
+    volume: 0.3,
+    fadeDuration: 1.5,     // секунды
+    preloadAll: false      // если true — грузит все треки сразу
 };
 
 // === СОСТОЯНИЕ ===
 let audioContext = null;
-let gainNode = null;
 let currentBuffer = null;
 let currentSource = null;
 let currentPlanet = null;
 let isMuted = false;
 let isMusicStarted = false;
+let scheduledNextTime = 0;
 let fadeTimeout = null;
-let html5Audio = null;  // ✅ Fallback на HTML5 Audio
+let gainNode = null;
+let nextSource = null;       // для seamless crossfade
+let nextBuffer = null;
 
 // === КЭШ БУФЕРОВ ===
 const bufferCache = {};
@@ -35,28 +38,37 @@ const PLANETS = [
 function initAudioContext() {
     if (audioContext) return audioContext;
     
-    try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) {
-            console.warn('⚠️ [MUSIC] Web Audio API не поддерживается, используем HTML5 Audio');
-            return null;
-        }
-        
-        audioContext = new AudioCtx();
-        gainNode = audioContext.createGain();
-        gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
-        gainNode.connect(audioContext.destination);
-        
-        console.log('🎵 [MUSIC] AudioContext initialized');
-        return audioContext;
-    } catch (e) {
-        console.warn('⚠️ [MUSIC] Ошибка создания AudioContext:', e);
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+        console.warn('⚠️ [MUSIC] Web Audio API не поддерживается');
         return null;
     }
+    
+    audioContext = new AudioCtx();
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
+    gainNode.connect(audioContext.destination);
+    
+    // Возобновление после user gesture (требование браузеров)
+    const resumeOnGesture = () => {
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        document.removeEventListener('click', resumeOnGesture);
+        document.removeEventListener('touchstart', resumeOnGesture);
+        document.removeEventListener('keydown', resumeOnGesture);
+    };
+    
+    document.addEventListener('click', resumeOnGesture);
+    document.addEventListener('touchstart', resumeOnGesture);
+    document.addEventListener('keydown', resumeOnGesture);
+    
+    console.log('🎵 [MUSIC] AudioContext initialized');
+    return audioContext;
 }
 
 // ==========================================
-// 🎵 ЗАГРУЗКА АУДИО БУФЕРА (Web Audio API)
+//  ЗАГРУЗКА АУДИО БУФЕРА
 // ==========================================
 
 async function loadAudioBuffer(planet) {
@@ -66,8 +78,8 @@ async function loadAudioBuffer(planet) {
     if (!ctx) return null;
     
     try {
-        console.log('🎵 [MUSIC] Loading:', `audio/${planet}.ogg`);
-        const response = await fetch(`audio/${planet}.ogg`);
+        console.log('🎵 [MUSIC] Loading:', `audio/${planet}.mp3`);
+        const response = await fetch(`audio/${planet}.mp3`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const arrayBuffer = await response.arrayBuffer();
@@ -77,57 +89,70 @@ async function loadAudioBuffer(planet) {
         console.log('✅ [MUSIC] Loaded:', planet, `(${audioBuffer.duration.toFixed(1)}s)`);
         return audioBuffer;
     } catch (e) {
-        console.warn('⚠️ [MUSIC] Web Audio load failed:', planet, e.message);
+        console.error(' [MUSIC] Failed to load:', planet, e);
         return null;
     }
 }
 
 // ==========================================
-// 🔁 SEAMLESS LOOPING (Web Audio API)
+// 🔁 SEAMLESS LOOPING
 // ==========================================
 
+/**
+ * Запускает зацикленное воспроизведение буфера
+ * Использует scheduling для seamless loop без микропауз
+ */
 function startSeamlessLoop(buffer) {
-    if (!audioContext || !buffer) return false;
+    if (!audioContext || !buffer) return;
     
+    // Останавливаем предыдущий источник
     stopCurrentSource();
+    
     currentBuffer = buffer;
     const duration = buffer.duration;
     
+    // Запускаем первый цикл
     scheduleLoop(buffer, audioContext.currentTime, duration);
-    return true;
 }
 
+/**
+ * Планирует следующий цикл за 0.1 сек до конца текущего
+ */
 function scheduleLoop(buffer, startTime, duration) {
-    if (!audioContext || !buffer || currentBuffer !== buffer) return;
+    if (!audioContext || !buffer) return;
     
-    try {
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
-        source.loop = false;
-        source.connect(gainNode);
-        
-        source.start(startTime);
-        source.onended = () => {
-            if (currentSource === source) {
-                currentSource = null;
-            }
-        };
-        
-        currentSource = source;
-        
-        const nextStartTime = startTime + duration;
-        const delay = (nextStartTime - audioContext.currentTime) * 1000;
-        
-        setTimeout(() => {
-            if (currentBuffer === buffer) {
-                scheduleLoop(buffer, nextStartTime, duration);
-            }
-        }, Math.max(0, delay - 200));
-    } catch (e) {
-        console.warn('⚠️ [MUSIC] scheduleLoop error:', e);
-    }
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.loop = false;  //  Отключаем нативный loop — используем scheduling
+    source.connect(gainNode);
+    
+    source.start(startTime);
+    
+    // За 0.1 сек до конца — планируем следующий цикл
+    const nextStartTime = startTime + duration - 0.1;
+    
+    source.onended = () => {
+        // Если источник закончился, но мы уже запланировали следующий — ничего не делаем
+        if (currentSource === source) {
+            currentSource = null;
+        }
+    };
+    
+    currentSource = source;
+    
+    // Планируем следующий цикл
+    const scheduleNext = () => {
+        if (!audioContext || !currentBuffer) return;
+        scheduleLoop(currentBuffer, nextStartTime, duration);
+    };
+    
+    const delay = (nextStartTime - audioContext.currentTime) * 1000;
+    setTimeout(scheduleNext, Math.max(0, delay - 100));
 }
 
+/**
+ * Останавливает текущий источник
+ */
 function stopCurrentSource() {
     if (currentSource) {
         try {
@@ -143,98 +168,62 @@ function stopCurrentSource() {
 // ==========================================
 
 function fadeIn(duration = MUSIC_CONFIG.fadeDuration) {
-    if (gainNode && audioContext) {
-        const now = audioContext.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(MUSIC_CONFIG.volume, now + duration);
-    }
-    if (html5Audio) {
-        html5Audio.volume = MUSIC_CONFIG.volume;
-    }
+    if (!gainNode || !audioContext) return;
+    
+    const now = audioContext.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(MUSIC_CONFIG.volume, now + duration);
 }
 
 function fadeOut(duration = MUSIC_CONFIG.fadeDuration, callback) {
-    if (gainNode && audioContext) {
-        const now = audioContext.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + duration);
+    if (!gainNode || !audioContext) {
+        if (callback) callback();
+        return;
     }
-    if (html5Audio) {
-        html5Audio.volume = 0;
-    }
+    
+    const now = audioContext.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.linearRampToValueAtTime(0, now + duration);
+    
     if (callback) {
         setTimeout(callback, duration * 1000);
     }
 }
 
 // ==========================================
-// 🎵 ПЕРЕКЛЮЧЕНИЕ ТРЕКОВ
+// 🎵 ПЕРЕКЛЮЧЕНИЕ ТРЕКОВ (CROSSFADE)
 // ==========================================
 
 async function playPlanetMusic(planet) {
     if (!PLANETS.includes(planet)) {
-        console.warn('⚠️ [MUSIC] Unknown planet:', planet);
+        console.warn('️ [MUSIC] Unknown planet:', planet);
         return;
     }
     
-    if (currentPlanet === planet && (currentSource || (html5Audio && !html5Audio.paused))) {
+    // Если планета не изменилась — ничего не делаем
+    if (currentPlanet === planet && currentSource) {
         return;
     }
     
     currentPlanet = planet;
     
-    // ✅ ПЫТАЕМСЯ Web Audio API (для seamless loop)
     const buffer = await loadAudioBuffer(planet);
+    if (!buffer) return;
     
-    if (buffer) {
-        // Останавливаем HTML5 Audio если он играл
-        stopHtml5Audio();
-        
+    // Если уже играет — делаем crossfade
+    if (currentSource) {
         fadeOut(MUSIC_CONFIG.fadeDuration, () => {
             startSeamlessLoop(buffer);
             fadeIn(MUSIC_CONFIG.fadeDuration);
         });
-        
-        console.log('🎵 [MUSIC] Playing via Web Audio API:', planet);
     } else {
-        // ✅ FALLBACK на HTML5 Audio (работает всегда)
-        console.log('🎵 [MUSIC] Fallback to HTML5 Audio for:', planet);
-        playHtml5Audio(planet);
+        startSeamlessLoop(buffer);
+        fadeIn(MUSIC_CONFIG.fadeDuration);
     }
-}
-
-// ==========================================
-// 🎵 HTML5 AUDIO FALLBACK
-// ==========================================
-
-function playHtml5Audio(planet) {
-    stopHtml5Audio();
     
-    html5Audio = new Audio(`audio/${planet}.ogg`);
-    html5Audio.loop = true;
-    html5Audio.volume = isMuted ? 0 : MUSIC_CONFIG.volume;
-    
-    html5Audio.addEventListener('error', (e) => {
-        console.error('❌ [MUSIC] HTML5 Audio error:', e);
-    });
-    
-    html5Audio.play().then(() => {
-        console.log('🎵 [MUSIC] HTML5 Audio playing:', planet);
-    }).catch(err => {
-        console.warn('⚠️ [MUSIC] HTML5 Audio play failed:', err);
-    });
-}
-
-function stopHtml5Audio() {
-    if (html5Audio) {
-        try {
-            html5Audio.pause();
-            html5Audio.currentTime = 0;
-        } catch (e) {}
-        html5Audio = null;
-    }
+    console.log('🎵 [MUSIC] Playing:', planet);
 }
 
 // ==========================================
@@ -247,9 +236,7 @@ function toggleMute() {
     if (window.gameState) {
         window.gameState.musicMuted = isMuted;
     }
-    try {
-        localStorage.setItem('cosmicMusicMuted', isMuted.toString());
-    } catch (e) {}
+    localStorage.setItem('cosmicMusicMuted', isMuted.toString());
     
     if (gainNode && audioContext) {
         const now = audioContext.currentTime;
@@ -258,27 +245,19 @@ function toggleMute() {
         gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.3);
     }
     
-    if (html5Audio) {
-        html5Audio.volume = isMuted ? 0 : MUSIC_CONFIG.volume;
-    }
-    
     updateMuteButton();
-    console.log('🔇 [MUSIC] Mute:', isMuted);
+    console.log(' [MUSIC] Mute:', isMuted);
 }
 
 // ==========================================
-// 🎨 UI КНОПКА (✅ ДОБАВЛЕНО!)
+//  UI КНОПКА
 // ==========================================
 
 function createMuteButton() {
-    // Удаляем старую кнопку если есть
-    const existing = document.getElementById('musicMuteBtn');
-    if (existing) existing.remove();
-    
     const btn = document.createElement('button');
     btn.id = 'musicMuteBtn';
     btn.title = isMuted ? 'Включить музыку' : 'Выключить музыку';
-    btn.innerHTML = isMuted ? '🔇' : '🎵';
+    btn.innerHTML = isMuted ? '' : '🎵';
     btn.style.cssText = `
         position: fixed;
         top: 10px;
@@ -298,19 +277,13 @@ function createMuteButton() {
         transition: transform 0.1s, background 0.2s;
     `;
     
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleMute();
-    });
-    
+    btn.addEventListener('click', toggleMute);
     btn.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        e.stopPropagation();
         toggleMute();
     }, { passive: false });
     
     document.body.appendChild(btn);
-    console.log('🎨 [MUSIC] Mute button created');
 }
 
 function updateMuteButton() {
@@ -326,12 +299,9 @@ function updateMuteButton() {
 // ==========================================
 
 function init() {
-    try {
-        const savedMute = localStorage.getItem('cosmicMusicMuted');
-        isMuted = savedMute === 'true';
-    } catch (e) {
-        isMuted = false;
-    }
+    // Загружаем состояние mute
+    const savedMute = localStorage.getItem('cosmicMusicMuted');
+    isMuted = savedMute === 'true';
     
     // Подписываемся на смену планеты
     if (window.EventBus) {
@@ -346,25 +316,21 @@ function init() {
     
     // Запуск после первого клика
     const startOnFirstInteraction = async () => {
-        if (isMusicStarted) return;
-        
-        if (window.gameState && window.gameState.currentLocation) {
-            const ctx = initAudioContext();
-            if (ctx && ctx.state === 'suspended') {
-                try { await ctx.resume(); } catch (e) {}
-            }
-            
+        if (!isMusicStarted && window.gameState && window.gameState.currentLocation) {
+            initAudioContext();
             await playPlanetMusic(window.gameState.currentLocation);
             isMusicStarted = true;
-            console.log('🎵 [MUSIC] Started for planet:', window.gameState.currentLocation);
         }
+        document.removeEventListener('click', startOnFirstInteraction);
+        document.removeEventListener('touchstart', startOnFirstInteraction);
+        document.removeEventListener('keydown', startOnFirstInteraction);
     };
     
     document.addEventListener('click', startOnFirstInteraction, { once: true });
     document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
     document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('🎵 Music System initialized (with HTML5 fallback)');
+    console.log(' Music System initialized (Web Audio API)');
 }
 
 // ==========================================
