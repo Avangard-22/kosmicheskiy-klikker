@@ -6,6 +6,7 @@
 const MUSIC_CONFIG = {
     volume: 0.3,
     fadeDuration: 0.1,     // секунды
+     cycleDuration: 30,     // ✅ НОВОЕ: длина одного цикла в секундах 
     preloadAll: false      // если true — грузит все треки сразу
 };
 
@@ -104,17 +105,18 @@ async function loadAudioBuffer(planet) {
  */
 function startSeamlessLoop(buffer) {
     if (!audioContext || !buffer) return;
-    
-    // Останавливаем предыдущий источник
     stopCurrentSource();
-    
     currentBuffer = buffer;
+    
     const duration = buffer.duration;
     
-    // Запускаем первый цикл
+    // Проверка: если файл не 30 сек — предупреждение
+    if (Math.abs(duration - 30) > 0.5) {
+        console.warn('⚠️ [MUSIC] Файл не 30 сек! Длительность:', duration.toFixed(2), 'с');
+    }
+    
     scheduleLoop(buffer, audioContext.currentTime, duration);
 }
-
 /**
  * Планирует следующий цикл за 0.1 сек до конца текущего
  */
