@@ -5,7 +5,7 @@
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
     fadeDuration: 1500,
-    volume: 0.4,
+    volume: 10.0,
     loop: true  // ✅ Зацикливание
 };
 
