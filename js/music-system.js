@@ -4,9 +4,11 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    volume: 0.6,
-    fadeDuration: 1.5,     // секунды
-    preloadAll: false      // если true — грузит все треки сразу
+    fadeDuration: 0,05      // Длительность перехода (с) — уменьшите для быстрого перехода
+    volume: 0.6,             // Громкость (0.0 - 1.0) — увеличьте для громче
+    loop: true,              // Зацикливание трека
+    cycleDuration: 30,     // ✅ НОВОЕ: длина одного цикла в секундах
+    preload: true            // Предзагрузка (true = быстрее, но больше трафика)
 };
 
 // === СОСТОЯНИЕ ===
@@ -109,7 +111,12 @@ function startSeamlessLoop(buffer) {
     stopCurrentSource();
     
     currentBuffer = buffer;
-    const duration = buffer.duration;
+    
+    // ✅ ИСПРАВЛЕНО: используем фиксированную длину цикла (30 сек)
+    // Если файл короче — играем его полностью, если длиннее — обрезаем до 30 сек
+    const duration = Math.min(buffer.duration, MUSIC_CONFIG.cycleDuration);
+    
+    console.log('🎵 [MUSIC] Cycle duration:', duration.toFixed(1), 's (file:', buffer.duration.toFixed(1), 's)');
     
     // Запускаем первый цикл
     scheduleLoop(buffer, audioContext.currentTime, duration);
@@ -126,10 +133,12 @@ function scheduleLoop(buffer, startTime, duration) {
     source.loop = false;  //  Отключаем нативный loop — используем scheduling
     source.connect(gainNode);
     
-    source.start(startTime);
+    // ✅ ИСПРАВЛЕНО: третий параметр ограничивает воспроизведение до duration секунд
+    // source.start(when, offset, duration)
+    source.start(startTime, 0, duration);
     
-    // За 0.05 сек до конца — планируем следующий цикл
-    const nextStartTime = startTime + duration - 0.05;
+    // За 0.1 сек до конца — планируем следующий цикл
+    const nextStartTime = startTime + duration - 0.1;
     
     source.onended = () => {
         // Если источник закончился, но мы уже запланировали следующий — ничего не делаем
