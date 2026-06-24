@@ -5,7 +5,7 @@
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
     fadeDuration: 1500,      // Длительность fade in/out (мс)
-    volume: 0.4,             // Громкость (0.0 - 1.0)
+    volume: 0.9,             // Громкость (0.0 - 1.0)
     loop: true,              // Зацикливание
     preload: true            // Предзагрузка
 };
