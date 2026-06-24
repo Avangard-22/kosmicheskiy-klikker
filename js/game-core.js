@@ -465,7 +465,7 @@ initEffectCanvas: function() {
 
         // ✅ Передаём имя планеты, а не номер
 if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
-       // ✅ Отправляем событие смены планеты для музыки
+      // ✅ Отправляем событие смены планеты для музыки
     if (window.EventBus) {
         window.EventBus.emit('game:planetChanged', loc);
     }
