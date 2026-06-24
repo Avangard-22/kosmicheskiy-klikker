@@ -4,7 +4,7 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    volume: 0.3,
+    volume: 0.6,
     fadeDuration: 1.5,     // секунды
     preloadAll: false      // если true — грузит все треки сразу
 };
@@ -128,8 +128,8 @@ function scheduleLoop(buffer, startTime, duration) {
     
     source.start(startTime);
     
-    // За 0.1 сек до конца — планируем следующий цикл
-    const nextStartTime = startTime + duration - 0.1;
+    // За 0.05 сек до конца — планируем следующий цикл
+    const nextStartTime = startTime + duration - 0.05;
     
     source.onended = () => {
         // Если источник закончился, но мы уже запланировали следующий — ничего не делаем
