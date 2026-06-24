@@ -153,9 +153,9 @@ window.GAME_CORE = {
     hitBlock: function(block, damage) {
     if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
     
-    // ✅ Throttling вибрации — не чаще 1 раза в 100мс
+    // ✅ Throttling вибрации — не чаще 1 раза в 150мс
     const now = Date.now();
-    if (!this.lastHapticTime || now - this.lastHapticTime > 100) {
+    if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
         if (navigator.vibrate) navigator.vibrate(50);
         if (window.telegramHaptic) window.telegramHaptic.light();
         this.lastHapticTime = now;
