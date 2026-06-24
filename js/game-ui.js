@@ -4,14 +4,83 @@
 
 const CFG = window.GAME_CONFIG;
 
-// ✅ Единая конфигурация прогресса локаций
-const LOC_REQ = CFG.planetOrder.reduce((acc, planet, index) => {
-    acc[planet] = {
-        targetAU: CFG.astronomicalUnits[planet],
-        nextLocation: CFG.planetOrder[index + 1] || null
-    };
-    return acc;
-}, {});
+// ✅ ИСПРАВЛЕНО: Используем готовую конфигурацию из game-config.js
+// PROGRESSION_CONFIG уже содержит targetAU и nextLocation
+const LOC_REQ = CFG.PROGRESSION_CONFIG;
+
+// ==========================================
+// ✅ НОВОЕ: OBJECT POOLING ДЛЯ ТЕКСТОВЫХ ЭФФЕКТОВ
+// Решает проблему утечки памяти и Layout Thrashing
+// ==========================================
+const TEXT_POOL_SIZE = 30;
+const textPool = [];
+let textPoolIndex = 0;
+
+/**
+ * Инициализация пула текстовых элементов
+ */
+function initTextPool() {
+    if (textPool.length > 0) return;
+
+    for (let i = 0; i < TEXT_POOL_SIZE; i++) {
+        const el = document.createElement('div');
+        el.style.cssText = `
+            position: absolute;
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
+            -webkit-text-stroke: 1px #000000;
+            transition: none;
+            font-family: 'Orbitron', monospace;
+        `;
+        document.body.appendChild(el);
+        textPool.push({
+            element: el,
+            active: false,
+            animationId: null,
+            timeoutId: null
+        });
+    }
+    console.log('✅ [UI] Text pool initialized:', TEXT_POOL_SIZE, 'elements');
+}
+
+/**
+ * Получить свободный элемент из пула
+ */
+function getTextElement() {
+    initTextPool();
+
+    // Ищем неактивный элемент
+    for (let i = 0; i < textPool.length; i++) {
+        const idx = (textPoolIndex + i) % textPool.length;
+        if (!textPool[idx].active) {
+            textPoolIndex = (idx + 1) % textPool.length;
+            return textPool[idx];
+        }
+    }
+
+    // Все заняты — используем следующий по кругу и отменяем анимацию
+    const item = textPool[textPoolIndex];
+    textPoolIndex = (textPoolIndex + 1) % textPool.length;
+
+    if (item.animationId) cancelAnimationFrame(item.animationId);
+    if (item.timeoutId) clearTimeout(item.timeoutId);
+
+    return item;
+}
+
+/**
+ * Освободить элемент обратно в пул
+ */
+function releaseTextElement(item) {
+    if (!item) return;
+    item.active = false;
+    item.animationId = null;
+    item.timeoutId = null;
+    item.element.style.opacity = '0';
+}
 
 window.GAME_UI = {
     
@@ -168,94 +237,129 @@ window.GAME_UI = {
     // ==========================================
     
     createDamageText: function(dmg, block, color) {
-        if (!block) return;
-        
-        const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'damage-text';
-        t.textContent = `-${dmg}`;
-        t.style.color = color;
-        
-        let l = r.left + r.width / 2;
-        let tp = r.top;
-        if (l < 50) l = 50;
-        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
-        if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        
-        let op = 1, y = tp;
-        const anim = () => {
-            op -= 0.02;
-            y -= 2;
-            t.style.opacity = op;
-            t.style.top = y + 'px';
-            if (op > 0) {
-                requestAnimationFrame(anim);
-            } else if (t.parentNode) {
-                document.body.removeChild(t);
-            }
-        };
-        anim();
-    },
+    if (!block) return;
 
-    showComboText: function(count, bonus, block) {
-        if (!block) return;
-        
-        const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'combo-text';
-        
-        if (window.formatString && window.translations) {
-            t.textContent = window.formatString(
-                window.translations[window.currentLanguage].tooltips.combo,
-                { count: count, bonus: bonus }
-            );
+    const item = getTextElement();
+    const el = item.element;
+
+    // Настройка элемента
+    el.className = 'damage-text';
+    el.textContent = `-${dmg}`;
+    el.style.color = color;
+    el.style.fontSize = 'clamp(1em, 4vw, 1.1em)';
+    el.style.textAlign = 'center';
+    el.style.maxWidth = '100px';
+
+    const r = block.getBoundingClientRect();
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    if (l < 50) l = 50;
+    if (l > window.innerWidth - 50) l = window.innerWidth - 50;
+    if (tp < 50) tp = 50;
+
+    el.style.left = l + 'px';
+    el.style.top = tp + 'px';
+    el.style.opacity = '1';
+
+    item.active = true;
+
+    let opacity = 1;
+    let currentY = tp;
+
+    const animate = () => {
+        opacity -= 0.02;
+        currentY -= 2;
+
+        el.style.opacity = opacity;
+        el.style.top = currentY + 'px';
+
+        if (opacity > 0) {
+            item.animationId = requestAnimationFrame(animate);
         } else {
-            t.textContent = `COMBO x${count}! +${bonus}`;
+            releaseTextElement(item);
         }
-        
-        let l = r.left + r.width / 2;
-        let tp = r.top;
-        if (l < 75) l = 75;
-        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
-        if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
-    },
+    };
+
+    item.animationId = requestAnimationFrame(animate);
+},
+
+   showComboText: function(count, bonus, block) {
+    if (!block) return;
+
+    const item = getTextElement();
+    const el = item.element;
+
+    el.className = 'combo-text';
+    el.style.fontSize = 'clamp(1.4em, 5vw, 1.8em)';
+    el.style.color = '#FFD700';
+    el.style.textAlign = 'center';
+    el.style.maxWidth = '150px';
+
+    if (window.formatString && window.translations) {
+        el.textContent = window.formatString(
+            window.translations[window.currentLanguage].tooltips.combo,
+            { count: count, bonus: bonus }
+        );
+    } else {
+        el.textContent = `COMBO x${count}! +${bonus}`;
+    }
+
+    const r = block.getBoundingClientRect();
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    if (l < 75) l = 75;
+    if (l > window.innerWidth - 75) l = window.innerWidth - 75;
+    if (tp < 50) tp = 50;
+
+    el.style.left = l + 'px';
+    el.style.top = tp + 'px';
+    el.style.opacity = '1';
+
+    item.active = true;
+
+    item.timeoutId = setTimeout(() => {
+        releaseTextElement(item);
+    }, 1000);
+},
 
     showRewardText: function(amount, block) {
-        if (!block) return;
-        
-        const rct = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'reward-text';
-        
-        if (window.formatString && window.translations) {
-            t.textContent = window.formatString(
-                window.translations[window.currentLanguage].tooltips.reward,
-                { reward: amount }
-            );
-        } else {
-            t.textContent = `+${amount} 💎`;
-        }
-        
-        let l = rct.left + rct.width / 2;
-        let tp = rct.top + rct.height / 2;
-        if (l < 60) l = 60;
-        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
-        if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
-    },
+    if (!block) return;
+
+    const item = getTextElement();
+    const el = item.element;
+
+    el.className = 'reward-text';
+    el.style.fontSize = 'clamp(1.1em, 4vw, 1.3em)';
+    el.style.color = '#FFFFFF';
+    el.style.textAlign = 'center';
+    el.style.maxWidth = '120px';
+
+    if (window.formatString && window.translations) {
+        el.textContent = window.formatString(
+            window.translations[window.currentLanguage].tooltips.reward,
+            { reward: amount }
+        );
+    } else {
+        el.textContent = `+${amount} 💎`;
+    }
+
+    const rct = block.getBoundingClientRect();
+    let l = rct.left + rct.width / 2;
+    let tp = rct.top + rct.height / 2;
+    if (l < 60) l = 60;
+    if (l > window.innerWidth - 60) l = window.innerWidth - 60;
+    if (tp < 50) tp = 50;
+
+    el.style.left = l + 'px';
+    el.style.top = tp + 'px';
+    el.style.opacity = '1';
+
+    item.active = true;
+
+    item.timeoutId = setTimeout(() => {
+        releaseTextElement(item);
+    }, 1500);
+},
 
     updateCracks: function(block, health) {
         if (!block) return;

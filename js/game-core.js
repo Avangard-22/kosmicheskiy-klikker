@@ -19,7 +19,7 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: /Android|webOS|iPhone/i.test(navigator.userAgent) ? 25 : 20,
+    blockSpeed: CFG.isMobile ? 25 : 20,
 
     getBonus: function(type, fallback = 1) {
         if (window.shopSystem && typeof window.shopSystem[type] === 'function') return window.shopSystem[type]();
@@ -184,7 +184,7 @@ window.GAME_CORE = {
 
     destroyBlock: function(block) {
         if (!window.gameState) return;
-        const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
+     const now = Date.now(), win = CFG.isMobile ? 1500 : 2000;
         window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
         window.gameState.lastDestroyTime = now;
 
@@ -444,9 +444,9 @@ initEffectCanvas: function() {
     },
 
     setLocation: function(loc) {
-        if (!window.gameState) return;
-        if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
-        window.gameState.currentLocation = loc;
+    if (!window.gameState) return;
+    if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
+    window.gameState.currentLocation = loc;
 
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
@@ -463,9 +463,15 @@ initEffectCanvas: function() {
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
 
-        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
-        UI.updateProgressBar();
-    },
+        // ✅ Передаём имя планеты, а не номер
+if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
+       // ✅ Отправляем событие смены планеты для музыки
+    if (window.EventBus) {
+        window.EventBus.emit('game:planetChanged', loc);
+    }
+    
+    UI.updateProgressBar();
+},
 
     startGame: function(reset = true) {
         console.log('🚀 Start, reset =', reset);
@@ -751,6 +757,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);
     if (window.updateLanguageFlag) window.updateLanguageFlag();
     if (window.updateContinueButton) window.updateContinueButton();
+// ✅ Сигнализируем другим модулям о готовности
+if (window.EventBus) {
+    window.EventBus.emit('core:ready');
+}
 });
 
 })();

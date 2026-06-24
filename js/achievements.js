@@ -360,6 +360,44 @@
         setupEventHandlers();
         checkSavedAchievements();
         updateAchievementsDisplay();
+// ✅ Подписка на события EventBus (для связи с game-core.js)
+if (window.EventBus) {
+    window.EventBus.on('game:damageDealt', function(damage) {
+        window.achievementsSystem.incrementTotalDamage(damage);
+    });
+    
+    window.EventBus.on('game:clickMade', function(count) {
+        window.achievementsSystem.incrementTotalClicks(count);
+    });
+    
+    window.EventBus.on('game:critMade', function(count) {
+        window.achievementsSystem.incrementCrits(count);
+    });
+    
+    window.EventBus.on('game:coinsEarned', function(amount) {
+        window.achievementsSystem.incrementCoinsEarned(amount);
+    });
+    
+    window.EventBus.on('game:blockDestroyed', function(data) {
+        window.achievementsSystem.incrementPlanetBlocks(data.planet, 1);
+        if (data.isRare) {
+            window.achievementsSystem.incrementRareBlocks(1);
+            window.achievementsSystem.incrementPlanetRareBlocks(data.planet, 1);
+        }
+    });
+    
+    window.EventBus.on('game:comboUpdated', function(data) {
+        window.achievementsSystem.updateCombo(data.combo);
+        window.achievementsSystem.updatePlanetCombo(data.planet, data.combo);
+    });
+    
+    window.EventBus.on('game:planetVisited', function(level) {
+        window.achievementsSystem.updatePlanetProgress(level);
+    });
+    
+    console.log('📡 [ACHIEVEMENTS] Подписка на EventBus выполнена');
+}
+
         console.log('🏆 Achievements initialized. Total:', totalAchievements);
     }
 
@@ -444,10 +482,10 @@
             var emoji = info.stage === 0 ? '🔒' : cat.emoji;
             card.innerHTML = crown + '<div class="ach-icon-emoji">' + emoji + '</div><div class="ach-icon-name">' + cat.description + '</div><div class="ach-icon-stage">' + stageInfo.icon + ' ' + info.unlocked + '/' + info.total + '</div><div class="ach-icon-progress"><div class="ach-icon-progress-fill" style="width:' + info.pct + '%"></div></div>';
 
-            (function(id) {
-                card.addEventListener('click', function() { showCategoryDetail(id); });
-                card.addEventListener('touchstart', function(e) { e.preventDefault(); showCategoryDetail(id); }, { passive: false });
-            })(catId);
+          (function(id) {
+    // ✅ Используем только click (работает на всех устройствах)
+    card.addEventListener('click', function() { showCategoryDetail(id); });
+})(catId);
 
             grid.appendChild(card);
         }
@@ -768,7 +806,8 @@
 
         syncGlobal('combatMastery', gs.totalDamageDealt);
         syncGlobal('resourceCollector', gm.totalCoinsEarned);
-        syncGlobal('explorer', gm.planetsVisited || 1);
+// ✅ Используем длину массива посещённых планет
+syncGlobal('explorer', (gm.visitedPlanets && gm.visitedPlanets.length) || 0);
         syncGlobal('comboLegend', gm.maxCombo);
         syncGlobal('critMaster', gm.totalCrits);
         syncGlobal('upgradeEnthusiast', gm.upgradesBought);
@@ -862,12 +901,19 @@
             gm.totalCoinsEarned = (gm.totalCoinsEarned || 0) + a;
             updateProgress('resourceCollector', gm.totalCoinsEarned);
         },
-        updatePlanetProgress: function(lvl) {
-            var gm = window.gameMetrics;
-            if (!gm) gm = window.gameMetrics = {};
-            gm.planetsVisited = Math.max(gm.planetsVisited || 0, lvl);
-            updateProgress('explorer', gm.planetsVisited);
-        },
+        updatePlanetProgress: function(planet) {
+    var gm = window.gameMetrics;
+    if (!gm) gm = window.gameMetrics = {};
+    if (!gm.visitedPlanets) gm.visitedPlanets = [];
+    
+    // ✅ Проверяем, действительно ли это новая планета
+    if (gm.visitedPlanets.indexOf(planet) === -1) {
+        gm.visitedPlanets.push(planet);
+        gm.planetsVisited = gm.visitedPlanets.length;
+        updateProgress('explorer', gm.planetsVisited);
+        console.log('🪐 [ACHIEVEMENTS] Новая планета посещена:', planet, 'Всего:', gm.planetsVisited);
+    }
+},
         updateCombo: function(combo) {
             var gm = window.gameMetrics;
             if (!gm) gm = window.gameMetrics = {};
@@ -920,16 +966,34 @@
         }
     };
 
-    function safeInit() {
-        if (!document.getElementById('achievementsBtn')) { setTimeout(safeInit, 200); return; }
-        if (!window.gameState) { setTimeout(safeInit, 200); return; }
-        if (!window.GAME_CORE) { setTimeout(safeInit, 200); return; }
-        init();
+  /**
+✅ ИСПРАВЛЕНО: Используем EventBus вместо polling
+*/
+function safeInit() {
+    // Проверяем готовность DOM
+    if (!document.getElementById('achievementsBtn')) {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
+        return;
     }
+    
+    // Проверяем готовность модулей
+    if (!window.gameState || !window.GAME_CORE) {
+        // Подписываемся на событие готовности через EventBus
+        if (window.EventBus) {
+            window.EventBus.once('core:ready', init);
+            return;
+        }
+        // Fallback если EventBus недоступен
+        setTimeout(safeInit, 200);
+        return;
+    }
+    
+    init();
+}
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { setTimeout(safeInit, 300); });
-    } else {
-        setTimeout(safeInit, 300);
-    }
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
+} else {
+    setTimeout(safeInit, 100);
+}
 })();

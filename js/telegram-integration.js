@@ -24,45 +24,75 @@ function extractInitDataFromURL() {
     }
 }
 
-async function sendToCloud(action, progressData, initData) {
-    console.log('🔍 DEBUG: sendToCloud called with action:', action);
-    console.log('🔍 DEBUG: initData available:', !!initData);
-    console.log('🔍 DEBUG: initData length:', initData?.length || 0);
-    
+/**
+ * Отправка данных в облако
+ * ✅ ИСПРАВЛЕНО: Добавлен sendBeacon для критических сохранений
+ * ✅ ИСПРАВЛЕНО: Добавлен keepalive: true для fetch
+ * @param {string} action - 'save', 'load', 'leaderboard'
+ * @param {Object} progressData - Данные для сохранения (опционально)
+ * @param {string} initData - Telegram initData
+ * @param {boolean} critical - Критическое сохранение (использовать sendBeacon)
+ */
+async function sendToCloud(action, progressData, initData, critical = false) {
+    console.log('🔍 [CLOUD] sendToCloud called with action:', action, critical ? '(CRITICAL)' : '');
+    console.log('🔍 [CLOUD] initData available:', !!initData);
+    console.log('🔍 [CLOUD] initData length:', initData?.length || 0);
+
     if (!initData) {
-        console.error('❌ No initData available');
+        console.error('❌ [CLOUD] No initData available');
         return { success: false, error: 'No initData' };
     }
-    
-    try {
-        const body = {
-            initData: initData,
-            action: action
-        };
-        
-        if (progressData) {
-            body.progress = progressData;
+
+    const body = {
+        initData: initData,
+        action: action
+    };
+
+    if (progressData) {
+        body.progress = progressData;
+    }
+
+    const bodyString = JSON.stringify(body);
+
+    // ✅ ПРИОРИТЕТ 1: sendBeacon для критических сохранений
+    // Гарантирует доставку даже при закрытии страницы
+    if (critical && action === 'save' && navigator.sendBeacon) {
+        try {
+            const blob = new Blob([bodyString], { type: 'text/plain' });
+            const sent = navigator.sendBeacon(`${CLOUD_API_URL}/api/save`, blob);
+            if (sent) {
+                console.log('✅ [CLOUD] sendBeacon successful (critical save)');
+                window.isCloudAvailable = true;
+                return { success: true, beacon: true };
+            }
+            console.warn('⚠️ [CLOUD] sendBeacon failed, falling back to fetch');
+        } catch (e) {
+            console.warn('⚠️ [CLOUD] sendBeacon error:', e.message);
         }
-        
-        console.log('🔍 DEBUG: Request body:', JSON.stringify(body).substring(0, 200));
-        
+    }
+
+    // ✅ ПРИОРИТЕТ 2: fetch с keepalive (переживёт закрытие страницы)
+    try {
+        console.log('🔍 [CLOUD] Request body:', bodyString.substring(0, 200));
+
         const response = await fetch(`${CLOUD_API_URL}/api/save`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'text/plain'
             },
-            body: JSON.stringify(body)
+            body: bodyString,
+            keepalive: true  // ✅ КЛЮЧЕВОЙ ПАРАМЕТР: запрос переживёт закрытие страницы
         });
-        
-        console.log(' DEBUG: Response status:', response.status);
-        
+
+        console.log('🔍 [CLOUD] Response status:', response.status);
+
         const result = await response.json();
         console.log('☁️ [CLOUD] Ответ:', result);
-        
+
         if (result.success) {
             window.isCloudAvailable = true;
         }
-        
+
         return result;
     } catch (error) {
         console.error('❌ [CLOUD] Ошибка:', error.message);
@@ -198,22 +228,40 @@ function initTelegramIntegration() {
     console.log('🔍 telegramInitData length:', window.telegramInitData?.length || 0);
 
     window.telegramCloud = {
-        isAvailable: true,
-        
-        saveProgress: async function(progressData) {
-            console.log('☁️ [SAVE] Отправка:', progressData);
-            return sendToCloud('save', progressData, tg.initData);
-        },
+    isAvailable: true,
 
-        loadProgress: async function() {
-            console.log('☁️ [LOAD] Загрузка из облака...');
-            return sendToCloud('load', null, tg.initData);
-        },
-        
-        getLeaderboard: async function(limit = 50) {
-            return sendToCloud('leaderboard', { limit }, tg.initData);
-        }
-    };
+    saveProgress: async function(progressData) {
+        console.log('☁️ [SAVE] Отправка:', progressData);
+        console.log('☁️ [SAVE] username:', window.telegramUsername);
+        return sendToCloud('save', progressData, tg.initData, false);  // ✅ обычное сохранение
+    },
+
+    // ✅ НОВОЕ: Критическое сохранение (использует sendBeacon)
+    saveProgressCritical: async function(progressData) {
+        console.log('🚨 [SAVE] Критическая отправка:', progressData);
+        return sendToCloud('save', progressData, tg.initData, true);  // ✅ критическое сохранение
+    },
+
+    loadProgress: async function() {
+        console.log('☁️ [LOAD] Загрузка из облака...');
+        return sendToCloud('load', null, tg.initData, false);
+    },
+
+    getLeaderboard: async function(limit = 50) {
+        return sendToCloud('leaderboard', { limit }, tg.initData, false);
+    }
+// ✅ НОВОЕ: Получаем username с fallback
+window.telegramUsername = getUsername(window.telegramUser);
+window.telegramInitData = tg.initData || '';
+
+console.log(' [TELEGRAM] telegramUser:', window.telegramUser);
+console.log('🔍 [TELEGRAM] telegramUsername:', window.telegramUsername);
+console.log('🔍 [TELEGRAM] telegramInitData length:', window.telegramInitData?.length || 0);
+
+// ✅ НОВОЕ: Экспортируем функции для доступа из других модулей
+window.getTelegramUser = () => window.telegramUser;
+window.getTelegramUsername = () => window.telegramUsername || 'Anonymous';
+};
 
     console.log('✅ Telegram Integration initialized');
     console.log('☁️ Cloud API:', CLOUD_API_URL);

@@ -19,7 +19,7 @@ window.GAME_FEATURES = {
         const rect = block.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
-        const sz = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 150 : 200;
+       const sz = CFG.isMobile ? 150 : 200;
 
         const ex = document.createElement('div');
         ex.className = 'explosion';

@@ -14,7 +14,11 @@
         return;
     }
 
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+   // ✅ ИСПРАВЛЕНО: Используем единый флаг из конфига
+// Fallback на проверку, если конфиг вдруг не загружен (хотя не должен)
+const isMobile = window.GAME_CONFIG?.isMobile !== undefined 
+    ? window.GAME_CONFIG.isMobile 
+    : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     // ✅ Адаптивные настройки производительности
     const getAdaptiveSettings = () => {

@@ -197,6 +197,10 @@ const PROGRESSION_CONFIG = PLANET_ORDER.reduce((acc, planet, index) => {
     return acc;
 }, {});
 
+// === ОПРЕДЕЛЕНИЕ МОБИЛЬНОГО УСТРОЙСТВА ===
+// ✅ НОВОЕ: Единый флаг для всех модулей
+const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 // === ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ===
 window.GAME_CONFIG = {
     // Астрономия
@@ -204,7 +208,10 @@ window.GAME_CONFIG = {
     astronomicalUnits: ASTRONOMICAL_UNITS,
     planetOrder: PLANET_ORDER,
 
-    // Визуал
+// ✅ НОВОЕ: Флаг мобильного устройства
+    isMobile: IS_MOBILE,
+    
+// Визуал
     locations: LOCATIONS,
     rareBlocks: RARE_BLOCKS,
 

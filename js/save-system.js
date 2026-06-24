@@ -105,7 +105,9 @@ const DEFAULT_GAME_METRICS = {
     boostersUsed: 0,
     maxCombo: 0,
     rareBlocksDestroyed: 0,
-    sessions: 0
+    sessions: 0,
+    // ✅ НОВОЕ: массив реально посещённых планет
+    visitedPlanets: []
 };
 
 // ============================================
@@ -185,7 +187,20 @@ function applyCloudData(cloudData) {
         const currentGameActive = window.gameState.gameActive;
         const currentGamePaused = window.gameState.gamePaused;
         
-        window.gameState = deepMerge(DEFAULT_GAME_STATE, cloudData.full_game_state);
+        // ✅ ИСПРАВЛЕНО: сохраняем dailyBonus из облака до слияния
+const cloudDailyBonus = cloudData.full_game_state.dailyBonus;
+
+window.gameState = deepMerge(DEFAULT_GAME_STATE, cloudData.full_game_state);
+
+// ✅ Восстанавливаем dailyBonus из облака (deepMerge мог его перезаписать)
+if (cloudDailyBonus) {
+    window.gameState.dailyBonus = {
+        lastClaimDate: cloudDailyBonus.lastClaimDate || null,
+        currentDay: cloudDailyBonus.currentDay || 1,
+        totalClaimed: cloudDailyBonus.totalClaimed || 0,
+        streak: cloudDailyBonus.streak || 0
+    };
+}
         
         window.gameState.gameActive = currentGameActive;
         window.gameState.gamePaused = currentGamePaused;
@@ -271,22 +286,6 @@ function debouncedCloudSave() {
 }
 
 /**
- * ✅ НОВОЕ: Принудительное немедленное сохранение
- * Используется при закрытии вкладки/сворачивании — минуя debounce
- */
-window.flushCloudSave = function() {
-    // Отменяем отложенное сохранение
-    if (cloudSaveTimeout) {
-        clearTimeout(cloudSaveTimeout);
-        cloudSaveTimeout = null;
-        console.log('⚡ [SAVE] Debounce отменён — принудительное сохранение');
-    }
-    
-    // Выполняем немедленное сохранение
-    cloudSaveAsync();
-};
-
-/**
  * ☁️ Асинхронное сохранение в облако (основная функция)
  */
 async function cloudSaveAsync() {
@@ -336,6 +335,31 @@ async function cloudSaveAsync() {
         isSyncing = false;
     }
 }
+/**
+ * ✅ НОВОЕ: Принудительное немедленное сохранение
+ * Используется при закрытии вкладки/сворачивании — минуя debounce
+ * Использует sendBeacon для гарантированной доставки
+ */
+window.flushCloudSave = function() {
+    // Отменяем отложенное сохранение
+    if (typeof cloudSaveTimeout !== 'undefined' && cloudSaveTimeout) {
+        clearTimeout(cloudSaveTimeout);
+        cloudSaveTimeout = null;
+        console.log('⚡ [SAVE] Debounce отменён — принудительное сохранение');
+    }
+
+    // Критическое сохранение через sendBeacon
+    if (window.telegramCloud?.saveProgressCritical) {
+        console.log('🚨 [SAVE] Критическое сохранение при закрытии...');
+        const cloudData = extractCloudData();
+        if (cloudData) {
+            window.telegramCloud.saveProgressCritical(cloudData);
+        }
+    } else {
+        // Fallback на обычное сохранение
+        cloudSaveAsync();
+    }
+};
 
 // ============================================
 // 📥 ЗАГРУЗКА ИЗ ОБЛАКА
@@ -524,29 +548,26 @@ function init() {
 
     startAutoSave();
 
-    // ✅ Сохраняем в облако при закрытии вкладки (принудительно, минуя debounce)
-    window.addEventListener('beforeunload', () => {
-        if (window.gameState && window.gameState.gameActive) {
-            // ✅ НОВОЕ: принудительное сохранение перед закрытием
-            if (typeof window.flushCloudSave === 'function') {
-                window.flushCloudSave();
-            } else {
-                window.saveGame();
-            }
+    // ✅ ИСПРАВЛЕНО: Используем flushCloudSave для гарантированной доставки
+window.addEventListener('beforeunload', () => {
+    if (window.gameState && window.gameState.gameActive) {
+        if (typeof window.flushCloudSave === 'function') {
+            window.flushCloudSave();
+        } else {
+            window.saveGame();
         }
-    });
+    }
+});
 
-    // ✅ Сохраняем в облако при сворачивании (принудительно, минуя debounce)
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden && window.gameState && window.gameState.gameActive) {
-            // ✅ НОВОЕ: принудительное сохранение при сворачивании
-            if (typeof window.flushCloudSave === 'function') {
-                window.flushCloudSave();
-            } else {
-                window.saveGame();
-            }
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && window.gameState && window.gameState.gameActive) {
+        if (typeof window.flushCloudSave === 'function') {
+            window.flushCloudSave();
+        } else {
+            window.saveGame();
         }
-    });
+    }
+});
 
     console.log('💾 Save System initialized (CLOUD ONLY + DEBOUNCE)');
     console.log('💾 gameState.coins:', window.gameState.coins);
