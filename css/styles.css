@@ -743,3 +743,43 @@ body {
     pointer-events: none;
     animation: rareBlockAnnounce 2s ease-out forwards;
 }
+/* ==========================================
+🎵 МУЗЫКАЛЬНАЯ КНОПКА
+========================================== */
+#musicMuteBtn {
+    position: fixed;
+    top: 10px;
+    right: 60px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    transition: transform 0.1s, background 0.2s;
+}
+
+#musicMuteBtn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+#musicMuteBtn:active {
+    transform: scale(0.92);
+}
+
+@media (max-width: 768px) {
+    #musicMuteBtn {
+        top: 65px;
+        right: 8px;
+        width: 36px;
+        height: 36px;
+        font-size: 1em;
+    }
+}
