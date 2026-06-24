@@ -16,7 +16,8 @@ let currentPlanet = null;    // Текущая планета
 let isMuted = false;         // Состояние mute
 let isPlaying = false;       // Играет ли музыка
 let fadeTimeout = null;      // Таймер для fade
-
+let musicStarted = false;
+    
 // === ПЛАНЕТЫ ===
 const PLANETS = [
     'mercury', 'venus', 'earth', 'mars',
@@ -49,12 +50,23 @@ function init() {
     // Создаём кнопку mute в UI
     createMuteButton();
 
-    // Запускаем музыку для текущей планеты (если игра уже идёт)
-    if (window.gameState && window.gameState.currentLocation) {
-        playPlanetMusic(window.gameState.currentLocation);
-    }
+    // ✅ ИСПРАВЛЕНО: Запускаем музыку ТОЛЬКО после первого взаимодействия
+    // Браузеры блокируют автовоспроизведение без жеста пользователя
+    const startMusic = function() {
+        if (window.gameState && window.gameState.currentLocation && !musicStarted) {
+            playPlanetMusic(window.gameState.currentLocation);
+            musicStarted = true;
+        }
+        // Удаляем слушатели после первого запуска
+        document.removeEventListener('click', startMusic);
+        document.removeEventListener('touchstart', startMusic);
+    };
+
+    document.addEventListener('click', startMusic, { once: true });
+    document.addEventListener('touchstart', startMusic, { once: true });
 
     console.log('🎵 Music System initialized. Muted:', isMuted);
+    console.log('🎵 Waiting for user interaction to start music...');
 }
 
 /**
