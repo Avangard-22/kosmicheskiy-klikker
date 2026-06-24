@@ -78,8 +78,8 @@ async function loadAudioBuffer(planet) {
     if (!ctx) return null;
     
     try {
-        console.log('🎵 [MUSIC] Loading:', `audio/${planet}.mp3`);
-        const response = await fetch(`audio/${planet}.mp3`);
+        console.log('🎵 [MUSIC] Loading:', `audio/${planet}.ogg`);
+        const response = await fetch(`audio/${planet}.ogg`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const arrayBuffer = await response.arrayBuffer();
