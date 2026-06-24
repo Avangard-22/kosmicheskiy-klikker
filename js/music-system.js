@@ -4,18 +4,17 @@
 
 // === НАСТРОЙКИ ===
 const MUSIC_CONFIG = {
-    fadeDuration: 1500,
-    volume: 10.0,
-    loop: true  // ✅ Зацикливание
+    volume: 0.7,           // Громкость (0.0 - 1.0)
+    fadeDuration: 100000,    // Длительность fade in/out (мс)
+    loop: true             // Зацикливание
 };
 
 // === СОСТОЯНИЕ ===
-let currentTrack = null;
+let currentAudio = null;
 let currentPlanet = null;
 let isMuted = false;
-let isPlaying = false;
+let isMusicStarted = false;  // Флаг: музыка уже запущена
 let fadeTimeout = null;
-let musicStarted = false;  // ✅ Флаг первого запуска
 
 // === ПЛАНЕТЫ ===
 const PLANETS = [
@@ -24,49 +23,53 @@ const PLANETS = [
 ];
 
 // ==========================================
-// 🎵 ОСНОВНЫЕ ФУНКЦИИ
+//  ОСНОВНЫЕ ФУНКЦИИ
 // ==========================================
 
+/**
+ * Инициализация музыкальной системы
+ */
 function init() {
-    // Загружаем состояние mute
-    if (window.gameState && window.gameState.musicMuted !== undefined) {
-        isMuted = window.gameState.musicMuted;
-    } else {
-        const saved = localStorage.getItem('cosmicMusicMuted');
-        isMuted = saved === 'true';
-    }
+    // Загружаем состояние mute из localStorage
+    const savedMute = localStorage.getItem('cosmicMusicMuted');
+    isMuted = savedMute === 'true';
 
-    // Подписываемся на смену планеты
+    // Подписываемся на смену планеты через EventBus
     if (window.EventBus) {
         window.EventBus.on('game:planetChanged', function(planet) {
-            if (musicStarted) {  // ✅ Только если музыка уже запущена
+            if (isMusicStarted) {
                 playPlanetMusic(planet);
             }
         });
     }
 
-    // Создаём кнопку mute
+    // Создаём кнопку mute в UI
     createMuteButton();
-    // ✅ Запускаем музыку после первого клика пользователя
-    const startMusic = function() {
-        if (!musicStarted && window.gameState && window.gameState.currentLocation) {
+
+    // ✅ Запускаем музыку при первом клике пользователя (требование браузеров)
+    const startOnFirstInteraction = function() {
+        if (!isMusicStarted && window.gameState && window.gameState.currentLocation) {
             playPlanetMusic(window.gameState.currentLocation);
-            musicStarted = true;
+            isMusicStarted = true;
             console.log('🎵 Music started for planet:', window.gameState.currentLocation);
         }
-        // Удаляем слушатели
-        document.removeEventListener('click', startMusic);
-        document.removeEventListener('touchstart', startMusic);
-        document.removeEventListener('keydown', startMusic);
+        // Удаляем слушатели после первого запуска
+        document.removeEventListener('click', startOnFirstInteraction);
+        document.removeEventListener('touchstart', startOnFirstInteraction);
+        document.removeEventListener('keydown', startOnFirstInteraction);
     };
 
-    document.addEventListener('click', startMusic, { once: true });
-    document.addEventListener('touchstart', startMusic, { once: true });
-    document.addEventListener('keydown', startMusic, { once: true });
+    document.addEventListener('click', startOnFirstInteraction, { once: true });
+    document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
+    document.addEventListener('keydown', startOnFirstInteraction, { once: true });
 
-    console.log(' Music System initialized. Waiting for user interaction...');
+    console.log('🎵 Music System initialized. Waiting for first interaction...');
 }
 
+/**
+ * Воспроизвести музыку для планеты
+ * @param {string} planet - Название планеты (mercury, venus, ...)
+ */
 function playPlanetMusic(planet) {
     if (!PLANETS.includes(planet)) {
         console.warn('⚠️ [MUSIC] Unknown planet:', planet);
@@ -74,7 +77,7 @@ function playPlanetMusic(planet) {
     }
 
     // Если планета не изменилась — ничего не делаем
-    if (currentPlanet === planet && currentTrack && !currentTrack.paused) {
+    if (currentPlanet === planet && currentAudio && !currentAudio.paused) {
         return;
     }
 
@@ -84,10 +87,10 @@ function playPlanetMusic(planet) {
     console.log('🎵 [MUSIC] Playing:', trackPath);
 
     // Fade out текущего трека
-    if (currentTrack) {
-        fadeOut(currentTrack, () => {
-            currentTrack.pause();
-            currentTrack = null;
+    if (currentAudio) {
+        fadeOut(currentAudio, () => {
+            currentAudio.pause();
+            currentAudio = null;
             // Запускаем новый трек
             loadAndPlay(trackPath);
         });
@@ -96,43 +99,39 @@ function playPlanetMusic(planet) {
     }
 }
 
-function loadAndPlay(path) {    const audio = new Audio(path);
-    audio.loop = MUSIC_CONFIG.loop;  // ✅ Зацикливание
+/**
+ * Загрузить и воспроизвести трек
+ */
+function loadAndPlay(path) {
+    const audio = new Audio(path);
+    audio.loop = MUSIC_CONFIG.loop;
     audio.volume = isMuted ? 0 : MUSIC_CONFIG.volume;
     audio.preload = 'auto';
 
     // Обработка ошибок
     audio.addEventListener('error', (e) => {
-        console.error(' [MUSIC] Error loading:', path, e);
+        console.error('❌ [MUSIC] Error loading:', path, e);
     });
 
     // Воспроизведение после загрузки
     audio.addEventListener('canplaythrough', () => {
         audio.play().then(() => {
-            isPlaying = true;
             if (!isMuted) {
                 fadeIn(audio);
             }
             updateMuteButton();
-            console.log(' [MUSIC] Playing:', path);
+            console.log('🎵 [MUSIC] Playing:', path);
         }).catch(err => {
             console.warn('⚠️ [MUSIC] Play failed:', err);
-            isPlaying = false;
         });
     }, { once: true });
 
-    // ✅ Обработка окончания трека (на случай если loop не сработал)
-    audio.addEventListener('ended', () => {
-        console.log('🎵 [MUSIC] Track ended, restarting...');
-        audio.currentTime = 0;
-        audio.play().catch(err => {
-            console.error('❌ [MUSIC] Restart failed:', err);
-        });
-    });
-
-    currentTrack = audio;
+    currentAudio = audio;
 }
 
+/**
+ * Fade in (плавное нарастание громкости)
+ */
 function fadeIn(audio) {
     if (fadeTimeout) clearTimeout(fadeTimeout);
     
@@ -145,7 +144,8 @@ function fadeIn(audio) {
     const fade = () => {
         currentVolume += volumeStep;
         if (currentVolume >= MUSIC_CONFIG.volume) {
-            audio.volume = MUSIC_CONFIG.volume;            return;
+            audio.volume = MUSIC_CONFIG.volume;
+            return;
         }
         audio.volume = currentVolume;
         fadeTimeout = setTimeout(fade, stepDuration);
@@ -154,6 +154,9 @@ function fadeIn(audio) {
     fade();
 }
 
+/**
+ * Fade out (плавное затухание громкости)
+ */
 function fadeOut(audio, callback) {
     if (fadeTimeout) clearTimeout(fadeTimeout);
     
@@ -174,30 +177,34 @@ function fadeOut(audio, callback) {
     fade();
 }
 
+/**
+ * Переключить mute/unmute
+ */
 function toggleMute() {
     isMuted = !isMuted;
 
     // Сохраняем состояние
-    if (window.gameState) {
-        window.gameState.musicMuted = isMuted;
-    }
     localStorage.setItem('cosmicMusicMuted', isMuted.toString());
 
     // Применяем к текущему треку
-    if (currentTrack) {
+    if (currentAudio) {
         if (isMuted) {
-            fadeOut(currentTrack, () => {
-                currentTrack.volume = 0;
+            fadeOut(currentAudio, () => {
+                currentAudio.volume = 0;
             });
         } else {
-            currentTrack.volume = 0;
-            fadeIn(currentTrack);
+            currentAudio.volume = 0;
+            fadeIn(currentAudio);
         }
     }
+
     updateMuteButton();
     console.log('🎵 [MUSIC] Mute:', isMuted);
 }
 
+/**
+ * Создать кнопку mute в UI
+ */
 function createMuteButton() {
     const btn = document.createElement('button');
     btn.id = 'musicMuteBtn';
@@ -231,6 +238,9 @@ function createMuteButton() {
     document.body.appendChild(btn);
 }
 
+/**
+ * Обновить иконку кнопки mute
+ */
 function updateMuteButton() {
     const btn = document.getElementById('musicMuteBtn');
     if (btn) {
@@ -243,16 +253,16 @@ function updateMuteButton() {
 // 🚀 ПУБЛИЧНЫЙ API
 // ==========================================
 
-window.MusicSystem = {    init: init,
+window.MusicSystem = {
+    init: init,
     playPlanetMusic: playPlanetMusic,
     toggleMute: toggleMute,
     isMuted: () => isMuted,
-    isPlaying: () => isPlaying,
     getCurrentPlanet: () => currentPlanet
 };
 
 // ==========================================
-// 🚀 АВТОЗАПУСК
+//  АВТОЗАПУСК
 // ==========================================
 
 if (document.readyState === 'loading') {
