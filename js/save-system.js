@@ -284,57 +284,6 @@ function debouncedCloudSave() {
     
     console.log('⏱️ [SAVE] Debounce: сохранение через ' + (CLOUD_SAVE_DEBOUNCE / 1000) + ' сек');
 }
-
-/**
- * ☁️ Асинхронное сохранение в облако (основная функция)
- */
-async function cloudSaveAsync() {
-    if (!window.telegramCloud?.isAvailable) {
-        console.warn('⚠️ [CLOUD] Облако недоступно');
-        return;
-    }
-    
-    // ✅ Если синхронизация заблокирована — пропускаем
-    if (isOperationLocked) {
-        console.log('⏳ [CLOUD] Синхронизация заблокирована, пропускаем');
-        return;
-    }
-    
-    const now = Date.now();
-    if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) {
-        console.log('⏳ [CLOUD] Cooldown, пропускаем');
-        return;
-    }
-    if (isSyncing) return;
-
-    isSyncing = true;
-    try {
-        const cloudData = extractCloudData();
-        if (cloudData) {
-            console.log('☁️ [CLOUD] Отправка данных:', {
-                crystals: cloudData.crystals,
-                level: cloudData.level,
-                score: cloudData.score,
-                timestamp: cloudData.timestamp
-            });
-            
-            const result = await window.telegramCloud.saveProgress(cloudData);
-            
-            if (result?.success) {
-                lastCloudSync = now;
-                showSaveIndicator('☁️', 'Сохранено');
-                console.log('✅ [CLOUD] Sync successful');
-            } else {
-                console.warn('⚠️ [CLOUD] Sync failed:', result?.error);
-                showSaveIndicator('⚠️', 'Ошибка сохранения', '#ff9800');
-            }
-        }
-    } catch (e) {
-        console.warn('⚠️ Ошибка облачной синхронизации:', e);
-    } finally {
-        isSyncing = false;
-    }
-}
 /**
  * ✅ НОВОЕ: Принудительное немедленное сохранение
  * Используется при закрытии вкладки/сворачивании — минуя debounce
