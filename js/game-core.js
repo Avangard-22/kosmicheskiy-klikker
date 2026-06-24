@@ -6,8 +6,15 @@ const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-window.gameState = {};
-window.gameMetrics = {};
+// ✅ НЕ перезаписываем - данные уже загружены из save-system.js
+if (!window.gameState) {
+    console.warn('️ [CORE] gameState не инициализирован');
+    window.gameState = {};
+}
+if (!window.gameMetrics) {
+    console.warn('️ [CORE] gameMetrics не инициализирован');
+    window.gameMetrics = {};
+}
 
 window.GAME_CORE = {
     currentBlock: null,
