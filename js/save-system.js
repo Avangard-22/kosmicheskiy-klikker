@@ -305,15 +305,17 @@ async function cloudSaveAsync() {
             
             if (result?.success) {
                 lastCloudSync = now;
-                showSaveIndicator('☁️', 'Сохранено');
+                    // ✅ ИСПРАВЛЕНО: передаём цвет явно
+                showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
                 console.log('✅ [CLOUD] Sync successful');
             } else {
                 console.warn('⚠️ [CLOUD] Sync failed:', result?.error);
-                showSaveIndicator('⚠️', 'Ошибка сохранения', '#ff9800');
+                showSaveIndicator('⚠️', 'Ошибка', '#ff9800');
             }
         }
     } catch (e) {
         console.warn('⚠️ Ошибка облачной синхронизации:', e);
+        showSaveIndicator('❌', 'Ошибка', '#f44336');
     } finally {
         isSyncing = false;
     }
@@ -433,13 +435,40 @@ window.hasSave = async function() {
 // ============================================
 
 function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '#4CAF50') {
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+        // Очищаем предыдущие состояния
+        saveBtn.classList.remove('save-pending', 'save-pulse-success', 'save-pulse-error');
+        
+        // Вынужденный reflow для сброса CSS-анимаций
+        void saveBtn.offsetWidth;
+        
+        // ✅ ИСПРАВЛЕНО: проверяем цвет корректно
+        // Если цвет не передан или зелёный — успех, иначе — ошибка
+        const isSuccess = !color || color === '#4CAF50' || color === '#4CAF50';
+        
+        if (isSuccess) {
+            saveBtn.classList.add('save-pulse-success');
+        } else {
+            saveBtn.classList.add('save-pulse-error');
+        }
+        
+        // Удаляем классы после анимации
+        setTimeout(() => {
+            saveBtn.classList.remove('save-pulse-success', 'save-pulse-error');
+        }, 1000);
+    }
+
+    // Всплывающий текст под кнопкой
     let indicator = document.getElementById('saveIndicator');
     if (!indicator) {
         indicator = document.createElement('div');
         indicator.id = 'saveIndicator';
-        indicator.style.cssText = 'position:fixed;top:20px;right:20px;padding:8px 16px;background:rgba(0,0,0,0.85);color:#4CAF50;border-radius:8px;font-size:0.9em;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;font-family:Orbitron,sans-serif;backdrop-filter:blur(4px);';
+        indicator.style.cssText = 'position:absolute;top:55px;right:10px;padding:4px 8px;background:rgba(0,0,0,0.7);color:#4CAF50;border-radius:4px;font-size:0.75em;z-index:9999;opacity:0;transition:opacity 0.3s;pointer-events:none;font-family:Orbitron,sans-serif;letter-spacing:0.5px;';
         document.body.appendChild(indicator);
     }
+    
+    // ✅ ИСПРАВЛЕНО: показываем иконку и текст
     indicator.textContent = `${icon} ${text}`;
     indicator.style.color = color;
     indicator.style.opacity = '1';
