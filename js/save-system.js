@@ -214,12 +214,20 @@ window.saveGame = function() {
 
         console.log('💾 [SAVE] Сохранение запрошено...');
         
+        // Визуальный отклик: переводим кнопку в режим ожидания (дыхания), подтверждая фиксацию клика
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
+            saveBtn.classList.add('save-pending');
+        }
+        
+        // ✅ Если синхронизация заблокирована — добавляем в очередь
         if (isOperationLocked) {
             console.log('⏳ [SAVE] Синхронизация заблокирована, добавляем в очередь');
             pendingOperations.push(() => debouncedCloudSave());
             return true;
         }
 
+        // ✅ Используем debounce для группировки вызовов
         debouncedCloudSave();
         return true;
     } catch (e) {
