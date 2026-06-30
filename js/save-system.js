@@ -229,7 +229,6 @@ function extractCloudData() {
             lastUpdate: Date.now()
         }
     };
-}
 
 function applyCloudData(cloudData) {
     if (!cloudData || !window.gameState) return;
