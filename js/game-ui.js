@@ -45,32 +45,35 @@ function releaseTextElement(item) {
 }
 
 window.GAME_UI = {
-    updateHUD: function() {
-        if (!window.gameState) return;
+updateHUD: function() {
+    if (!window.gameState) return;
+    const gs = window.gameState;
 
-        const el = (id) => document.getElementById(id);
+    const setText = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = (val === 0 || val) ? val.toLocaleString() : '0';
+    };
 
-        const coinsEl = el('coins-value');
-        if (coinsEl) coinsEl.textContent = Math.floor(window.gameState.coins).toLocaleString();
+    setText('coins-value', Math.floor(gs.coins || 0));
+    
+    const powerEl = document.getElementById('clickPower-value');
+    if (powerEl) powerEl.textContent = Math.round(gs.clickPower || 0);
 
-        const powerEl = el('clickPower-value');
-        if (powerEl) powerEl.textContent = Math.round(window.gameState.clickPower);
+    const critChanceEl = document.getElementById('critChance-value');
+    if (critChanceEl) critChanceEl.textContent = ${((gs.critChance || 0.001) * 100).toFixed(1)}%;
 
-        const critChanceEl = el('critChance-value');
-        if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
+    const critMultEl = document.getElementById('critMultiplier-value');
+    if (critMultEl) critMultEl.textContent = x${(gs.critMultiplier || 2).toFixed(1)};
 
-        const critMultEl = el('critMultiplier-value');
-        if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
-
-        // ✅ НОВОЕ: Тёмная материя (показывается только если > 0)
-        const dmEl = document.getElementById('dmDisplay');
-        const dmVal = document.getElementById('darkMatter-value');
-        if (dmEl && dmVal) {
-            const dm = window.gameState.darkMatter || 0;
-            dmEl.style.display = dm > 0 ? 'flex' : 'none';
-            dmVal.textContent = dm.toLocaleString();
-        }
-    },
+    // Тёмная материя
+    const dmEl = document.getElementById('dmDisplay');
+    const dmVal = document.getElementById('darkMatter-value');
+    if (dmEl && dmVal) {
+        const dm = gs.darkMatter || 0;
+        dmEl.style.display = dm > 0 ? 'flex' : 'none';
+        dmVal.textContent = dm.toLocaleString();
+    }
+},
 
     updateUpgradeButtons: function() {
         if (!window.gameState) return;
