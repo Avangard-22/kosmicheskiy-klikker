@@ -188,17 +188,17 @@ function init() {
         if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
         return String(n);
     }
-
     function escapeHtml(s) {
         const d = document.createElement('div');
         d.textContent = s;
         return d.innerHTML;
     }
+} // <--- ВОТ ЭТА ФИГУРНАЯ СКОБКА БЫЛА УТЕРЯНА (закрывает функцию init)
 
-    // Автозапуск
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+// Автозапуск
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 })();
