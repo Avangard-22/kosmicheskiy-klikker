@@ -209,17 +209,27 @@ function extractCloudData() {
     delete cleanState._crystalIntervalStart;
     delete cleanState._crystalIntervalActive;
 
-      return {
-        crystals: Math.floor(window.gameState.coins || 0),
-        level: currentLevel,
-        score: Math.floor(window.gameState.totalDamageDealt || 0),
-        unlocked_locations: unlocked,
-        bobo_skin: window.gameState.boboSkin || 'default',
-        username: username,
-        timestamp: Date.now(),
-             full_game_state: JSON.parse(JSON.stringify(window.gameState)),
-        full_game_metrics: window.gameMetrics ? JSON.parse(JSON.stringify(window.gameMetrics)) : {}
-    };
+return {
+    crystals: Math.floor(window.gameState.coins || 0),
+    level: currentLevel,
+    score: Math.floor(window.gameState.totalDamageDealt || 0),
+    unlocked_locations: unlocked,
+    bobo_skin: window.gameState.boboSkin || 'default',
+    username: username,
+    timestamp: Date.now(),
+    full_game_state: cleanState,
+    full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {})),
+    // ✅ Удалена дублирующаяся строка
+    leaderboard: {
+        currentLocation: window.gameState.currentLocation,
+        totalDamage: Math.floor(window.gameState.totalDamageDealt || 0),
+        dayDamage: Math.floor(window.gameState._lb?.dayDamage || 0),
+        weekDamage: Math.floor(window.gameState._lb?.weekDamage || 0),
+        monthDamage: Math.floor(window.gameState._lb?.monthDamage || 0),
+        lastUpdate: Date.now()
+    }
+};
+    
     leaderboard: {
             currentLocation: window.gameState.currentLocation,
             totalDamage: Math.floor(window.gameState.totalDamageDealt || 0),
