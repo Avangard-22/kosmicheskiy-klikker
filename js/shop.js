@@ -454,25 +454,23 @@ function showNotification(text, color) {
         left: 50%;
         transform: translateX(-50%);
         background: ${color || '#4CAF50'};
-        color: #fff;
+        color: white;
         padding: 10px 20px;
-        border-radius: 10px;
-        z-index: 3000;
+        border-radius: 8px;
+        z-index: 10000;
         font-family: 'Orbitron', sans-serif;
-        font-weight: bold;
-        font-size: 0.9em;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        animation: achSlideDown 0.3s ease-out;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         pointer-events: none;
     `;
     document.body.appendChild(notif);
-
     setTimeout(() => {
-        notif.style.transition = 'opacity 0.3s';
+        notif.style.transition = 'opacity 0.5s';
         notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 300);
+        setTimeout(() => notif.remove(), 500);
     }, 2000);
 }
+
+})();
 
 // === ПУБЛИЧНЫЙ API ===
 window.shopSystem = {
