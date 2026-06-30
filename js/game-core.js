@@ -648,9 +648,9 @@ window.GAME_CORE = {
         // ✅ Применить перки
         if (window.PerkSystem?.applyAllPerks) window.PerkSystem.applyAllPerks();
 
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        UI.updateProgressBar();
+        if (window.GAME_UI) window.GAME_UI.updateHUD();
+       window.GAME_UI?.updateUpgradeButtons();
+       window.GAME_UI?.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
 
         if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
