@@ -208,8 +208,7 @@ function extractCloudData() {
     delete cleanState._boboCallCounter;
     delete cleanState._crystalIntervalStart;
     delete cleanState._crystalIntervalActive;
-
-      return {
+    return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
         score: Math.floor(window.gameState.totalDamageDealt || 0),
@@ -217,12 +216,11 @@ function extractCloudData() {
         bobo_skin: window.gameState.boboSkin || 'default',
         username: username,
         timestamp: Date.now(),
-        full_game_state: JSON.parse(JSON.stringify(window.gameState))
-    full_game_metrics: safeMetrics
-},
- }
-    // ✅ НОВОЕ: данные для таблицы лидеров
-    leaderboard: {
+        full_game_state: cleanState,
+        full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {})),
+        // ✅ НОВОЕ: данные для таблицы лидеров
+        leaderboard: {
+
             currentLocation: window.gameState.currentLocation,
             totalDamage: Math.floor(window.gameState.totalDamageDealt || 0),
             dayDamage: Math.floor(window.gameState._lb?.dayDamage || 0),
