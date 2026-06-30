@@ -659,96 +659,118 @@ window.GAME_CORE = {
         setTimeout(() => this.createMovingBlock(), 500);
     },
 
-    continueGame: async function() {
-        console.log('🔄 [GAME] Starting continueGame...');
+continueGame: async function() {
+    console.log(' [GAME] Starting continueGame...');
 
-        if (!window.gameState || Object.keys(window.gameState).length === 0) {
-            window.gameState = {
-                coins: 0,
-                clickPower: 1,
-                critChance: 0.001,
-                critMultiplier: 2.0,
-                currentLocation: 'mercury',
-                totalDamageDealt: 0,
-                planetDamageDealt: 0,
-                planetFirstBlockCleared: false,
-                darkMatter: 0,
-                clickUpgradeLevel: 0,
-                critChanceUpgradeLevel: 0,
-                critMultiplierUpgradeLevel: 0,
-                helperUpgradeLevel: 0,
-                helperActivations: 0,
-                helperActive: false,
-                helperTimeLeft: 0,
-                helperDamageBonus: 0,
-                boboCoinBonus: 0,
-                comboCount: 0,
-                lastDestroyTime: 0,
-                gameActive: false,
-                gamePaused: false,
-                achievements: {},
-                shopItems: {},
-                permanentBonuses: {},
-                unlockedLocations: ['mercury'],
-                boboSkin: 'default',
-                dailyBonus: {
-                    lastClaimDate: null,
-                    currentDay: 1,
-                    totalClaimed: 0,
-                    streak: 0
-                }
-            };
-            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
-        }
+    // ✅ НОВОЕ: Ждём готовности save-system (до 3 секунд)
+    let attempts = 0;
+    while (typeof window.cloudInit !== 'function' && attempts < 30) {
+        console.log('⏳ [GAME] Waiting for save-system...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
 
-        if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
-            window.gameMetrics = {
-                startTime: 0,
-                blocksDestroyed: 0,
-                upgradesBought: 0,
-                totalClicks: 0,
-                totalCrits: 0,
-                totalCoinsEarned: 0,
-                helpersBought: 0,
-                boostersUsed: 0,
-                maxCombo: 0,
-                rareBlocksDestroyed: 0,
-                sessions: 0,
-                planetStats: {}
-            };
-        }
-
-        if (typeof window.cloudInit === 'function') {
-            console.log('☁️ [GAME] cloudInit вызывается...');
-            try {
-                await window.cloudInit();
-                console.log('☁️ [GAME] cloudInit завершён');
-            } catch (e) {
-                console.error('☁️ [GAME] cloudInit error:', e);
+    // ✅ Инициализация gameState с дефолтными значениями (если ещё не инициализирован)
+    if (!window.gameState || !window.gameState.coins) {
+        console.log('🔄 [GAME] Initializing default gameState...');
+        window.gameState = {
+            coins: 0,
+            clickPower: 1,
+            critChance: 0.001,
+            critMultiplier: 2.0,
+            currentLocation: 'mercury',
+            totalDamageDealt: 0,
+            planetDamageDealt: 0,
+            planetFirstBlockCleared: false,
+            darkMatter: 0,
+            clickUpgradeLevel: 0,
+            critChanceUpgradeLevel: 0,
+            critMultiplierUpgradeLevel: 0,
+            helperUpgradeLevel: 0,
+            helperActivations: 0,
+            helperActive: false,
+            helperTimeLeft: 0,
+            helperDamageBonus: 0,
+            boboCoinBonus: 0,
+            comboCount: 0,
+            lastDestroyTime: 0,
+            gameActive: false,
+            gamePaused: false,
+            achievements: {},
+            shopItems: {},
+            permanentBonuses: {},
+            unlockedLocations: ['mercury'],
+            boboSkin: 'default',
+            dailyBonus: {
+                lastClaimDate: null,
+                currentDay: 1,
+                totalClaimed: 0,
+                streak: 0
             }
-        } else {
-            console.warn('⚠️ [GAME] cloudInit function NOT found');
+        };
+    }
+
+    // ✅ Инициализация gameMetrics
+    if (!window.gameMetrics || !window.gameMetrics.startTime) {
+        window.gameMetrics = {
+            startTime: Date.now(),
+            blocksDestroyed: 0,
+            upgradesBought: 0,
+            totalClicks: 0,
+            totalCrits: 0,
+            totalCoinsEarned: 0,
+            helpersBought: 0,
+            boostersUsed: 0,
+            maxCombo: 0,
+            rareBlocksDestroyed: 0,
+            sessions: 0,
+            visitedPlanets: [],
+            planetStats: {}
+        };
+    }
+
+    // ✅ Загрузка из облака (если cloudInit доступен)
+    if (typeof window.cloudInit === 'function') {
+        console.log('️ [GAME] cloudInit вызывается...');
+        try {
+            await window.cloudInit();
+            console.log('☁️ [GAME] cloudInit завершён');
+        } catch (e) {
+            console.error('☁️ [GAME] cloudInit error:', e);
         }
+    } else {
+        console.warn('⚠️ [GAME] cloudInit function NOT found after waiting');
+    }
 
-        console.log('✅ [GAME] Load successful, starting game...');
-        console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
-        console.log('⚫ [GAME] gameState.darkMatter:', window.gameState.darkMatter);
-        console.log('🌟 [GAME] permanentBonuses:', window.gameState.permanentBonuses);
+    console.log('✅ [GAME] Load successful, starting game...');
+    console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
+    console.log('⚫ [GAME] gameState.darkMatter:', window.gameState.darkMatter);
+    console.log('🌟 [GAME] permanentBonuses:', window.gameState.permanentBonuses);
 
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        UI.updateProgressBar();
-        this.setLocation(window.gameState.currentLocation);
-        this.startGame(false);
+    // ✅ Финальная защита перед UI
+    if (!window.gameState.coins) window.gameState.coins = 0;
+    if (!window.gameState.clickPower) window.gameState.clickPower = 1;
+    if (!window.gameState.critChance) window.gameState.critChance = 0.001;
+    if (!window.gameState.critMultiplier) window.gameState.critMultiplier = 2.0;
+    if (!window.gameState.darkMatter) window.gameState.darkMatter = 0;
+    if (!window.gameState.currentLocation) window.gameState.currentLocation = 'mercury';
 
-        if (window.showTooltip && window.formatString) {
-            const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
-                coins: Math.floor(window.gameState.coins || 0).toLocaleString()
-            });
-            window.showTooltip(t);
-            setTimeout(window.hideTooltip, 3000);
-        }
-    },
+    // ✅ Обновление UI
+    if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+    if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+    if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+    
+    this.setLocation(window.gameState.currentLocation);
+    this.startGame(false);
+
+    if (window.showTooltip && window.formatString) {
+        const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
+            coins: Math.floor(window.gameState.coins || 0).toLocaleString()
+        });
+        window.showTooltip(t);
+        setTimeout(window.hideTooltip, 3000);
+    }
+},
 
     restartGame: function() {
         this.startGame(true);
