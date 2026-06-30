@@ -1,75 +1,106 @@
-// js/game-ui.js
+// js/game-ui.js (v2.0)
 (function() {
 'use strict';
 
 const CFG = window.GAME_CONFIG;
+const LOC_REQ = CFG.PROGRESSION_CONFIG;
 
-// ✅ Единая конфигурация прогресса локаций
-const LOC_REQ = CFG.planetOrder.reduce((acc, planet, index) => {
-    acc[planet] = {
-        targetAU: CFG.astronomicalUnits[planet],
-        nextLocation: CFG.planetOrder[index + 1] || null
-    };
-    return acc;
-}, {});
+// === OBJECT POOL ДЛЯ ТЕКСТОВЫХ ЭФФЕКТОВ ===
+const TEXT_POOL_SIZE = 30;
+const textPool = [];
+let textPoolIndex = 0;
+
+function initTextPool() {
+    if (textPool.length > 0) return;
+    for (let i = 0; i < TEXT_POOL_SIZE; i++) {
+        const el = document.createElement('div');
+        el.style.cssText = `position:absolute;pointer-events:none;z-index:15;opacity:0;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.8),0 0 10px rgba(0,0,0,0.9);-webkit-text-stroke:1px #000;transition:none;font-family:'Orbitron',monospace;`;
+        document.body.appendChild(el);
+        textPool.push({ element: el, active: false, animationId: null, timeoutId: null });
+    }
+}
+
+function getTextElement() {
+    initTextPool();
+    for (let i = 0; i < textPool.length; i++) {
+        const idx = (textPoolIndex + i) % textPool.length;
+        if (!textPool[idx].active) {
+            textPoolIndex = (idx + 1) % textPool.length;
+            return textPool[idx];
+        }
+    }
+    const item = textPool[textPoolIndex];
+    textPoolIndex = (textPoolIndex + 1) % textPool.length;
+    if (item.animationId) cancelAnimationFrame(item.animationId);
+    if (item.timeoutId) clearTimeout(item.timeoutId);
+    return item;
+}
+
+function releaseTextElement(item) {
+    if (!item) return;
+    item.active = false;
+    item.animationId = null;
+    item.timeoutId = null;
+    item.element.style.opacity = '0';
+}
 
 window.GAME_UI = {
-    
-    // ==========================================
-    // HUD И КНОПКИ
-    // ==========================================
-    
     updateHUD: function() {
         if (!window.gameState) return;
-        
+
         const el = (id) => document.getElementById(id);
-        
+
         const coinsEl = el('coins-value');
         if (coinsEl) coinsEl.textContent = Math.floor(window.gameState.coins).toLocaleString();
-        
+
         const powerEl = el('clickPower-value');
         if (powerEl) powerEl.textContent = Math.round(window.gameState.clickPower);
-        
+
         const critChanceEl = el('critChance-value');
         if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
-        
+
         const critMultEl = el('critMultiplier-value');
         if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
+
+        // ✅ НОВОЕ: Тёмная материя (показывается только если > 0)
+        const dmEl = document.getElementById('dmDisplay');
+        const dmVal = document.getElementById('darkMatter-value');
+        if (dmEl && dmVal) {
+            const dm = window.gameState.darkMatter || 0;
+            dmEl.style.display = dm > 0 ? 'flex' : 'none';
+            dmVal.textContent = dm.toLocaleString();
+        }
     },
 
     updateUpgradeButtons: function() {
         if (!window.gameState) return;
-        
+
         const setBtn = (id, cost, title) => {
             const btn = document.getElementById(id);
             if (!btn) return;
-            
+
             const costEl = btn.querySelector('.upgrade-cost');
             if (costEl) costEl.textContent = cost.toLocaleString();
-            
+
             const avail = window.gameState.coins >= cost;
             btn.className = `upgrade-btn ${avail ? 'btn-available' : 'btn-unavailable'}`;
             btn.title = title;
             btn.style.opacity = avail ? '1' : '0.7';
         };
-        
-        // Сила удара
-        setBtn(
-            'upgradeClickBtn',
+
+        setBtn('upgradeClickBtn',
             Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel)),
-            'Увеличить силу удара'
-        );
-        
-        // ✅ BOBO (с блокировкой во время активности + таймер)
+            'Увеличить силу удара');
+
+        // Bobo (с блокировкой во время активности + таймер)
         const baseHelperCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel));
         const activationBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
         const helperCost = Math.floor(baseHelperCost * (1 + activationBonus * 0.2));
-        
+
         const helperBtn = document.getElementById('upgradeHelperBtn');
         if (helperBtn) {
             const costEl = helperBtn.querySelector('.upgrade-cost');
-            
-            // ✅ Если Bobo активен — блокируем кнопку и показываем таймер
+
             if (window.gameState.helperActive && window.gameState.helperTimeLeft > 0) {
                 const seconds = Math.ceil(window.gameState.helperTimeLeft / 1000);
                 if (costEl) costEl.textContent = seconds + 'с';
@@ -77,7 +108,6 @@ window.GAME_UI = {
                 helperBtn.title = 'Bobo активен: ' + seconds + 'с';
                 helperBtn.style.opacity = '0.6';
             } else {
-                // Обычная логика: проверяем наличие кристаллов
                 const avail = window.gameState.coins >= helperCost;
                 if (costEl) costEl.textContent = helperCost.toLocaleString();
                 helperBtn.className = 'upgrade-btn ' + (avail ? 'btn-available' : 'btn-unavailable');
@@ -85,47 +115,35 @@ window.GAME_UI = {
                 helperBtn.style.opacity = avail ? '1' : '0.7';
             }
         }
-        
-        // Шанс крита
-        setBtn(
-            'upgradeCritChanceBtn',
+
+        setBtn('upgradeCritChanceBtn',
             Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel)),
-            'Увеличить шанс крита'
-        );
-        
-        // Множитель крита
-        setBtn(
-            'upgradeCritMultBtn',
+            'Увеличить шанс крита');
+
+        setBtn('upgradeCritMultBtn',
             Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel)),
-            'Увеличить множитель крита'
-        );
-        
-        // Урон Bobo
-        setBtn(
-            'upgradeHelperDmgBtn',
+            'Увеличить множитель крита');
+
+        setBtn('upgradeHelperDmgBtn',
             Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel)),
-            'Увеличить урон Bobo'
-        );
+            'Увеличить урон Bobo');
     },
 
-    // ==========================================
-    // ПРОГРЕСС-БАР И ЛОКАЦИИ
-    // ==========================================
-    
     updateProgressBar: function() {
         if (!window.gameState) return;
-        
+
         const req = LOC_REQ[window.gameState.currentLocation];
         if (!req) return;
-        
-        const cur = window.gameState.totalDamageDealt / CFG.AU_TO_DAMAGE;
+
+        // ✅ Используем planetDamageDealt (обнуляется при переходе), а не totalDamageDealt
+        const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
         const pct = Math.min(100, (cur / req.targetAU) * 100);
-        
+
         const bar = document.getElementById('progressBar');
         const txt = document.getElementById('progressText');
-        
+
         if (bar) bar.style.width = pct + '%';
-        
+
         if (txt && window.applyTranslation) {
             window.applyTranslation(txt, 'progressText', {
                 current: cur.toFixed(5),
@@ -139,17 +157,18 @@ window.GAME_UI = {
 
     checkLocationUpgrade: function() {
         if (!window.gameState) return;
-        
+
         const req = LOC_REQ[window.gameState.currentLocation];
         if (!req || !req.nextLocation) return;
-        
-        const cur = window.gameState.totalDamageDealt / CFG.AU_TO_DAMAGE;
-        
+
+        const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
+
         if (cur >= req.targetAU) {
+            // ✅ Передаём doReset=true — сбрасываем боевые параметры
             if (window.GAME_CORE && window.GAME_CORE.setLocation) {
-                window.GAME_CORE.setLocation(req.nextLocation);
+                window.GAME_CORE.setLocation(req.nextLocation, true);
             }
-            
+
             if (window.showTooltip && window.translations && window.formatString) {
                 const tooltipText = window.formatString(
                     window.translations[window.currentLanguage].locationProgress.unlocked,
@@ -159,118 +178,120 @@ window.GAME_UI = {
                 setTimeout(window.hideTooltip, 3000);
             }
         }
-        
+
         this.updateProgressBar();
     },
 
-    // ==========================================
-    // ВИЗУАЛЬНЫЕ ЭФФЕКТЫ
-    // ==========================================
-    
     createDamageText: function(dmg, block, color) {
         if (!block) return;
-        
+        const item = getTextElement();
+        const el = item.element;
+        el.className = 'damage-text';
+        el.textContent = `-${dmg}`;
+        el.style.color = color;
+        el.style.fontSize = 'clamp(1em, 4vw, 1.1em)';
+        el.style.textAlign = 'center';
+        el.style.maxWidth = '100px';
+
         const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'damage-text';
-        t.textContent = `-${dmg}`;
-        t.style.color = color;
-        
-        let l = r.left + r.width / 2;
-        let tp = r.top;
+        let l = r.left + r.width / 2, tp = r.top;
         if (l < 50) l = 50;
         if (l > window.innerWidth - 50) l = window.innerWidth - 50;
         if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        
-        let op = 1, y = tp;
-        const anim = () => {
-            op -= 0.02;
-            y -= 2;
-            t.style.opacity = op;
-            t.style.top = y + 'px';
-            if (op > 0) {
-                requestAnimationFrame(anim);
-            } else if (t.parentNode) {
-                document.body.removeChild(t);
-            }
+        el.style.left = l + 'px';
+        el.style.top = tp + 'px';
+        el.style.opacity = '1';
+        item.active = true;
+
+        let opacity = 1, currentY = tp;
+        const animate = () => {
+            opacity -= 0.02;
+            currentY -= 2;
+            el.style.opacity = opacity;
+            el.style.top = currentY + 'px';
+            if (opacity > 0) item.animationId = requestAnimationFrame(animate);
+            else releaseTextElement(item);
         };
-        anim();
+        item.animationId = requestAnimationFrame(animate);
     },
 
     showComboText: function(count, bonus, block) {
         if (!block) return;
-        
-        const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'combo-text';
-        
+        const item = getTextElement();
+        const el = item.element;
+        el.className = 'combo-text';
+        el.style.fontSize = 'clamp(1.4em, 5vw, 1.8em)';
+        el.style.color = '#FFD700';
+        el.style.textAlign = 'center';
+        el.style.maxWidth = '150px';
+
         if (window.formatString && window.translations) {
-            t.textContent = window.formatString(
+            el.textContent = window.formatString(
                 window.translations[window.currentLanguage].tooltips.combo,
                 { count: count, bonus: bonus }
             );
         } else {
-            t.textContent = `COMBO x${count}! +${bonus}`;
+            el.textContent = `COMBO x${count}! +${bonus}`;
         }
-        
-        let l = r.left + r.width / 2;
-        let tp = r.top;
+
+        const r = block.getBoundingClientRect();
+        let l = r.left + r.width / 2, tp = r.top;
         if (l < 75) l = 75;
         if (l > window.innerWidth - 75) l = window.innerWidth - 75;
         if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1000);
+        el.style.left = l + 'px';
+        el.style.top = tp + 'px';
+        el.style.opacity = '1';
+        item.active = true;
+
+        item.timeoutId = setTimeout(() => releaseTextElement(item), 1000);
     },
 
     showRewardText: function(amount, block) {
         if (!block) return;
-        
-        const rct = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'reward-text';
-        
+        const item = getTextElement();
+        const el = item.element;
+        el.className = 'reward-text';
+        el.style.fontSize = 'clamp(1.1em, 4vw, 1.3em)';
+        el.style.color = '#FFFFFF';
+        el.style.textAlign = 'center';
+        el.style.maxWidth = '120px';
+
         if (window.formatString && window.translations) {
-            t.textContent = window.formatString(
+            el.textContent = window.formatString(
                 window.translations[window.currentLanguage].tooltips.reward,
                 { reward: amount }
             );
         } else {
-            t.textContent = `+${amount} 💎`;
+            el.textContent = `+${amount} 💎`;
         }
-        
-        let l = rct.left + rct.width / 2;
-        let tp = rct.top + rct.height / 2;
+
+        const rct = block.getBoundingClientRect();
+        let l = rct.left + rct.width / 2, tp = rct.top + rct.height / 2;
         if (l < 60) l = 60;
         if (l > window.innerWidth - 60) l = window.innerWidth - 60;
         if (tp < 50) tp = 50;
-        
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-        document.body.appendChild(t);
-        setTimeout(() => { if (t.parentNode) document.body.removeChild(t); }, 1500);
+        el.style.left = l + 'px';
+        el.style.top = tp + 'px';
+        el.style.opacity = '1';
+        item.active = true;
+
+        item.timeoutId = setTimeout(() => releaseTextElement(item), 1500);
     },
 
     updateCracks: function(block, health) {
         if (!block) return;
-        
         const ex = block.querySelector('.crack-overlay');
         if (ex) block.removeChild(ex);
-        
+
         const max = parseInt(block.dataset.maxHealth) || 1;
         const rat = 1 - (health / max);
-        
+
         let crackClass = null;
         if (rat > 0.7) crackClass = 'crack-overlay crack-3';
         else if (rat > 0.4) crackClass = 'crack-overlay crack-2';
         else if (rat > 0.1) crackClass = 'crack-overlay crack-1';
-        
+
         if (crackClass) {
             const crack = document.createElement('div');
             crack.className = crackClass;
@@ -287,5 +308,4 @@ window.GAME_UI = {
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2000);
     }
 };
-
 })();

@@ -1,5 +1,5 @@
 /* ==========================================
-   🎨 COSMIC CLICKER - MAIN STYLESHEET
+   🎨 COSMIC CLICKER - MAIN STYLESHEET v2.0
    ========================================== */
 
 /* ✅ Универсальный сброс и мобильная адаптация */
@@ -95,6 +95,7 @@ body {
 #coins-value { color: #FFD54F; text-shadow: 0 0 4px rgba(255,213,79,0.6); }
 #clickPower-value { color: #4FC3F7; text-shadow: 0 0 4px rgba(79,195,247,0.6); }
 #critChance-value, #critMultiplier-value { color: #FFD700; text-shadow: 0 0 4px rgba(255,215,0,0.6); }
+#darkMatter-value { color: #9c27b0; text-shadow: 0 0 6px rgba(156, 39, 176, 0.6); }
 
 /* Прогресс-бар */
 #progressContainer {
@@ -151,24 +152,59 @@ body {
     justify-content: center;
     background: rgba(0, 0, 0, 0.5);
     color: #4CAF50;
-    transition: transform 0.1s;
+    transition: transform 0.1s, background-color 0.3s, color 0.3s;
 }
 
 #saveBtn:active { transform: scale(0.92); }
 
 #saveIndicator {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.8);
+    position: absolute;
+    top: 55px;
+    right: 10px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.7);
     color: #4CAF50;
-    border-radius: 8px;
-    font-size: 0.9em;
+    border-radius: 4px;
+    font-size: 0.75em;
     z-index: 9999;
     opacity: 0;
     transition: opacity 0.3s;
     pointer-events: none;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   ⏳ ЭФФЕКТЫ И ИМПУЛЬСЫ СИСТЕМЫ СОХРАНЕНИЯ
+   ========================================== */
+@keyframes savePendingAnimation {
+    0%, 100% { opacity: 0.6; transform: scale(1); color: #4CAF50; }
+    50% { opacity: 1; transform: scale(1.05); color: #FFD700; }
+}
+
+@keyframes savePulseSuccessAnimation {
+    0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.8); transform: scale(1); }
+    50% { box-shadow: 0 0 15px 6px rgba(76, 175, 80, 0.5); transform: scale(1.12); color: #fff; background: #388E3C; }
+    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); transform: scale(1); }
+}
+
+@keyframes savePulseErrorAnimation {
+    0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.8); transform: scale(1); }
+    50% { box-shadow: 0 0 15px 6px rgba(244, 67, 54, 0.5); transform: scale(1.12); color: #fff; background: #d32f2f; }
+    100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); transform: scale(1); }
+}
+
+.save-pending {
+    animation: savePendingAnimation 1.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.save-pulse-success {
+    animation: savePulseSuccessAnimation 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.save-pulse-error {
+    animation: savePulseErrorAnimation 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 /* ==========================================
@@ -213,6 +249,9 @@ body {
 
 .upgrade-btn.btn-available { background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; }
 .upgrade-btn.btn-unavailable { background: linear-gradient(135deg, #666, #444); color: #ccc; cursor: not-allowed; opacity: 0.7; }
+
+@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
+.upgrade-btn.btn-available:active { animation: pulse 0.3s; }
 
 /* ==========================================
    🧱 БЛОКИ И ИГРОВАЯ ЗОНА
@@ -269,6 +308,11 @@ body {
 .block-crystal { background: linear-gradient(45deg, #00ffff, #ffffff, #00ffff) !important; box-shadow: 0 0 25px #00ffff, 0 0 10px #ffffff inset !important; animation: crystalPulse 2s ease-in-out infinite !important; }
 .block-mystery { background: linear-gradient(45deg, #9b59b6, #e74c3c, #3498db) !important; background-size: 300% 300% !important; box-shadow: 0 0 20px rgba(155, 89, 182, 0.7) !important; animation: mysteryShift 4s ease-in-out infinite !important; }
 
+@keyframes gold-shimmer { 0% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } 50% { box-shadow: 0 0 20px rgba(255,215,0,0.8); } 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } }
+@keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes crystalPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
+@keyframes mysteryShift { 0%, 100% { background-position: 0% 50%; filter: hue-rotate(0deg); } 50% { background-position: 100% 50%; filter: hue-rotate(180deg); } }
+
 /* ==========================================
    🤖 BOBO (ПОМОЩНИК)
    ========================================== */
@@ -290,7 +334,7 @@ body {
     top: 0;
 }
 
-.helper::before { content: '🤖'; }
+.helper::before { content: ''; }
 
 @keyframes helperFloat {
     0%, 100% { transform: translate(0, 0) scale(1); }
@@ -304,45 +348,62 @@ body {
     font-size: clamp(1em, 4vw, 1.1em);
     position: absolute;
     pointer-events: none;
-    z-index: 15;
+    z-index: 50;
     opacity: 1;
-    transition: transform 0.5s, opacity 0.5s;
+    font-weight: bold;
+    color: #FFFFFF;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
     max-width: 100px;
     text-align: center;
-    font-weight: bold;
-    color: #FFFFFF;
     -webkit-text-stroke: 1px #000000;
+    animation: damageFloat 0.8s ease-out forwards;
 }
 
 .combo-text {
     font-size: clamp(1.4em, 5vw, 1.8em);
     position: absolute;
     pointer-events: none;
-    z-index: 15;
-    animation: comboPop 0.5s ease-out;
+    z-index: 51;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
     font-family: 'Orbitron', monospace;
     max-width: 150px;
     text-align: center;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
-    font-weight: bold;
-    color: #FFD700;
     -webkit-text-stroke: 1px #000000;
+    animation: comboFloat 1s ease-out forwards;
 }
 
 .reward-text {
     font-size: clamp(1.1em, 4vw, 1.3em);
     position: absolute;
     pointer-events: none;
-    z-index: 15;
-    animation: rewardFloat 1.5s ease-out;
+    z-index: 52;
+    font-weight: bold;
+    color: #4CAF50;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
     font-family: 'Orbitron', monospace;
     max-width: 120px;
     text-align: center;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
-    font-weight: bold;
-    color: #FFFFFF;
     -webkit-text-stroke: 1px #000000;
+    animation: rewardFloat 1.5s ease-out forwards;
+}
+
+@keyframes damageFloat {
+    0% { transform: translate(-50%, 0); opacity: 1; }
+    100% { transform: translate(-50%, -80px); opacity: 0; }
+}
+
+@keyframes comboFloat {
+    0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
+    50% { transform: translate(-50%, -40px) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -80px) scale(1); opacity: 0; }
+}
+
+@keyframes rewardFloat {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    50% { transform: translate(-50%, -70%) scale(1.1); opacity: 1; }
+    100% { transform: translate(-50%, -90%) scale(1); opacity: 0; }
 }
 
 .explosion {
@@ -365,7 +426,28 @@ body {
     animation: particleFly 0.8s ease-out forwards;
 }
 
-.rare-block-announce { animation: fadeInOut 2s ease-in-out; }
+@keyframes explode { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; } }
+@keyframes particleFly { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
+
+.rare-block-announce {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: gold;
+    z-index: 1000;
+    text-shadow: 0 0 10px black, 0 0 20px gold;
+    pointer-events: none;
+    animation: rareBlockAnnounce 2s ease-out forwards;
+}
+
+@keyframes rareBlockAnnounce {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+}
 
 #levelAnnounce {
     position: absolute;
@@ -398,23 +480,11 @@ body {
     z-index: 35;
 }
 
-/* Keyframes */
-@keyframes gold-shimmer { 0% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } 50% { box-shadow: 0 0 20px rgba(255,215,0,0.8); } 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } }
-@keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes crystalPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
-@keyframes mysteryShift { 0%, 100% { background-position: 0% 50%; filter: hue-rotate(0deg); } 50% { background-position: 100% 50%; filter: hue-rotate(180deg); } }
-@keyframes explode { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; } }
-@keyframes particleFly { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
-@keyframes comboPop { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-@keyframes rewardFloat { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
 @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
-
-.upgrade-btn.btn-available:active { animation: pulse 0.3s; }
 
 /* ==========================================
-   🛒 МАГАЗИН
+   🛒 МАГАЗИН — КАРТОЧКИ (v2.0)
    ========================================== */
 .shop-container { position: absolute; bottom: 10px; right: 10px; z-index: 30; }
 
@@ -429,38 +499,223 @@ body {
 }
 .shop-btn:active { transform: scale(0.92); }
 
+/* ✅ ЕДИНСТВЕННОЕ определение .shop-panel (старое удалено) */
 .shop-panel {
-    position: absolute; bottom: 60px; right: 0;
-    width: 250px; max-height: 65vh;
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    width: 92vw;
+    max-width: 480px;
+    max-height: 70vh;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.85);
-    border-radius: 12px; padding: 15px;
-    display: none; flex-direction: column; gap: 10px;
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(180deg, rgba(10, 15, 30, 0.96), rgba(20, 25, 40, 0.96));
+    border-radius: 16px;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 31;
-    scrollbar-width: thin; scrollbar-color: #4CAF50 #222;
+    scrollbar-width: thin;
+    scrollbar-color: #4CAF50 #222;
 }
 
-.shop-panel h3 { margin: 0 0 10px 0; color: #bb86fc; text-align: center; font-size: 1.1em; }
+.shop-panel::-webkit-scrollbar { width: 6px; }
+.shop-panel::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+.shop-panel::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.4); border-radius: 3px; }
 
-.shop-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px; background: rgba(255,255,255,0.05);
-    border-radius: 8px; cursor: pointer;
-    transition: background 0.2s; color: white; font-size: 0.9em;
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
 }
-.shop-item:hover { background: rgba(255,255,255,0.1); }
-.shop-item i { font-size: 1.4em; width: 28px; text-align: center; color: #4CAF50; }
-.shop-cost { margin-left: auto; color: #FFD54F; font-weight: bold; font-size: 0.9em; }
-.shop-item.active { background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50; }
-.shop-item.disabled { opacity: 0.5; cursor: not-allowed; }
+
+.shop-title {
+    margin: 0;
+    color: #FFD700;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1em;
+}
+
+.shop-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 1.3em;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.shop-close-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.shop-close-btn:active { transform: scale(0.92); }
+
+.shop-balance {
+    color: #FFD54F;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85em;
+    margin: 4px 0 12px;
+    opacity: 0.9;
+}
+
+/* === СЕТКА КАРТОЧЕК === */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.shop-card {
+    --idx: 0;
+    position: relative;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 8px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
+    animation: shopCardEnter 0.35s ease-out both;
+    animation-delay: calc(var(--idx, 0) * 0.04s);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+@keyframes shopCardEnter {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.shop-card:hover { transform: translateY(-2px); }
+.shop-card:active { transform: scale(0.96); }
+
+.shop-card-icon {
+    font-size: 1.7em;
+    color: #4FC3F7;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 0 6px rgba(79, 195, 247, 0.4));
+}
+
+.shop-card-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.85em;
+    margin-bottom: 4px;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.shop-card-desc {
+    color: #aaa;
+    font-size: 0.7em;
+    line-height: 1.25;
+    min-height: 2.4em;
+}
+
+.shop-card-cost {
+    margin-top: 8px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 215, 0, 0.15);
+    color: #FFD54F;
+    font-weight: bold;
+    font-size: 0.8em;
+    font-family: 'Orbitron', monospace;
+    white-space: nowrap;
+}
+
+/* 🟡 Состояния */
+.shop-card.disabled {
+    opacity: 0.55;
+    filter: grayscale(60%);
+    cursor: not-allowed;
+    background: rgba(0, 0, 0, 0.4);
+}
+.shop-card.disabled .shop-card-cost {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+}
+
+.shop-card.active {
+    border-color: #4CAF50;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.05));
+    box-shadow: 0 0 14px rgba(76, 175, 80, 0.25);
+}
+.shop-card.active .shop-card-icon {
+    color: #4CAF50;
+    filter: drop-shadow(0 0 6px rgba(76, 175, 80, 0.6));
+}
+.shop-card.active .shop-card-name::after {
+    content: ' ●';
+    color: #4CAF50;
+    animation: shopActiveDot 1.4s ease-in-out infinite;
+}
+.shop-card.active .shop-card-cost {
+    background: rgba(76, 175, 80, 0.25);
+    color: #c8f7c5;
+}
+
+@keyframes shopActiveDot {
+    0%, 100% { opacity: 0.5; }
+    50%     { opacity: 1; }
+}
+
+.shop-card-timer {
+    margin-top: 6px;
+    color: #c8f7c5;
+    font-size: 0.8em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    font-family: 'Orbitron', monospace;
+}
+
+.shop-card-timer-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.shop-card-timer-bar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    transition: width 0.4s linear;
+}
+
+/* Feedback-анимации */
+@keyframes shopShake {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(4px); }
+    30%, 50%, 70% { transform: translateX(-8px); }
+    40%, 60% { transform: translateX(8px); }
+}
+.shop-card.shake { animation: shopShake 0.45s; }
+
+@keyframes shopBought {
+    0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); transform: scale(1); }
+    50%  { box-shadow: 0 0 25px 6px rgba(76, 175, 80, 0.4); transform: scale(1.04); }
+    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); transform: scale(1); }
+}
+.shop-card.bought { animation: shopBought 0.8s; }
 
 /* Активные бусты HUD */
 #activeBoosts {
-    position: fixed; top: 120px; right: 20px;
-    display: none; flex-wrap: wrap; gap: 5px;
-    z-index: 32; max-width: 300px;
+    position: fixed;
+    top: 120px;
+    right: 20px;
+    display: none;
+    flex-wrap: wrap;
+    gap: 5px;
+    z-index: 32;
+    max-width: 300px;
 }
 
 /* ==========================================
@@ -480,15 +735,24 @@ body {
 .achievements-btn:active { transform: scale(0.92); }
 
 .achievements-panel {
-    position: fixed; top: 50%; left: 50%;
+    position: fixed;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%; max-width: 500px; max-height: 70vh;
+    width: 90%;
+    max-width: 500px;
+    max-height: 70vh;
     background: rgba(0, 0, 0, 0.85);
-    border-radius: 15px; padding: 20px;
-    display: none; flex-direction: column; gap: 10px;
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 3px solid #FFD700;
-    z-index: 1000; overflow-y: auto;
+    z-index: 1000;
+    overflow-y: auto;
     box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
 }
 
@@ -496,43 +760,173 @@ body {
 .achievements-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
 .achievements-panel::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 3px; }
 
-.achievements-panel h3 { margin: 0 0 10px 0; color: #ff9800; text-align: center; font-size: 1.3em; font-family: 'Orbitron', sans-serif; }
+/* ✅ Мёртвые .achievement-item удалены — achievements.js использует .ach-icon-card */
 
-.achievement-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px; background: rgba(255,255,255,0.05);
-    border-radius: 8px; color: white; font-size: 0.85em;
-    position: relative; transition: all 0.3s ease; min-height: 60px;
+/* ==========================================
+   ☄️ ПЕРЕХОД МЕЖДУ ПЛАНЕТАМИ (транзишн-модал)
+   ========================================== */
+.transition-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    width: min(90vw, 400px);
+    background: rgba(10, 15, 30, 0.96);
+    border: 2px solid #4FC3F7;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    box-shadow: 0 10px 60px rgba(0, 0, 0, 0.7);
+    animation: modalEnter 0.4s ease-out;
+    color: #fff;
 }
-.achievement-item.unlocked { background: rgba(255, 215, 0, 0.1); border: 1px solid #FFD700; animation: achievementUnlock 0.5s ease; }
-@keyframes achievementUnlock { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-.achievement-item i { font-size: 1.2em; color: #FFD700; width: 24px; }
-.achievement-progress { margin-left: auto; color: #4FC3F7; font-size: 0.8em; font-weight: bold; font-family: 'Orbitron', sans-serif; }
-.achievement-item.unlocked .achievement-progress { color: #4CAF50; }
+.transition-modal h2 {
+    margin: 0 0 8px;
+    font-size: 1.4em;
+}
+
+.transition-modal .tm-description {
+    color: #aaa;
+    font-size: 0.85em;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.transition-modal .tm-perk-box {
+    background: rgba(255, 215, 0, 0.12);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.transition-modal .tm-perk-title {
+    color: #FFD700;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.transition-modal .tm-perk-name {
+    color: #fff;
+    font-size: 1em;
+    margin-top: 4px;
+}
+
+.transition-modal .tm-darkmatter-box {
+    background: rgba(79, 195, 247, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.transition-modal .tm-darkmatter-title {
+    color: #4FC3F7;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.transition-modal .tm-darkmatter-desc {
+    color: #aaa;
+    font-size: 0.75em;
+    margin: 4px 0 8px;
+    line-height: 1.4;
+}
+
+.transition-modal .tm-balance {
+    color: #aaa;
+    font-size: 0.7em;
+    margin-bottom: 8px;
+}
+
+.transition-modal .tm-btn {
+    border-radius: 10px;
+    border: 1px solid #4FC3F7;
+    color: #fff;
+    padding: 10px 24px;
+    cursor: pointer;
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.3), rgba(33, 150, 243, 0.3));
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+.transition-modal .tm-btn:hover {
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.5), rgba(33, 150, 243, 0.5));
+}
+.transition-modal .tm-btn:active { transform: scale(0.95); }
+
+.transition-modal .tm-proceed-btn {
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    padding: 8px 20px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: 'Orbitron', sans-serif;
+    transition: all 0.2s;
+}
+.transition-modal .tm-proceed-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes modalEnter {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 
 /* ==========================================
    🎁 ЕЖЕДНЕВНЫЙ БОНУС
    ========================================== */
-.daily-bonus-claimed { opacity: 0.5; filter: grayscale(100%); }
-.daily-bonus-current { border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(255,215,0,0.5); animation: dailyBonusPulse 1s infinite; }
-.daily-bonus-locked { opacity: 0.3; }
+#dailyBonusIcon {
+    position: fixed;
+    top: 180px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
+    border: 2px solid #FFD700;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    font-family: 'Orbitron', sans-serif;
+}
+
+#dailyBonusDay { font-size: 0.65em; color: #FFD700; font-weight: bold; margin-bottom: 2px; }
+#dailyBonusTimer { font-size: 0.5em; color: #fff; font-weight: bold; }
+#dailyBonusIcon:hover { transform: scale(1.1); }
+#dailyBonusIcon:active { transform: scale(0.95); }
 
 @keyframes dailyBonusPulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(255,215,0,0.5); }
-    50% { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,215,0,0.7); }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
 }
 
 /* ==========================================
    🖥️ ЭКРАНЫ (WELCOME / GAME OVER)
    ========================================== */
 #welcomeScreen, #gameOverScreen, #saveScreen {
-    position: absolute; top: 0; left: 0;
+    position: absolute;
+    top: 0; left: 0;
     width: 100%; height: 100%;
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
-    z-index: 100; color: white; text-align: center;
-    padding: 15px; box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    box-sizing: border-box;
     background: rgba(0,0,0,0.85);
 }
 
@@ -541,11 +935,16 @@ body {
 
 .btn {
     padding: clamp(10px, 3vw, 12px) clamp(25px, 6vw, 30px);
-    margin-top: 15px; font-size: clamp(1em, 4vw, 1.1em);
-    background: #4CAF50; color: white; border: none;
-    border-radius: 8px; cursor: pointer;
+    margin-top: 15px;
+    font-size: clamp(1em, 4vw, 1.1em);
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
     font-family: 'Orbitron', sans-serif;
-    transition: transform 0.1s; min-height: 44px;
+    transition: transform 0.1s;
+    min-height: 44px;
 }
 
 #continueBtn { background: #2196F3; margin-bottom: 10px; }
@@ -557,27 +956,69 @@ body {
 
 #restartBtn, #shareBtn {
     padding: clamp(8px, 2.5vw, 10px) clamp(20px, 5vw, 24px);
-    margin: 6px; font-size: clamp(0.9em, 3.5vw, 1em);
-    border: none; border-radius: 8px; cursor: pointer;
+    margin: 6px;
+    font-size: clamp(0.9em, 3.5vw, 1em);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
     font-family: 'Orbitron', sans-serif;
-    transition: transform 0.1s; min-height: 44px;
+    transition: transform 0.1s;
+    min-height: 44px;
 }
 #restartBtn { background: #4CAF50; color: white; }
 #shareBtn { background: #00c853; color: white; }
 
 #langBtn-welcome {
-    position: absolute; top: 15px; right: 15px;
-    width: 40px; height: 40px;
-    border: none; border-radius: 8px;
-    font-size: 1.5em; cursor: pointer; z-index: 35;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(0, 0, 0, 0.5); color: white;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.5em;
+    cursor: pointer;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
     transition: transform 0.1s;
 }
 #langBtn-welcome:active { transform: scale(0.92); }
 
 /* ==========================================
-   📱 МОБИЛЬНАЯ АДАПТАЦИЯ
+   🎵 МУЗЫКАЛЬНАЯ КНОПКА
+   ========================================== */
+#musicMuteBtn {
+    position: fixed;
+    top: 10px;
+    right: 60px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    cursor: pointer;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    transition: transform 0.1s, background 0.2s;
+}
+
+#musicMuteBtn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+#musicMuteBtn:active { transform: scale(0.92); }
+
+/* ==========================================
+    МОБИЛЬНАЯ АДАПТАЦИЯ
    ========================================== */
 @media (max-width: 768px) {
     #hud-left { top: 65px; left: 8px; padding: 5px 8px; min-width: 110px; max-width: 130px; gap: 2px; }
@@ -598,6 +1039,14 @@ body {
 
     .achievements-panel { width: 95%; padding: 15px; }
     .shop-panel { width: 220px; padding: 12px; }
+
+    #musicMuteBtn {
+        top: 65px;
+        right: 8px;
+        width: 36px;
+        height: 36px;
+        font-size: 1em;
+    }
 }
 
 @media (max-width: 480px) {
@@ -617,6 +1066,19 @@ body {
     #gameTitle { font-size: 1.1em; }
     #welcomeScreen h2 { font-size: 1.5em; }
     #welcomeScreen p { font-size: 0.85em; }
+
+    .shop-grid { grid-template-columns: repeat(2, 1fr); }
+    .shop-card-name { font-size: 0.8em; }
+    .shop-card-desc { font-size: 0.65em; }
+}
+
+@media (min-width: 480px) {
+    .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 360px) {
+    .shop-card-name { font-size: 0.8em; }
+    .shop-card-desc { font-size: 0.65em; }
 }
 
 @media (max-height: 500px) and (orientation: landscape) {
@@ -635,111 +1097,165 @@ body {
     #progressText { top: 46px; font-size: 0.55em; }
 }
 
-/* Анимация текста урона */
-@keyframes damageFloat {
-    0% {
-        transform: translate(-50%, 0);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -80px);
-        opacity: 0;
-    }
-}
-
-.damage-text {
+/* ==========================================
+🏆 КНОПКА ТАБЛИЦЫ ЛИДЕРОВ (на welcome screen)
+========================================== */
+.leaderboard-btn-welcome {
     position: absolute;
-    pointer-events: none;
-    font-weight: bold;
-    font-size: 1.2em;
-    z-index: 50;
-    text-shadow: 1px 1px 2px black, -1px -1px 2px black;
-    animation: damageFloat 0.8s ease-out forwards;
-}
-
-/* Анимация комбо-текста */
-@keyframes comboFloat {
-    0% {
-        transform: translate(-50%, 0) scale(0.8);
-        opacity: 1;
-    }
-    50% {
-        transform: translate(-50%, -40px) scale(1.2);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -80px) scale(1);
-        opacity: 0;
-    }
-}
-
-.combo-text {
-    position: absolute;
-    pointer-events: none;
-    font-weight: bold;
+    top: 15px;
+    left: 15px;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 10px;
     font-size: 1.5em;
-    color: #FFD700;
-    z-index: 51;
-    text-shadow: 2px 2px 4px black;
-    animation: comboFloat 1s ease-out forwards;
+    cursor: pointer;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #FFD700, #FFA000);
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
-/* Анимация текста награды */
-@keyframes rewardFloat {
-    0% {
-        transform: translate(-50%, -50%) scale(0.8);
-        opacity: 1;
-    }
-    50% {
-        transform: translate(-50%, -70%) scale(1.1);
-        opacity: 1;
-    }
-    100% {
-        transform: translate(-50%, -90%) scale(1);
-        opacity: 0;
-    }
+.leaderboard-btn-welcome:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.6);
 }
 
-.reward-text {
-    position: absolute;
-    pointer-events: none;
-    font-weight: bold;
-    font-size: 1.3em;
-    color: #4CAF50;
-    z-index: 52;
-    text-shadow: 2px 2px 4px black;
-    animation: rewardFloat 1.5s ease-out forwards;
+.leaderboard-btn-welcome:active {
+    transform: scale(0.95);
 }
 
-/* Анимация объявления редкого блока */
-@keyframes rareBlockAnnounce {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5);
-    }
-    20% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-    80% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.8);
-    }
-}
-
-.rare-block-announce {
+.leaderboard-panel {
     position: fixed;
     top: 50%;
     left: 50%;
-    font-size: 1.8em;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    width: min(92vw, 500px);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: rgba(10, 15, 30, 0.97);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 16px;
+    padding: 16px;
+    font-family: 'Orbitron', sans-serif;
+    box-shadow: 0 10px 60px rgba(0, 0, 0, 0.7);
+    animation: modalEnter 0.4s ease-out;
+}
+
+.lb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.lb-title {
+    margin: 0;
+    color: #FFD700;
+    font-size: 1.1em;
+}
+
+.lb-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 1.3em;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.lb-close-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+.lb-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.lb-tab {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    color: #aaa;
+    cursor: pointer;
+    text-align: center;
+    font-family: inherit;
+    font-size: 0.8em;
+    transition: all 0.2s;
+}
+.lb-tab:hover { background: rgba(255, 255, 255, 0.08); }
+.lb-tab.active {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: #FFD700;
+    color: #FFD700;
+}
+
+.lb-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75em;
+}
+.lb-table th {
+    color: #888;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+    font-weight: normal;
+}
+.lb-table td {
+    padding: 8px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: #ccc;
+}
+.lb-table .lb-rank {
+    color: #FFD700;
     font-weight: bold;
-    color: gold;
-    z-index: 1000;
-    text-shadow: 0 0 10px black, 0 0 20px gold;
-    pointer-events: none;
-    animation: rareBlockAnnounce 2s ease-out forwards;
+    width: 24px;
+}
+.lb-table .lb-name { color: #4FC3F7; }
+.lb-table .lb-planet { color: #aaa; font-size: 0.9em; }
+.lb-table .lb-distance { color: #bb86fc; font-family: monospace; }
+.lb-table .lb-damage { color: #4CAF50; font-family: monospace; }
+
+.lb-loading {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+}
+
+.lb-my-position {
+    margin-top: 12px;
+    padding: 10px;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 8px;
+    text-align: center;
+    font-size: 0.8em;
+    color: #FFD700;
+}
+
+/* Топ-3 подсветка */
+.lb-table tr:nth-child(1) { background: rgba(255, 215, 0, 0.08); }
+.lb-table tr:nth-child(2) { background: rgba(192, 192, 192, 0.06); }
+.lb-table tr:nth-child(3) { background: rgba(205, 127, 50, 0.06); }
+
+/* Моя строка */
+.lb-table tr.lb-mine {
+    background: rgba(255, 215, 0, 0.15) !important;
+    border-left: 3px solid #FFD700;
+}
+
+@media (max-width: 480px) {
+    .lb-table { font-size: 0.7em; }
+    .lb-table th, .lb-table td { padding: 6px 2px; }
 }
