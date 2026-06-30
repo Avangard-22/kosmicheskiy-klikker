@@ -740,7 +740,15 @@ window.GAME_CORE = {
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
-
+if (window.gameState) {
+    window.gameState.coins = window.gameState.coins || 0;
+    window.gameState.darkMatter = window.gameState.darkMatter || 0;
+    window.gameState.permanentBonuses = window.gameState.permanentBonuses || {};
+    window.gameState.critChance = window.gameState.critChance != null ? window.gameState.critChance : 0.001;
+    window.gameState.critMultiplier = window.gameState.critMultiplier != null ? window.gameState.critMultiplier : 2.0;
+    window.gameState.clickPower = window.gameState.clickPower || 1;
+}
+if (!window.gameMetrics) window.gameMetrics = { startTime: Date.now() }
         if (window.showTooltip && window.formatString) {
             const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
                 coins: Math.floor(window.gameState.coins || 0).toLocaleString()
