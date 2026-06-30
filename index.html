@@ -165,21 +165,6 @@
     <!-- 11. Вспомогательные -->
     <script src="js/voyager-tracker.js"></script>
 
-<!-- Отладочный модуль -->
-<script src="js/debug-system.js"></script>
-<script>
-// Кнопка для показа отчёта в консоли
-window.showDebugReport = function() {
-    if (window.DEBUG) {
-        DEBUG.report();
-        console.log('📊 Current gameState:', window.gameState);
-        console.log('📊 Current gameMetrics:', window.gameMetrics);
-        console.log('📊 Achievements:', window.gameState?.achievements);
-    }
-};
-console.log('💡 Вызовите showDebugReport() для просмотра статистики');
-</script>
-
     <!-- ============================================
          🎨 AUDIO (скрытые элементы)
          ============================================ -->
