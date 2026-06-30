@@ -649,9 +649,9 @@ window.GAME_CORE = {
         if (window.PerkSystem?.applyAllPerks) window.PerkSystem.applyAllPerks();
 
         if (window.GAME_UI) window.GAME_UI.updateHUD();
-       window.GAME_UI?.updateUpgradeButtons();
-       window.GAME_UI?.updateProgressBar();
-        this.setLocation(window.gameState.currentLocation);
+     if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
 
         if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
         if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
