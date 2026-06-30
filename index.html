@@ -165,21 +165,6 @@
     <!-- 11. Вспомогательные -->
     <script src="js/voyager-tracker.js"></script>
 
-<!-- Отладочный модуль -->
-<script src="js/debug-system.js"></script>
-<script>
-// Кнопка для показа отчёта в консоли
-window.showDebugReport = function() {
-    if (window.DEBUG) {
-        DEBUG.report();
-        console.log('📊 Current gameState:', window.gameState);
-        console.log('📊 Current gameMetrics:', window.gameMetrics);
-        console.log('📊 Achievements:', window.gameState?.achievements);
-    }
-};
-console.log('💡 Вызовите showDebugReport() для просмотра статистики');
-</script>
-
     <!-- ============================================
          🎨 AUDIO (скрытые элементы)
          ============================================ -->
@@ -201,5 +186,324 @@ console.log('💡 Вызовите showDebugReport() для просмотра �
     <audio id="penaltySound" preload="auto">
         <source src="audio/penalty.mp3" type="audio/mpeg">
     </audio>
+
+ 
+<!-- ШАГ 4: Тестовая диагностика для мобильных устройств -->
+<script>
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        console.log('📱 MOBILE DEBUG:');
+        console.log('- User Agent:', navigator.userAgent);
+        console.log('- Platform:', navigator.platform);
+        console.log('- localStorage:', typeof localStorage !== 'undefined' ? 'available' : 'NOT available');
+        console.log('- sessionStorage:', typeof sessionStorage !== 'undefined' ? 'available' : 'NOT available');
+        console.log('- Telegram WebApp:', window.Telegram?.WebApp ? 'detected' : 'NOT detected');
+        console.log('- Telegram version:', window.Telegram?.WebApp?.version);
+        console.log('- Telegram platform:', window.Telegram?.WebApp?.platform);
+        console.log('- Telegram initData:', window.Telegram?.WebApp?.initData ? 'exists (' + window.Telegram?.WebApp.initData.length + ' chars)' : 'MISSING');
+        console.log('- Telegram user:', window.Telegram?.WebApp?.initDataUnsafe?.user);
+        console.log('- isTelegramEnvironment:', window.isTelegramEnvironment);
+        console.log('- telegramCloud:', window.telegramCloud ? 'exists' : 'MISSING');
+        console.log('- cloud isAvailable:', window.telegramCloud?.isAvailable);
+        
+        // Тест localStorage
+        try {
+            localStorage.setItem('cosmic_test', 'test_value');
+            const value = localStorage.getItem('cosmic_test');
+            console.log('- localStorage test:', value === 'test_value' ? 'PASS ✅' : 'FAIL ❌');
+            localStorage.removeItem('cosmic_test');
+        } catch (e) {
+            console.error('- localStorage test: ERROR ❌', e.message);
+        }
+        
+        // Тест sessionStorage
+        try {
+            sessionStorage.setItem('cosmic_test', 'test_value');
+            const value = sessionStorage.getItem('cosmic_test');
+            console.log('- sessionStorage test:', value === 'test_value' ? 'PASS ✅' : 'FAIL ❌');
+            sessionStorage.removeItem('cosmic_test');
+        } catch (e) {
+            console.error('- sessionStorage test: ERROR ❌', e.message);
+        }
+        
+        // Проверка gameState
+        console.log('- gameState:', window.gameState ? 'exists' : 'MISSING');
+        console.log('- gameState.coins:', window.gameState?.coins);
+        console.log('- gameState.currentLocation:', window.gameState?.currentLocation);
+    }, 2000);
+});
+</script>
+
+    <!-- УЛУЧШЕННАЯ МОБИЛЬНАЯ КОНСОЛЬ -->
+<div id="mobile-debug-container" style="
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: rgba(0,0,0,0.95);
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    border-top: 3px solid #0f0;
+    resize: vertical;
+    overflow: auto;
+">
+    <!-- Панель управления -->
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background: rgba(0,255,0,0.1);
+        border-bottom: 1px solid #0f0;
+        cursor: move;
+        user-select: none;
+    ">
+        <span style="color: #0f0; font-weight: bold; font-size: 12px;">📱 DEBUG CONSOLE</span>
+        <div>
+            <button onclick="toggleDebugConsole()" style="
+                padding: 4px 8px;
+                margin: 0 2px;
+                background: #333;
+                color: #0f0;
+                border: 1px solid #0f0;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 11px;
+            ">⬆️ Свернуть</button>
+            <button onclick="clearDebugConsole()" style="
+                padding: 4px 8px;
+                margin: 0 2px;
+                background: #333;
+                color: #f00;
+                border: 1px solid #f00;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 11px;
+            ">🗑️ Очистить</button>
+            <button onclick="copyDebugLogs()" style="
+                padding: 4px 8px;
+                margin: 0 2px;
+                background: #333;
+                color: #0ff;
+                border: 1px solid #0ff;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 11px;
+            ">📋 Копировать</button>
+        </div>
+    </div>
+    
+    <!-- Область логов с отдельной прокруткой -->
+    <div id="mobile-console-logs" style="
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+        color: #0f0;
+        background: rgba(0,20,0,0.8);
+    "></div>
+    
+    <!-- Индикатор количества логов -->
+    <div style="
+        padding: 4px 8px;
+        background: rgba(0,255,0,0.05);
+        border-top: 1px solid #0f0;
+        color: #0f0;
+        font-size: 10px;
+        text-align: center;
+    ">
+        <span id="log-count">0</span> записей | 
+        <label style="cursor: pointer;">
+            <input type="checkbox" id="auto-scroll" checked style="margin-right: 4px;"> 
+            Автоскролл
+        </label>
+    </div>
+</div>
+
+<!-- Кнопка показа/скрытия консоли -->
+<button id="toggle-console-btn" onclick="toggleDebugConsole()" style="
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(0,255,0,0.3);
+    border: 2px solid #0f0;
+    color: #0f0;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 99998;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0,255,0,0.5);
+">📱</button>
+
+<script>
+// === УЛУЧШЕННАЯ СИСТЕМА ЛОГИРОВАНИЯ ===
+(function() {
+    let logCount = 0;
+    const consoleDiv = document.getElementById('mobile-console-logs');
+    const logCountSpan = document.getElementById('log-count');
+    const autoScrollCheckbox = document.getElementById('auto-scroll');
+    
+    // Показываем консоль только на мобильных
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (isMobile) {
+        document.getElementById('mobile-debug-container').style.display = 'flex';
+        document.getElementById('toggle-console-btn').style.display = 'flex';
+    }
+    
+    // Перехватываем console.log
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+    
+    function addLog(message, type = 'log') {
+        const line = document.createElement('div');
+        line.style.margin = '2px 0';
+        line.style.padding = '2px 4px';
+        line.style.borderLeft = type === 'error' ? '3px solid #f00' : 
+                                type === 'warn' ? '3px solid #ff0' : 
+                                type === 'info' ? '3px solid #0ff' : '3px solid #0f0';
+        line.style.paddingLeft = '8px';
+        
+        const timestamp = new Date().toLocaleTimeString('ru-RU', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
+        
+        const formattedMsg = typeof message === 'object' ? JSON.stringify(message, null, 2) : String(message);
+        
+        line.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${escapeHtml(formattedMsg)}`;
+        consoleDiv.appendChild(line);
+        
+        logCount++;
+        logCountSpan.textContent = logCount;
+        
+        // Автоскролл
+        if (autoScrollCheckbox.checked) {
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        // Ограничиваем количество логов (последние 500)
+        while (consoleDiv.children.length > 500) {
+            consoleDiv.removeChild(consoleDiv.firstChild);
+            logCount--;
+            logCountSpan.textContent = logCount;
+        }
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        args.forEach(arg => addLog(arg, 'log'));
+    };
+    
+    console.error = function(...args) {
+        originalError.apply(console, args);
+        args.forEach(arg => addLog(arg, 'error'));
+    };
+    
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        args.forEach(arg => addLog(arg, 'warn'));
+    };
+    
+    console.info = function(...args) {
+        originalInfo.apply(console, args);
+        args.forEach(arg => addLog(arg, 'info'));
+    };
+    
+    // Глобальные функции
+    window.toggleDebugConsole = function() {
+        const container = document.getElementById('mobile-debug-container');
+        const btn = document.getElementById('toggle-console-btn');
+        
+        if (container.style.display === 'none') {
+            container.style.display = 'flex';
+            btn.style.display = 'none';
+        } else {
+            container.style.display = 'none';
+            btn.style.display = 'flex';
+        }
+    };
+    
+    window.clearDebugConsole = function() {
+        consoleDiv.innerHTML = '';
+        logCount = 0;
+        logCountSpan.textContent = logCount;
+        console.log('️ Console cleared');
+    };
+    
+    window.copyDebugLogs = function() {
+        const logs = Array.from(consoleDiv.children)
+            .map(div => div.textContent)
+            .join('\n');
+        
+        navigator.clipboard.writeText(logs).then(() => {
+            console.log('📋 Logs copied to clipboard');
+            alert('Логи скопированы в буфер обмена!');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+        });
+    };
+    
+    // Инициализация диагностики
+    setTimeout(function() {
+        console.log('📱 === MOBILE DEBUG INFO ===');
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Platform:', navigator.platform);
+        console.log('Screen:', window.screen.width + 'x' + window.screen.height);
+        console.log('localStorage:', typeof localStorage !== 'undefined' ? '✅ available' : '❌ NOT available');
+        console.log('sessionStorage:', typeof sessionStorage !== 'undefined' ? '✅ available' : '❌ NOT available');
+        console.log('Telegram WebApp:', window.Telegram?.WebApp ? '✅ detected' : '❌ NOT detected');
+        
+        if (window.Telegram?.WebApp) {
+            console.log('  - Version:', window.Telegram.WebApp.version);
+            console.log('  - Platform:', window.Telegram.WebApp.platform);
+            console.log('  - initData:', window.Telegram.WebApp.initData ? '✅ exists (' + window.Telegram.WebApp.initData.length + ' chars)' : '❌ MISSING');
+            console.log('  - User:', window.Telegram.WebApp.initDataUnsafe?.user);
+        }
+        
+        console.log('isTelegramEnvironment:', window.isTelegramEnvironment);
+        console.log('telegramCloud:', window.telegramCloud ? '✅ exists' : '❌ MISSING');
+        console.log('cloud isAvailable:', window.telegramCloud?.isAvailable);
+        
+        // Тест localStorage
+        try {
+            localStorage.setItem('cosmic_test', 'test_value');
+            const value = localStorage.getItem('cosmic_test');
+            console.log('localStorage test:', value === 'test_value' ? '✅ PASS' : '❌ FAIL');
+            localStorage.removeItem('cosmic_test');
+        } catch (e) {
+            console.error('localStorage test: ❌ ERROR', e.message);
+        }
+        
+        // Тест gameState
+        console.log('gameState:', window.gameState ? '✅ exists' : '❌ MISSING');
+        if (window.gameState) {
+            console.log('  - coins:', window.gameState.coins);
+            console.log('  - currentLocation:', window.gameState.currentLocation);
+            console.log('  - totalDamageDealt:', window.gameState.totalDamageDealt);
+        }
+        
+        console.log('=== END DEBUG INFO ===');
+    }, 2000);
+})();
+</script>
+    
 </body>
 </html>
