@@ -307,5 +307,49 @@ window.GAME_UI = {
         document.body.appendChild(el);
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2000);
     }
-};
+},
+
+    updateHUD: function() {
+    if (!window.gameState) return;
+    
+    // ✅ Защита: если поля не инициализированы — используем дефолты
+    const gs = window.gameState;
+    const coins = gs.coins || 0;
+    const clickPower = gs.clickPower || 1;
+    const critChance = gs.critChance || 0.001;
+    const critMultiplier = gs.critMultiplier || 2.0;
+    const darkMatter = gs.darkMatter || 0;
+
+    const el = (id) => document.getElementById(id);
+
+    const coinsEl = el('coins-value');
+    if (coinsEl) coinsEl.textContent = Math.floor(coins).toLocaleString();
+
+    const powerEl = el('clickPower-value');
+    if (powerEl) powerEl.textContent = Math.round(clickPower);
+
+    const critChanceEl = el('critChance-value');
+    if (critChanceEl) {
+        const percent = typeof critChance === 'number' && !isNaN(critChance) 
+            ? (critChance * 100).toFixed(1) 
+            : '0.1';
+        critChanceEl.textContent = `${percent}%`;
+    }
+
+    const critMultEl = el('critMultiplier-value');
+    if (critMultEl) {
+        const mult = typeof critMultiplier === 'number' && !isNaN(critMultiplier)
+            ? critMultiplier.toFixed(1)
+            : '2.0';
+        critMultEl.textContent = `x ${mult}`;
+    }
+
+    // Тёмная материя
+    const dmEl = document.getElementById('dmDisplay');
+    const dmVal = document.getElementById('darkMatter-value');
+    if (dmEl && dmVal) {
+        dmEl.style.display = darkMatter > 0 ? 'flex' : 'none';
+        dmVal.textContent = darkMatter.toLocaleString();
+    }
+},
 })();
