@@ -219,7 +219,6 @@ function extractCloudData() {
         timestamp: Date.now(),
         full_game_state: cleanState,
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {})),
-full_game_metrics,
         // ✅ НОВОЕ: данные для таблицы лидеров
         leaderboard: {
             currentLocation: window.gameState.currentLocation,
