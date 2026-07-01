@@ -101,21 +101,10 @@ window.GAME_CORE = {
             block.style.border = `2px solid ${theme.borderColor}`;
             block.textContent = this.currentBlockHealth;
         }
-
-        // ✅ Флаг для предотвращения двойного срабатывания на мобильных
-let lastTouchTime = 0;
-
-block.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    lastTouchTime = Date.now();
-    this.hitBlock(block, window.gameState.clickPower, false);
-}, { passive: false });
-
-block.addEventListener('click', () => {
-    // Игнорируем click, если был недавний touchstart (мобильные браузеры эмулируют click после touch)
-    if (Date.now() - lastTouchTime < 500) return;
-    this.hitBlock(block, window.gameState.clickPower, false);
-});
+        
+block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower, false));
+block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower, false); }, { passive: false });
+        
         gameArea.appendChild(block);
         this.currentBlock = block;
         this.animateBlock(block);
