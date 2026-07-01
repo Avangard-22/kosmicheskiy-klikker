@@ -101,9 +101,11 @@ window.GAME_CORE = {
             block.style.border = `2px solid ${theme.borderColor}`;
             block.textContent = this.currentBlockHealth;
         }
-        
-block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower, false));
-block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower, false); }, { passive: false });
+// Оставляем ТОЛЬКО click — он отлично сработает и на ПК, и на смартфонах
+blockElement.addEventListener('click', (e) => {
+    // Ваша логика нанесения урона, например:
+    window.GAME_CORE.hitBlock(blockElement, damage); 
+});
         
         gameArea.appendChild(block);
         this.currentBlock = block;
