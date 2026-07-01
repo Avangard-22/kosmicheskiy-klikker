@@ -270,31 +270,43 @@ window.flushCloudSave = function() {
 // ============================================
 // ✅ НОВОЕ: ОСНОВНАЯ ФУНКЦИЯ СОХРАНЕНИЯ В ОБЛАКО
 // ============================================
-
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable) {
-        console.warn('⚠️ [CLOUD] Облако недоступно');
+        console.warn('️ [CLOUD] Облако недоступно');
         return;
     }
-    
-    if (isOperationLocked) {
-        console.log('⏳ [CLOUD] Синхронизация заблокирована, пропускаем');
-        return;
-    }
-    
+    if (isOperationLocked) return;
     const now = Date.now();
-    if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) {
-        console.log('⏳ [CLOUD] Cooldown, пропускаем');
+    if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
+    if (isSyncing) return;
+
+    // ✅ НОВАЯ ЗАЩИТА: не сохранять если данные пустые/нулевые
+    const gs = window.gameState;
+    const gm = window.gameMetrics;
+    
+    // Проверка 1: gameState должен иметь реальные данные
+    const hasRealData = (gs?.coins > 0) || 
+                        (gs?.totalDamageDealt > 0) || 
+                        (gs?.clickUpgradeLevel > 0) ||
+                        (gs?.currentLocation && gs.currentLocation !== 'mercury');
+    
+    if (!hasRealData && !gs?._isNewGame) {
+        console.warn('🛡️ [SAVE] БЛОКИРОВКА: gameState пустой, не отправляем на сервер!');
+        console.warn('️ [SAVE] coins:', gs?.coins, 'damage:', gs?.totalDamageDealt);
+        return; // НЕ сохраняем пустые данные!
+    }
+
+    // Проверка 2: должен быть gameMetrics
+    if (!gm || !gm.startTime) {
+        console.warn('🛡️ [SAVE] БЛОКИРОВКА: gameMetrics не инициализирован!');
         return;
     }
-    
-    if (isSyncing) return;
-    
+
     isSyncing = true;
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
-            console.log('☁️ [CLOUD] Отправка данных:', {
+            console.log('️ [CLOUD] Отправка данных:', {
                 crystals: cloudData.crystals,
                 level: cloudData.level,
                 score: cloudData.score,
@@ -305,7 +317,6 @@ async function cloudSaveAsync() {
             
             if (result?.success) {
                 lastCloudSync = now;
-                    // ✅ ИСПРАВЛЕНО: передаём цвет явно
                 showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
                 console.log('✅ [CLOUD] Sync successful');
             } else {
