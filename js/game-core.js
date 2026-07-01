@@ -6,8 +6,15 @@ const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-window.gameState = {};
-window.gameMetrics = {};
+// ✅ НЕ перезаписываем - данные уже загружены из save-system.js
+if (!window.gameState) {
+    console.warn('️ [CORE] gameState не инициализирован');
+    window.gameState = {};
+}
+if (!window.gameMetrics) {
+    console.warn('️ [CORE] gameMetrics не инициализирован');
+    window.gameMetrics = {};
+}
 
 window.GAME_CORE = {
     currentBlock: null,
@@ -19,7 +26,8 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: /Android|webOS|iPhone/i.test(navigator.userAgent) ? 25 : 20,
+    blockSpeed: CFG.isMobile ? 25 : 20,
+    lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
     getBonus: function(type, fallback = 1) {
         if (window.shopSystem && typeof window.shopSystem[type] === 'function') return window.shopSystem[type]();
@@ -143,10 +151,17 @@ window.GAME_CORE = {
     },
 
     hitBlock: function(block, damage) {
-        if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+    if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+    
+    // ✅ Throttling вибрации — не чаще 1 раза в 150мс
+    const now = Date.now();
+    if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
         if (navigator.vibrate) navigator.vibrate(50);
         if (window.telegramHaptic) window.telegramHaptic.light();
-        this.playSound('clickSound');
+        this.lastHapticTime = now;
+    }
+    
+    this.playSound('clickSound');
         block.style.transform = 'translateX(-50%) scale(0.85)';
         setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
 
@@ -184,7 +199,7 @@ window.GAME_CORE = {
 
     destroyBlock: function(block) {
         if (!window.gameState) return;
-        const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
+     const now = Date.now(), win = CFG.isMobile ? 1500 : 2000;
         window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
         window.gameState.lastDestroyTime = now;
 
@@ -444,9 +459,9 @@ initEffectCanvas: function() {
     },
 
     setLocation: function(loc) {
-        if (!window.gameState) return;
-        if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
-        window.gameState.currentLocation = loc;
+    if (!window.gameState) return;
+    if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
+    window.gameState.currentLocation = loc;
 
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
@@ -463,9 +478,15 @@ initEffectCanvas: function() {
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
 
-        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
-        UI.updateProgressBar();
-    },
+        // ✅ Передаём имя планеты, а не номер
+if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
+      // ✅ Отправляем событие смены планеты для музыки
+    if (window.EventBus) {
+        window.EventBus.emit('game:planetChanged', loc);
+    }
+    
+    UI.updateProgressBar();
+},
 
     startGame: function(reset = true) {
         console.log('🚀 Start, reset =', reset);
@@ -751,6 +772,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);
     if (window.updateLanguageFlag) window.updateLanguageFlag();
     if (window.updateContinueButton) window.updateContinueButton();
+// ✅ Сигнализируем другим модулям о готовности
+if (window.EventBus) {
+    window.EventBus.emit('core:ready');
+}
 });
 
 })();
