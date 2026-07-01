@@ -1,4 +1,4 @@
-// js/game-core.js (v2.0)
+// js/game-core.js
 (function() {
 'use strict';
 
@@ -6,14 +6,8 @@ const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-if (!window.gameState) {
-    console.warn('⚠️ [CORE] gameState не инициализирован');
-    window.gameState = {};
-}
-if (!window.gameMetrics) {
-    console.warn('⚠️ [CORE] gameMetrics не инициализирован');
-    window.gameMetrics = {};
-}
+window.gameState = {};
+window.gameMetrics = {};
 
 window.GAME_CORE = {
     currentBlock: null,
@@ -25,21 +19,10 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: CFG.isMobile ? 25 : 20,
-    lastHapticTime: 0,
-
-    // Permanent-множители (устанавливаются PerkSystem)
-    permanentClickMult: 1,
-    permanentBlockHpMult: 1,
-    permanentRewardMult: 1,
-    permanentHelperInterval: 1500,
-    permanentStartBonus: 0,
-    _intervalMultActive: false,
+    blockSpeed: /Android|webOS|iPhone/i.test(navigator.userAgent) ? 25 : 20,
 
     getBonus: function(type, fallback = 1) {
-        if (window.shopSystem && typeof window.shopSystem[type] === 'function') {
-            return window.shopSystem[type]();
-        }
+        if (window.shopSystem && typeof window.shopSystem[type] === 'function') return window.shopSystem[type]();
         return fallback;
     },
 
@@ -60,32 +43,10 @@ window.GAME_CORE = {
         if (window.gameState) window.gameState.gamePaused = false;
     },
 
-    // ✅ Piecewise прогрессия силы удара
     calculateClickPower: function() {
         const lvl = window.gameState.clickUpgradeLevel || 0;
         const prog = CFG.balanceConfig.damageProgression;
-
-        const baseAt = (n) => 1 + (n *
-            Math.pow(prog.diminishingReturns, Math.min(n, prog.maxLevelEffect)) *
-            Math.sqrt(n + 1) * prog.baseMultiplier);
-
-        if (lvl <= 50) return baseAt(lvl);
-
-        const at50 = baseAt(50);
-        // 51..100: +1/ур
-        const r1 = Math.min(Math.max(lvl - 50, 0), 50);
-        // 101..500: +0.5/ур
-        const r2 = Math.min(Math.max(lvl - 100, 0), 400);
-        // 501+: +0.25/ур
-        const r3 = Math.max(lvl - 500, 0);
-
-        let power = at50 + r1 * 1.0 + r2 * 0.5 + r3 * 0.25;
-
-        // Permanent-бонусы
-        const perkMult = this.permanentClickMult || 1;
-        const startAdd = (window.gameState?.planetDamageDealt === 0) ? (this.permanentStartBonus || 0) : 0;
-
-        return Math.max(1, Math.round(power * perkMult + startAdd));
+        return 1 + (lvl * Math.pow(prog.diminishingReturns, Math.min(lvl, prog.maxLevelEffect)) * Math.sqrt(lvl + 1) * prog.baseMultiplier);
     },
 
     getCurrentSpeed: function() {
@@ -94,12 +55,7 @@ window.GAME_CORE = {
         return speed * this.getBonus('getSpeedMultiplier', 1);
     },
 
-    // Делегирует в CombatSystem
     calculateBlockHealth: function() {
-        if (window.CombatSystem?.calculateBlockHealth) {
-            return window.CombatSystem.calculateBlockHealth();
-        }
-        // Fallback
         const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
         const base = CFG.balanceConfig.baseHealth * (1 + CFG.astronomicalUnits[window.gameState.currentLocation] * 2);
         const random = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
@@ -128,7 +84,7 @@ window.GAME_CORE = {
             const rb = CFG.rareBlocks[rareType];
             block.classList.add(rb.className);
             this.currentBlockHealth = Math.floor(this.currentBlockHealth * rb.healthMultiplier);
-            block.innerHTML = `🌟<div style="font-size:0.35em;margin-top:1px;line-height:1.1">${rb.name}</div>`;
+            block.innerHTML = `🌟 <div style="font-size:0.35em;margin-top:1px;line-height:1.1;">${rb.name}</div>`;
             this.announceRareBlock(rb.name);
         } else {
             const ci = Math.floor(Math.random() * theme.blockColors.length);
@@ -138,8 +94,8 @@ window.GAME_CORE = {
             block.textContent = this.currentBlockHealth;
         }
 
-        block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower, false));
-        block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower, false); }, { passive: false });
+        block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower));
+        block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower); }, { passive: false });
 
         gameArea.appendChild(block);
         this.currentBlock = block;
@@ -156,24 +112,23 @@ window.GAME_CORE = {
         return null;
     },
 
-    announceRareBlock: function(name) {
-        const el = document.createElement('div');
-        el.className = 'rare-block-announce';
-        el.textContent = `🌟 ${name} блок! 🌟`;
-        document.body.appendChild(el);
-        el.addEventListener('animationend', () => {
-            if (el.parentNode) el.parentNode.removeChild(el);
-        });
-    },
+ announceRareBlock: function(name) {
+    const el = document.createElement('div');
+    el.className = 'rare-block-announce';
+    el.textContent = `🌟 ${name} блок! 🌟`;
+    document.body.appendChild(el);
+    
+    el.addEventListener('animationend', () => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    });
+},
 
     animateBlock: function(block) {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
         const move = () => {
-            if (!window.gameState?.gameActive || this.currentBlock !== block) return;
-            if (this.isGamePaused) {
-                requestAnimationFrame(move);
-                return;
+            if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
+                requestAnimationFrame(move); return;
             }
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
@@ -187,54 +142,95 @@ window.GAME_CORE = {
         move();
     },
 
-    // ✅ Делегирование в CombatSystem + поддержка isAuto
-    hitBlock: function(block, damage, isAuto = false) {
-        if (!window.gameState?.gameActive || this.isGamePaused) return;
+    hitBlock: function(block, damage) {
+        if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+        if (navigator.vibrate) navigator.vibrate(50);
+        if (window.telegramHaptic) window.telegramHaptic.light();
+        this.playSound('clickSound');
+        block.style.transform = 'translateX(-50%) scale(0.85)';
+        setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
 
-        // Тактильный отклик только для игрока (не для Бобо и не для автокликера)
-        if (!isAuto) {
-            const now = Date.now();
-            if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
-                if (navigator.vibrate) navigator.vibrate(50);
-                if (window.telegramHaptic) window.telegramHaptic.light();
-                this.lastHapticTime = now;
-                this.playSound('clickSound');
-            }
+        let finalDamage = damage * this.getBonus('getDamageMultiplier', 1);
+        let isCrit = false;
+        let critChance = window.gameState.critChance * this.getBonus('getCritChanceMultiplier', 1);
+        let critMult = window.gameState.critMultiplier * this.getBonus('getCritMultMultiplier', 1);
+        critChance = Math.min(1.0, critChance);
 
-            block.style.transform = 'translateX(-50%) scale(0.85)';
-            setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
+        if (Math.random() < critChance) {
+            finalDamage = Math.round(finalDamage * critMult);
+            isCrit = true;
+            if (window.achievementsSystem) window.achievementsSystem.incrementCrits(1);
+        } else {
+            finalDamage = Math.round(finalDamage);
         }
 
-        const result = window.CombatSystem.applyHit(damage, isAuto);
+        this.currentBlockHealth -= finalDamage;
+        window.gameState.totalDamageDealt += finalDamage;
 
-        this.createDamageText(result.damage, block, result.isCrit ? '#FFD700' : (isAuto ? '#69f0ae' : '#ff4444'));
+        if (window.achievementsSystem) {
+            window.achievementsSystem.incrementTotalDamage(finalDamage);
+            window.achievementsSystem.incrementTotalClicks(1);
+        }
+
+        this.createDamageText(finalDamage, block, isCrit ? '#FFD700' : '#ff4444');
         UI.checkLocationUpgrade();
 
-        if (result.destroyed) {
-            this.destroyBlock(block, isAuto);
-        } else if (block) {
-            block.textContent = Math.floor(this.currentBlockHealth || 0);
-            this.updateCracks(block, this.currentBlockHealth || 0);
+        if (this.currentBlockHealth <= 0) this.destroyBlock(block);
+        else {
+            block.textContent = Math.floor(this.currentBlockHealth);
+            this.updateCracks(block, this.currentBlockHealth);
         }
     },
 
-    // ✅ Делегирование в CombatSystem + поддержка isAuto
-    destroyBlock: function(block, isAuto = false) {
-        if (!window.gameState || !block) return;
+    destroyBlock: function(block) {
+        if (!window.gameState) return;
+        const now = Date.now(), win = /Android|webOS|iPhone/i.test(navigator.userAgent) ? 1500 : 2000;
+        window.gameState.comboCount = (now - (window.gameState.lastDestroyTime || 0) < win) ? (window.gameState.comboCount || 0) + 1 : 1;
+        window.gameState.lastDestroyTime = now;
 
-        const result = window.CombatSystem.applyDestroy(block, isAuto);
-        if (!result) return;
+        let r = Math.floor((25 + CFG.astronomicalUnits[window.gameState.currentLocation] * 100) * CFG.balanceConfig.rewardMultiplier);
+        r = Math.floor(r * (CFG.balanceConfig.randomBonusRange.min + Math.random() * (CFG.balanceConfig.randomBonusRange.max - CFG.balanceConfig.randomBonusRange.min)));
+        if (window.gameState.boboCoinBonus > 0) r = Math.floor(r * (1 + window.gameState.boboCoinBonus));
+        r = Math.floor(r * this.getBonus('getRewardMultiplier', 1));
 
-        // Комбо-текст (только для игрока)
-        if (!isAuto && result.comboCount > 1) {
-            this.showComboText(result.comboCount, result.comboBonus, block);
+        let isRare = false;
+        for (const k in CFG.rareBlocks) {
+            if (block.classList.contains(CFG.rareBlocks[k].className)) {
+                r = Math.floor(r * CFG.rareBlocks[k].multiplier);
+                isRare = true;
+                break;
+            }
+        }
+
+        if (window.gameState.comboCount > 1) {
+            let comboMult = CFG.balanceConfig.comboMultiplier * this.getBonus('getComboMultiplier', 1);
+            const bns = Math.floor(r * (window.gameState.comboCount * comboMult));
+            r += bns;
+            this.showComboText(window.gameState.comboCount, bns, block);
             this.playSound('comboSound');
+        }
+
+        window.gameState.coins += r;
+
+        if (window.achievementsSystem) {
+            const currentPlanet = window.gameState.currentLocation;
+            window.achievementsSystem.incrementCoinsEarned(r);
+            window.achievementsSystem.incrementPlanetBlocks(currentPlanet, 1);
+            if (isRare) {
+                window.achievementsSystem.incrementRareBlocks(1);
+                window.achievementsSystem.incrementPlanetRareBlocks(currentPlanet, 1);
+            }
+            if (window.gameState.comboCount > (window.gameMetrics.maxCombo || 0)) {
+                window.gameMetrics.maxCombo = window.gameState.comboCount;
+                window.achievementsSystem.updateCombo(window.gameState.comboCount);
+                window.achievementsSystem.updatePlanetCombo(currentPlanet, window.gameState.comboCount);
+            }
         }
 
         UI.updateHUD();
         UI.updateUpgradeButtons();
         this.playSound('breakSound');
-        this.showRewardText(result.reward, block);
+        this.showRewardText(r, block);
         FEAT.createExplosion(block);
 
         const ga = document.getElementById('gameArea');
@@ -245,73 +241,74 @@ window.GAME_CORE = {
     },
 
     createDamageText: function(dmg, block, col) {
-        const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'damage-text';
-        t.textContent = `-${dmg}`;
-        t.style.color = col;
-
-        let l = r.left + r.width / 2;
-        let tp = r.top;
-
-        if (l < 50) l = 50;
-        if (l > window.innerWidth - 50) l = window.innerWidth - 50;
-        if (tp < 50) tp = 50;
-
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-
-        document.body.appendChild(t);
-
-        t.addEventListener('animationend', () => {
-            if (t.parentNode) t.parentNode.removeChild(t);
-        });
-    },
+    const r = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'damage-text';
+    t.textContent = `-${dmg}`;
+    t.style.color = col;
+    
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    
+    if (l < 50) l = 50;
+    if (l > window.innerWidth - 50) l = window.innerWidth - 50;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
     showComboText: function(c, b, block) {
-        const r = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'combo-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+    const r = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'combo-text';
+    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+    
+    let l = r.left + r.width / 2;
+    let tp = r.top;
+    
+    if (l < 75) l = 75;
+    if (l > window.innerWidth - 75) l = window.innerWidth - 75;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
-        let l = r.left + r.width / 2;
-        let tp = r.top;
-
-        if (l < 75) l = 75;
-        if (l > window.innerWidth - 75) l = window.innerWidth - 75;
-        if (tp < 50) tp = 50;
-
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-
-        document.body.appendChild(t);
-
-        t.addEventListener('animationend', () => {
-            if (t.parentNode) t.parentNode.removeChild(t);
-        });
-    },
-
-    showRewardText: function(r, block) {
-        const rct = block.getBoundingClientRect();
-        const t = document.createElement('div');
-        t.className = 'reward-text';
-        t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
-        let l = rct.left + rct.width / 2;
-        let tp = rct.top + rct.height / 2;
-
-        if (l < 60) l = 60;
-        if (l > window.innerWidth - 60) l = window.innerWidth - 60;
-        if (tp < 50) tp = 50;
-
-        t.style.left = l + 'px';
-        t.style.top = tp + 'px';
-
-        document.body.appendChild(t);
-
-        t.addEventListener('animationend', () => {
-            if (t.parentNode) t.parentNode.removeChild(t);
-        });
-    },
+showRewardText: function(r, block) {
+    const rct = block.getBoundingClientRect();
+    const t = document.createElement('div');
+    t.className = 'reward-text';
+    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
+    
+    let l = rct.left + rct.width / 2;
+    let tp = rct.top + rct.height / 2;
+    
+    if (l < 60) l = 60;
+    if (l > window.innerWidth - 60) l = window.innerWidth - 60;
+    if (tp < 50) tp = 50;
+    
+    t.style.left = l + 'px';
+    t.style.top = tp + 'px';
+    
+    document.body.appendChild(t);
+    
+    t.addEventListener('animationend', () => {
+        if (t.parentNode) t.parentNode.removeChild(t);
+    });
+},
 
     updateCracks: function(block, health) {
         if (!block) return;
@@ -350,164 +347,105 @@ window.GAME_CORE = {
         this.helperElement.style.top = this.helperPosition.y + 'px';
     },
 
-    initEffectCanvas: function() {
-        if (!this.effectCanvas) {
-            this.effectCanvas = document.createElement('canvas');
-            this.effectCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';
-            document.body.appendChild(this.effectCanvas);
-            const resize = () => {
-                this.effectCanvas.width = window.innerWidth;
-                this.effectCanvas.height = window.innerHeight;
-            };
-            resize();
-            window.addEventListener('resize', resize);
-        }
-    },
-
-    createHelperEffect: function() {
-        if (!this.currentBlock || !this.helperElement) return;
-        this.initEffectCanvas();
-
-        const br = this.currentBlock.getBoundingClientRect();
-        const hr = this.helperElement.getBoundingClientRect();
-
-        const sx = hr.left + hr.width / 2;
-        const sy = hr.top + hr.height / 2;
-        const ex = br.left + br.width / 2;
-        const ey = br.top + br.height / 2;
-
-        const cv = this.effectCanvas;
-        const ctx = cv.getContext('2d');
-
-        let st = Date.now();
-        const an = () => {
-            const el = Date.now() - st;
-            const p = Math.min(el / 300, 1);
-
-            ctx.clearRect(0, 0, cv.width, cv.height);
-
-            if (p > 0) {
-                const cx = sx + (ex - sx) * p;
-                const cy = sy + (ey - sy) * p;
-
-                const g = ctx.createLinearGradient(sx, sy, cx, cy);
-                g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
-                g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
-                g.addColorStop(1, 'rgba(105, 240, 174, 0)');
-
-                ctx.beginPath();
-                ctx.moveTo(sx, sy);
-                ctx.lineTo(cx, cy);
-                ctx.lineWidth = 4 + (4 * (1 - p));
-                ctx.strokeStyle = g;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
-                ctx.fill();
-            }
-
-            if (p < 1) {
-                requestAnimationFrame(an);
-            } else {
-                ctx.clearRect(0, 0, cv.width, cv.height);
-            }
+initEffectCanvas: function() {
+    if (!this.effectCanvas) {
+        this.effectCanvas = document.createElement('canvas');
+        this.effectCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:100;';
+        document.body.appendChild(this.effectCanvas);
+        
+        const resize = () => {
+            this.effectCanvas.width = window.innerWidth;
+            this.effectCanvas.height = window.innerHeight;
         };
+        resize();
+        window.addEventListener('resize', resize);
+    }
+},
 
-        an();
-        this.playSound('helperSound');
-    },
+  createHelperEffect: function() {
+    if (!this.currentBlock || !this.helperElement) return;
+    
+    // Инициализируем глобальный canvas, если ещё не создан
+    this.initEffectCanvas();
+    
+    const br = this.currentBlock.getBoundingClientRect();
+    const hr = this.helperElement.getBoundingClientRect();
+    
+    const sx = hr.left + hr.width / 2;
+    const sy = hr.top + hr.height / 2;
+    const ex = br.left + br.width / 2;
+    const ey = br.top + br.height / 2;
+    
+    const cv = this.effectCanvas;
+    const ctx = cv.getContext('2d');
+    
+    let st = Date.now();
+    const an = () => {
+        const el = Date.now() - st;
+        const p = Math.min(el / 300, 1);
+        
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        
+        if (p > 0) {
+            const cx = sx + (ex - sx) * p;
+            const cy = sy + (ey - sy) * p;
+            
+            const g = ctx.createLinearGradient(sx, sy, cx, cy);
+            g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
+            g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
+            g.addColorStop(1, 'rgba(105, 240, 174, 0)');
+            
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(cx, cy);
+            ctx.lineWidth = 4 + (4 * (1 - p));
+            ctx.strokeStyle = g;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
+            ctx.fill();
+        }
+        
+        if (p < 1) {
+            requestAnimationFrame(an);
+        } else {
+            ctx.clearRect(0, 0, cv.width, cv.height);
+        }
+    };
+    
+    an();
+    this.playSound('helperSound');
+},
 
-    // ✅ Бобо использует CombatSystem с isAuto=true
     helperAttack: function() {
         if (!this.currentBlock || !window.gameState || !window.gameState.helperActive || !this.helperElement || this.isGamePaused) return;
 
         this.createHelperEffect();
 
-        let dmg = window.gameState.clickPower *
-                  (1 + (window.gameState.helperDamageBonus || 0)) *
-                  (1 + (window.gameState.helperUpgradeLevel || 0) * 0.2) *
-                  this.getBonus('getDamageMultiplier', 1);
+        let dmg = window.gameState.clickPower * (1 + (window.gameState.helperDamageBonus || 0)) * (1 + (window.gameState.helperUpgradeLevel || 0) * 0.2) * this.getBonus('getDamageMultiplier', 1);
 
-        // Делегируем математику в CombatSystem с isAuto=true
-        const result = window.CombatSystem.applyHit(dmg, true);
+        this.currentBlockHealth -= dmg;
+        window.gameState.totalDamageDealt += dmg;
 
-        this.createDamageText(result.damage, this.currentBlock, '#69f0ae');
+        if (window.achievementsSystem) {
+            window.achievementsSystem.incrementTotalDamage(dmg);
+        }
+
+        this.createDamageText(Math.round(dmg), this.currentBlock, '#69f0ae');
         UI.checkLocationUpgrade();
 
-        if (result.destroyed) {
-            this.destroyBlock(this.currentBlock, true);
-        } else {
-            this.currentBlock.textContent = Math.floor(this.currentBlockHealth || 0);
-            this.updateCracks(this.currentBlock, this.currentBlockHealth || 0);
+        if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock);
+        else {
+            this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
+            this.updateCracks(this.currentBlock, this.currentBlockHealth);
         }
-
-        // ✅ Хук перка Bobo hit
-        if (window.PerkSystem?.onBoboHit) window.PerkSystem.onBoboHit();
     },
 
-    // ✅ Новый setLocation с doReset
-    setLocation: function(loc, doReset = false) {
+    setLocation: function(loc) {
         if (!window.gameState) return;
-        const currentIdx = CFG.planetOrder.indexOf(window.gameState.currentLocation);
-        const newIdx = CFG.planetOrder.indexOf(loc);
-        if (newIdx < currentIdx || newIdx === currentIdx) return;
-
-        if (doReset) {
-            // ── Сброс боевых параметров ──
-            window.gameState.clickUpgradeLevel = 0;
-            window.gameState.clickPower = this.calculateClickPower();
-            window.gameState.critChanceUpgradeLevel = 0;
-            window.gameState.critChance = 0.001;
-            window.gameState.critMultiplierUpgradeLevel = 0;
-            window.gameState.critMultiplier = 2.0;
-            window.gameState.helperUpgradeLevel = 0;
-            window.gameState.helperDamageBonus = 0;
-            window.gameState.helperActive = false;
-            window.gameState.helperTimeLeft = 0;
-            window.gameState.boboCoinBonus = 0;
-            window.gameState.planetDamageDealt = 0;
-            window.gameState.planetFirstBlockCleared = false;
-            window.gameState.comboCount = 0;
-            window.gameState.lastDestroyTime = 0;
-
-            // ✅ Сброс мусорных счётчиков
-            delete window.gameState._boboHitCounter;
-            delete window.gameState._boboCallCounter;
-            delete window.gameState._crystalIntervalStart;
-            delete window.gameState._crystalIntervalActive;
-
-            // Уничтожить Bobo
-            if (this.helperInterval) clearInterval(this.helperInterval);
-            if (this.helperTimer) clearInterval(this.helperTimer);
-            if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
-            this.helperElement = null;
-            this.helperInterval = null;
-            this.helperTimer = null;
-
-            // Сбросить автокликер магазина
-            if (window.shopSystem?.stopAutoClicker) window.shopSystem.stopAutoClicker();
-
-            // Событие для подписчиков
-            if (window.EventBus) {
-                window.EventBus.emit('game:planetTransition', {
-                    from: window.gameState.currentLocation,
-                    to: loc,
-                    planetIndex: newIdx
-                });
-            }
-
-            // Выдать permanent-бонус (кроме Меркурия)
-            if (newIdx > 0 && window.PerkSystem?.activatePerk) {
-                window.PerkSystem.activatePerk(newIdx);
-            }
-
-            // UI перехода
-            this.showTransitionUI(loc, newIdx);
-        }
-
-        // Новая локация
+        if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
         window.gameState.currentLocation = loc;
 
         const gameTitle = document.getElementById('gameTitle');
@@ -525,78 +463,8 @@ window.GAME_CORE = {
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
 
-        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
-        if (window.EventBus) window.EventBus.emit('game:planetChanged', loc);
+        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(CFG.planetOrder.indexOf(loc) + 1);
         UI.updateProgressBar();
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-    },
-
-    // ✅ Модалка перехода
-    showTransitionUI: function(loc, idx) {
-        const old = document.getElementById('transitionModal');
-        if (old) old.remove();
-
-        const info = CFG.locations[loc];
-        const modal = document.createElement('div');
-        modal.id = 'transitionModal';
-        modal.className = 'transition-modal';
-        modal.style.animation = 'modalEnter 0.4s ease-out';
-
-        const bonus = (idx > 0 && window.PerkSystem?.getPerkForPlanet)
-            ? window.PerkSystem.getPerkForPlanet(idx)
-            : null;
-
-        modal.innerHTML = `
-            <h2 style="margin:0 0 8px;color:${info.borderColor}">${info.name}</h2>
-            <div class="tm-description">🛡️ Параметры сброшены к базовым<br>Достижения сохранены</div>
-            ${bonus ? `
-            <div class="tm-perk-box">
-                <div class="tm-perk-title">🌟 Постоянный бонус получен</div>
-                <div class="tm-perk-name">${bonus.name}</div>
-                <div style="color:#aaa;font-size:0.75em;margin-top:4px">${bonus.desc}</div>
-            </div>` : ''}
-            <div class="tm-darkmatter-box">
-                <div class="tm-darkmatter-title">⚫ Тёмная материя</div>
-                <div class="tm-darkmatter-desc">Таинственная субстанция, необходимая для скачков в дальний космос. Пригодится для преодоления пространственных разломов за пределами Солнечной системы.</div>
-                <div class="tm-balance">💎 Баланс: <span id="tmCrystals">${Math.floor(window.gameState.coins).toLocaleString()}</span></div>
-                <button id="convertDarkMatterBtn" class="tm-btn">⚫ Обменять всё на Тёмную материю</button>
-            </div>
-            <button id="closeTransitionBtn" class="tm-proceed-btn">Продолжить</button>
-        `;
-
-        document.body.appendChild(modal);
-
-        document.getElementById('convertDarkMatterBtn').addEventListener('click', () => {
-            this.convertCrystalsToDarkMatter();
-            const el = document.getElementById('tmCrystals');
-            if (el) el.textContent = Math.floor(window.gameState.coins).toLocaleString();
-        });
-
-        document.getElementById('closeTransitionBtn').addEventListener('click', () => modal.remove());
-    },
-
-    // ✅ Конвертация кристаллов в тёмную материю
-    convertCrystalsToDarkMatter: function() {
-        if (!window.gameState) return;
-        const rate = 100000;
-        const maxConvert = Math.floor(window.gameState.coins / rate);
-        if (maxConvert <= 0) {
-            if (window.showTooltip) {
-                window.showTooltip('❌ Недостаточно кристаллов (нужно 100 000 за 1 ед.)');
-                setTimeout(window.hideTooltip, 2000);
-            }
-            return;
-        }
-        const amount = maxConvert;
-        window.gameState.coins -= amount * rate;
-        window.gameState.darkMatter = (window.gameState.darkMatter || 0) + amount;
-        if (typeof window.saveGame === 'function') window.saveGame();
-        if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
-        if (window.showTooltip) {
-            window.showTooltip(`⚫ +${amount} Тёмной материи (осталось 💎 ${Math.floor(window.gameState.coins).toLocaleString()})`);
-            setTimeout(window.hideTooltip, 3000);
-        }
     },
 
     startGame: function(reset = true) {
@@ -645,13 +513,10 @@ window.GAME_CORE = {
             window.gameMetrics.startTime = Date.now();
         }
 
-        // ✅ Применить перки
-        if (window.PerkSystem?.applyAllPerks) window.PerkSystem.applyAllPerks();
-
-        if (window.GAME_UI) window.GAME_UI.updateHUD();
-     if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
-if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
-if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        UI.updateProgressBar();
+        this.setLocation(window.gameState.currentLocation);
 
         if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
         if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
@@ -659,145 +524,128 @@ if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
         setTimeout(() => this.createMovingBlock(), 500);
     },
 
-continueGame: async function() {
-    console.log(' [GAME] Starting continueGame...');
+    /**
+     * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
+     * - Убран вызов window.loadGame() (он больше не нужен)
+     * - cloudInit сам загружает данные из облака
+     * - gameState инициализируется дефолтными значениями до cloudInit
+     */
+    continueGame: async function() {
+        console.log('🔄 [GAME] Starting continueGame...');
 
-    // ✅ НОВОЕ: Ждём готовности save-system (до 3 секунд)
-    let attempts = 0;
-    while (typeof window.cloudInit !== 'function' && attempts < 30) {
-        console.log('⏳ [GAME] Waiting for save-system...');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-
-    // ✅ Инициализация gameState с дефолтными значениями (если ещё не инициализирован)
-    if (!window.gameState || !window.gameState.coins) {
-        console.log('🔄 [GAME] Initializing default gameState...');
-        window.gameState = {
-            coins: 0,
-            clickPower: 1,
-            critChance: 0.001,
-            critMultiplier: 2.0,
-            currentLocation: 'mercury',
-            totalDamageDealt: 0,
-            planetDamageDealt: 0,
-            planetFirstBlockCleared: false,
-            darkMatter: 0,
-            clickUpgradeLevel: 0,
-            critChanceUpgradeLevel: 0,
-            critMultiplierUpgradeLevel: 0,
-            helperUpgradeLevel: 0,
-            helperActivations: 0,
-            helperActive: false,
-            helperTimeLeft: 0,
-            helperDamageBonus: 0,
-            boboCoinBonus: 0,
-            comboCount: 0,
-            lastDestroyTime: 0,
-            gameActive: false,
-            gamePaused: false,
-            achievements: {},
-            shopItems: {},
-            permanentBonuses: {},
-            unlockedLocations: ['mercury'],
-            boboSkin: 'default',
-            dailyBonus: {
-                lastClaimDate: null,
-                currentDay: 1,
-                totalClaimed: 0,
-                streak: 0
-            }
-        };
-    }
-
-    // ✅ Инициализация gameMetrics
-    if (!window.gameMetrics || !window.gameMetrics.startTime) {
-        window.gameMetrics = {
-            startTime: Date.now(),
-            blocksDestroyed: 0,
-            upgradesBought: 0,
-            totalClicks: 0,
-            totalCrits: 0,
-            totalCoinsEarned: 0,
-            helpersBought: 0,
-            boostersUsed: 0,
-            maxCombo: 0,
-            rareBlocksDestroyed: 0,
-            sessions: 0,
-            visitedPlanets: [],
-            planetStats: {}
-        };
-    }
-
-    // ✅ Загрузка из облака (если cloudInit доступен)
-    if (typeof window.cloudInit === 'function') {
-        console.log('️ [GAME] cloudInit вызывается...');
-        try {
-            await window.cloudInit();
-            console.log('☁️ [GAME] cloudInit завершён');
-        } catch (e) {
-            console.error('☁️ [GAME] cloudInit error:', e);
+        // ✅ Инициализируем gameState дефолтными значениями
+        // (на случай, если облако пустое — игра начнётся с нуля)
+        if (!window.gameState || Object.keys(window.gameState).length === 0) {
+            window.gameState = {
+                coins: 0,
+                clickPower: 1,
+                critChance: 0.001,
+                critMultiplier: 2.0,
+                currentLocation: 'mercury',
+                totalDamageDealt: 0,
+                clickUpgradeLevel: 0,
+                critChanceUpgradeLevel: 0,
+                critMultiplierUpgradeLevel: 0,
+                helperUpgradeLevel: 0,
+                helperActivations: 0,
+                helperActive: false,
+                helperTimeLeft: 0,
+                helperDamageBonus: 0,
+                boboCoinBonus: 0,
+                comboCount: 0,
+                lastDestroyTime: 0,
+                gameActive: false,
+                gamePaused: false,
+                achievements: {},
+                shopItems: {},
+                permanentBonuses: {},
+                unlockedLocations: ['mercury'],
+                boboSkin: 'default',
+                dailyBonus: {
+                    lastClaimDate: null,
+                    currentDay: 1,
+                    totalClaimed: 0,
+                    streak: 0
+                }
+            };
+            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
-    } else {
-        console.warn('⚠️ [GAME] cloudInit function NOT found after waiting');
-    }
 
-    console.log('✅ [GAME] Load successful, starting game...');
-    console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
-    console.log('⚫ [GAME] gameState.darkMatter:', window.gameState.darkMatter);
-    console.log('🌟 [GAME] permanentBonuses:', window.gameState.permanentBonuses);
+        if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
+            window.gameMetrics = {
+                startTime: 0,
+                blocksDestroyed: 0,
+                upgradesBought: 0,
+                totalClicks: 0,
+                totalCrits: 0,
+                totalCoinsEarned: 0,
+                helpersBought: 0,
+                boostersUsed: 0,
+                maxCombo: 0,
+                rareBlocksDestroyed: 0,
+                sessions: 0
+            };
+        }
 
-    // ✅ Финальная защита перед UI
-    if (!window.gameState.coins) window.gameState.coins = 0;
-    if (!window.gameState.clickPower) window.gameState.clickPower = 1;
-    if (!window.gameState.critChance) window.gameState.critChance = 0.001;
-    if (!window.gameState.critMultiplier) window.gameState.critMultiplier = 2.0;
-    if (!window.gameState.darkMatter) window.gameState.darkMatter = 0;
-    if (!window.gameState.currentLocation) window.gameState.currentLocation = 'mercury';
+        // ✅ Загружаем из облака (асинхронно)
+        // cloudInit сам вызывает loadGame() внутри себя
+        if (typeof window.cloudInit === 'function') {
+            console.log('☁️ [GAME] cloudInit вызывается...');
+            try {
+                await window.cloudInit();
+                console.log('☁️ [GAME] cloudInit завершён');
+            } catch (e) {
+                console.error('☁️ [GAME] cloudInit error:', e);
+            }
+        } else {
+            console.warn('⚠️ [GAME] cloudInit function NOT found');
+        }
 
-    // ✅ Обновление UI
-    if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
-    if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
-    if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
-    
-    this.setLocation(window.gameState.currentLocation);
-    this.startGame(false);
+        // ✅ Запускаем игру с загруженными данными
+        console.log('✅ [GAME] Load successful, starting game...');
+        console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
+        console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
 
-    if (window.showTooltip && window.formatString) {
-        const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
-            coins: Math.floor(window.gameState.coins || 0).toLocaleString()
-        });
-        window.showTooltip(t);
-        setTimeout(window.hideTooltip, 3000);
-    }
-},
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        UI.updateProgressBar();
+        this.setLocation(window.gameState.currentLocation);
+        this.startGame(false);
+
+        if (window.showTooltip && window.formatString) {
+            const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
+                coins: Math.floor(window.gameState.coins || 0).toLocaleString()
+            });
+            window.showTooltip(t);
+            setTimeout(window.hideTooltip, 3000);
+        }
+    },
 
     restartGame: function() {
         this.startGame(true);
     },
 
-initEventHandlers: function() {
-    const langBtn = document.getElementById('langBtn-welcome');
-    if (langBtn) {
-        langBtn.addEventListener('click', window.switchLanguage);
-        langBtn.addEventListener('touchstart', e => { e.preventDefault(); window.switchLanguage(); }, { passive: false });
-    }
+    initEventHandlers: function() {
+        const langBtn = document.getElementById('langBtn-welcome');
+        if (langBtn) {
+            langBtn.addEventListener('click', window.switchLanguage);
+            langBtn.addEventListener('touchstart', e => { e.preventDefault(); window.switchLanguage(); }, { passive: false });
+        }
 
-    // ✅ Кнопка таблицы лидеров на welcome screen
-    const leaderboardBtn = document.getElementById('leaderboardBtnWelcome');
-    if (leaderboardBtn) {
-        leaderboardBtn.addEventListener('click', () => {
-            if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
-                window.leaderboardSystem.togglePanel();
-            }
-        });
-        leaderboardBtn.addEventListener('touchstart', e => {
-            e.preventDefault();
-            if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
-                window.leaderboardSystem.togglePanel();
-            }
-        }, { passive: false });
-    }
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                const ws = document.getElementById('welcomeScreen');
+                if (ws) ws.style.display = "none";
+                this.startGame(true);
+            });
+            startBtn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                const ws = document.getElementById('welcomeScreen');
+                if (ws) ws.style.display = "none";
+                this.startGame(true);
+            }, { passive: false });
+        }
 
         const contBtn = document.getElementById('continueBtn');
         if (contBtn) {
@@ -830,7 +678,7 @@ initEventHandlers: function() {
 
         add('shareBtn', () => {
             if (!window.gameState) return;
-            const txt = `🎮 Я нанёс ${Math.floor(window.gameState.totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(window.gameState.coins)} Кристаллов! 🌌`;
+            const txt = `🎮 Я нанес ${Math.floor(window.gameState.totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(window.gameState.coins)} Кристаллов! 🌌`;
             if (navigator.share) {
                 navigator.share({ title: 'Космический Кликер', text: txt }).then(() => {
                     window.gameState.coins += 50;
@@ -903,8 +751,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);
     if (window.updateLanguageFlag) window.updateLanguageFlag();
     if (window.updateContinueButton) window.updateContinueButton();
-    if (window.EventBus) {
-        window.EventBus.emit('core:ready');
-    }
 });
+
 })();
