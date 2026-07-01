@@ -102,9 +102,20 @@ window.GAME_CORE = {
             block.textContent = this.currentBlockHealth;
         }
 
-        block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower));
-        block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower); }, { passive: false });
+        // ✅ Флаг для предотвращения двойного срабатывания на мобильных
+let lastTouchTime = 0;
 
+block.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    lastTouchTime = Date.now();
+    this.hitBlock(block, window.gameState.clickPower, false);
+}, { passive: false });
+
+block.addEventListener('click', () => {
+    // Игнорируем click, если был недавний touchstart (мобильные браузеры эмулируют click после touch)
+    if (Date.now() - lastTouchTime < 500) return;
+    this.hitBlock(block, window.gameState.clickPower, false);
+});
         gameArea.appendChild(block);
         this.currentBlock = block;
         this.animateBlock(block);
