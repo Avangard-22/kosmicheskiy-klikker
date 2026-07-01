@@ -6,14 +6,14 @@ const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-// ✅ НЕ перезаписываем - данные уже загружены из save-system.js
+// ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
+// НЕ перезаписываем существующие данные!
 if (!window.gameState) {
-    console.warn('️ [CORE] gameState не инициализирован');
-    window.gameState = {};
+    console.warn('⚠️ [CORE] gameState не инициализирован, ждём save-system...');
+    // НЕ создаём пустой объект — пусть save-system сам инициализирует
 }
 if (!window.gameMetrics) {
-    console.warn('️ [CORE] gameMetrics не инициализирован');
-    window.gameMetrics = {};
+    console.warn('️ [CORE] gameMetrics не инициализирован, ждём save-system...');
 }
 
 window.GAME_CORE = {
@@ -101,10 +101,20 @@ window.GAME_CORE = {
             block.style.border = `2px solid ${theme.borderColor}`;
             block.textContent = this.currentBlockHealth;
         }
-// Оставляем ТОЛЬКО click — он отлично сработает и на ПК, и на смартфонах
-blockElement.addEventListener('click', (e) => {
-    // Ваша логика нанесения урона, например:
-    window.GAME_CORE.hitBlock(blockElement, damage); 
+
+        // ✅ Флаг для предотвращения двойного срабатывания на мобильных
+let lastTouchTime = 0;
+
+block.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    lastTouchTime = Date.now();
+    this.hitBlock(block, window.gameState.clickPower, false);
+}, { passive: false });
+
+block.addEventListener('click', () => {
+    // Игнорируем click, если был недавний touchstart (мобильные браузеры эмулируют click после touch)
+    if (Date.now() - lastTouchTime < 500) return;
+    this.hitBlock(block, window.gameState.clickPower, false);
 });
         
         gameArea.appendChild(block);
