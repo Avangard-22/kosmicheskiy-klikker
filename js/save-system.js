@@ -1,4 +1,4 @@
-// js/save-system.js
+// js/save-system.js (v3.1 — Защита от рассинхронизации метрик)
 (function() {
 'use strict';
 
@@ -90,18 +90,16 @@ const DEFAULT_GAME_METRICS = {
 };
 
 // ============================================
-// УТИЛИТЫ АВТОМАТИЗАЦИИ
+// УТИЛИТЫ АВТОМАТИЗАЦИИ И ЗАЩИТЫ
 // ============================================
 
-// Умное глубокое слияние: принимает новые структуры, не ломая вложенность
 function deepMerge(defaults, saved) {
     if (typeof saved !== 'object' || saved === null) return saved;
-    if (Array.isArray(saved)) return [...saved]; // Корректно копируем массивы локаций
+    if (Array.isArray(saved)) return [...saved];
 
     const result = Object.assign({}, defaults || {});
     for (const key in saved) {
         if (saved.hasOwnProperty(key)) {
-            // Если внутри объект (и не массив), уходим в рекурсию, создавая структуру на лету
             if (typeof saved[key] === 'object' && saved[key] !== null && !Array.isArray(saved[key])) {
                 result[key] = deepMerge(defaults ? defaults[key] : {}, saved[key]);
             } else {
@@ -112,7 +110,75 @@ function deepMerge(defaults, saved) {
     return result;
 }
 
-// Автоматический сборщик данных — забирает ВСЁ из gameState и gameMetrics
+// Аварийное восстановление метрик на основе накопленного прогресса ачивок
+function reconstructMetricsFromAchievements() {
+    if (!window.gameState) return;
+    if (!window.gameMetrics) window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
+    
+    const gm = window.gameMetrics;
+    const ach = window.gameState.achievements || {};
+    let healed = false;
+
+    console.log('⚙️ [SAVE-SYSTEM] Верификация корректности игровых метрик против достижений...');
+
+    // 1. Проверка общих кликов (clickMaster)
+    if (ach.clickMaster && typeof ach.clickMaster.progress === 'number') {
+        if ((gm.totalClicks || 0) < ach.clickMaster.progress) {
+            gm.totalClicks = ach.clickMaster.progress;
+            healed = true;
+        }
+    }
+    // 2. Проверка времени в игре (timeInvestor)
+    if (ach.timeInvestor && typeof ach.timeInvestor.progress === 'number') {
+        if ((gm.totalTimePlayed || 0) < ach.timeInvestor.progress) {
+            gm.totalTimePlayed = ach.timeInvestor.progress;
+            healed = true;
+        }
+    }
+    // 3. Проверка уничтоженных блоков (учитываем возможные вариации ключей ID ачивок)
+    const blockAch = ach.blockSmasher || ach.blockMaster || ach.stoneBreaker;
+    if (blockAch && typeof blockAch.progress === 'number') {
+        if ((gm.blocksDestroyed || 0) < blockAch.progress) {
+            gm.blocksDestroyed = blockAch.progress;
+            healed = true;
+        }
+    }
+    // 4. Проверка заработанного золота/кристаллов
+    const coinAch = ach.treasureHunter || ach.coinCollector;
+    if (coinAch && typeof coinAch.progress === 'number') {
+        if ((gm.totalCoinsEarned || 0) < coinAch.progress) {
+            gm.totalCoinsEarned = coinAch.progress;
+            healed = true;
+        }
+    }
+    // 5. Проверка максимального комбо
+    const comboAch = ach.comboKing || ach.comboMaster;
+    if (comboAch && typeof comboAch.progress === 'number') {
+        if ((gm.maxCombo || 0) < comboAch.progress) {
+            gm.maxCombo = comboAch.progress;
+            healed = true;
+        }
+    }
+
+    // Подсчет купленных апгрейдов на основе текущих уровней gameState
+    const currentUpgradesCount = 
+        (window.gameState.clickUpgradeLevel || 0) + 
+        (window.gameState.critChanceUpgradeLevel || 0) + 
+        (window.gameState.critMultiplierUpgradeLevel || 0) + 
+        (window.gameState.helperUpgradeLevel || 0);
+        
+    if ((gm.upgradesBought || 0) < currentUpgradesCount) {
+        gm.upgradesBought = currentUpgradesCount;
+        healed = true;
+    }
+
+    if (healed) {
+        console.warn('⚠️ [SAVE-SYSTEM] Обнаружен сбой или старая версия сохранения! Метрики успешно восстановлены:', gm);
+    } else {
+        console.log('✅ [SAVE-SYSTEM] Проверка пройдена: метрики соответствуют прогрессу достижений.');
+    }
+}
+
 function extractCloudData() {
     if (!window.gameState) return null;
     
@@ -124,7 +190,6 @@ function extractCloudData() {
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
 
     return {
-        // Упрощенные поля для быстрого чтения сервером (лидерборды/админка)
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
         score: Math.floor(window.gameState.totalDamageDealt || 0),
@@ -132,25 +197,22 @@ function extractCloudData() {
         username: username,
         timestamp: Date.now(),
         
-        // Автоматический слепок всего игрового состояния
         full_game_state: JSON.parse(JSON.stringify(window.gameState)),
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {}))
     };
 }
 
-// Автоматический распаковщик данных
 function applyCloudData(cloudData) {
     if (!cloudData) return;
     
-    // ВосстановлениеGameState
+    // Восстановление GameState
     if (cloudData.full_game_state) {
-        console.log('☁️ [LOAD] Авто-накакат gameState из облака...');
+        console.log('☁️ [LOAD] Накатываем gameState...');
         const currentGameActive = window.gameState?.gameActive || false;
         const currentGamePaused = window.gameState?.gamePaused || false;
         
         window.gameState = deepMerge(DEFAULT_GAME_STATE, cloudData.full_game_state);
         
-        // Сброс сессионных флагов, чтобы игра не зависла при старте
         window.gameState.gameActive = currentGameActive;
         window.gameState.gamePaused = currentGamePaused;
         window.gameState.helperActive = false;
@@ -158,11 +220,14 @@ function applyCloudData(cloudData) {
         window.gameState.comboCount = 0;
     }
     
-    // Автоматическое восстановление метрик
+    // Восстановление метрик
     if (cloudData.full_game_metrics) {
-        console.log('📊 [LOAD] Авто-накакат gameMetrics из облака...');
+        console.log('📊 [LOAD] Накатываем gameMetrics...');
         window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, cloudData.full_game_metrics);
     }
+    
+    // КРИТИЧЕСКИЙ ФИКС: Запускаем принудительный щит ресинхронизации
+    reconstructMetricsFromAchievements();
 }
 
 // ============================================
@@ -176,6 +241,12 @@ window.saveGame = function() {
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
             saveBtn.classList.add('save-pending');
+        }
+
+        // КРИТИЧЕСКИЙ ФИКС: Мгновенное дублирование сейва в LocalStorage как локальный буфер
+        const localSnapshot = extractCloudData();
+        if (localSnapshot) {
+            localStorage.setItem('cosmicClicker_localBackup', JSON.stringify(localSnapshot));
         }
         
         if (isOperationLocked) {
@@ -220,7 +291,6 @@ async function cloudSaveAsync() {
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
 
     const gs = window.gameState;
-    // Защита от сохранения "пустышек"
     const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury');
     if (!hasRealData && !gs?._isNewGame) return;
 
@@ -233,11 +303,11 @@ async function cloudSaveAsync() {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
             } else {
-                showSaveIndicator('⚠️', 'Ошибка', '#ff9800');
+                showSaveIndicator('⚠️', 'Локально', '#ff9800');
             }
         }
     } catch (e) {
-        showSaveIndicator('❌', 'Ошибка', '#f44336');
+        showSaveIndicator('❌', 'Ошибка сети', '#f44336');
     } finally {
         isSyncing = false;
     }
@@ -248,21 +318,40 @@ async function cloudSaveAsync() {
 // ============================================
 
 window.loadGame = async function() {
-    if (!window.telegramCloud?.isAvailable) return false;
+    let loadedFromCloud = false;
+    
+    // 1. Попытка загрузки из основного Telegram Cloud шлюза
     try {
-        const result = await window.telegramCloud.loadProgress();
-        if (!result?.success || !result.data) return false;
-        
-        applyCloudData(result.data);
-        return true;
+        if (window.telegramCloud?.isAvailable) {
+            const result = await window.telegramCloud.loadProgress();
+            if (result?.success && result.data) {
+                applyCloudData(result.data);
+                localStorage.setItem('cosmicClicker_localBackup', JSON.stringify(result.data));
+                loadedFromCloud = true;
+                return true;
+            }
+        }
     } catch (e) {
-        console.error('❌ Ошибка загрузки:', e);
-        return false;
+        console.error('❌ Ошибка загрузки из облака Telegram:', e);
     }
+
+    // 2. Локальный фаллбэк, если облако недоступно, выдало ошибку или пустое
+    try {
+        const localRaw = localStorage.getItem('cosmicClicker_localBackup');
+        if (localRaw) {
+            const localData = JSON.parse(localRaw);
+            console.log('💾 [LOAD] Аварийный запуск: применен бэкап из LocalStorage');
+            applyCloudData(localData);
+            return true;
+        }
+    } catch (err) {
+        console.error('❌ Ошибка чтения локального бэкапа LocalStorage:', err);
+    }
+
+    return loadedFromCloud;
 };
 
 window.cloudInit = async function() {
-    if (!window.telegramCloud) return;
     try {
         const loaded = await window.loadGame();
         if (loaded) {
@@ -285,6 +374,8 @@ window.resetGame = function() {
     window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
     window.gameMetrics.startTime = Date.now();
     
+    localStorage.removeItem('cosmicClicker_localBackup');
+    
     if (window.telegramCloud?.saveProgress) {
         window.telegramCloud.saveProgress(extractCloudData()).catch(() => {});
     }
@@ -292,6 +383,7 @@ window.resetGame = function() {
 };
 
 window.hasSave = async function() {
+    if (localStorage.getItem('cosmicClicker_localBackup')) return true;
     if (!window.telegramCloud?.isAvailable) return false;
     try {
         const result = await window.telegramCloud.loadProgress();
@@ -306,7 +398,7 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
         saveBtn.classList.remove('save-pending', 'save-pulse-success', 'save-pulse-error');
-        void saveBtn.offsetWidth; // Трюк с Reflow для перезапуска CSS-анимации
+        void saveBtn.offsetWidth; 
         saveBtn.classList.add(color === '#4CAF50' ? 'save-pulse-success' : 'save-pulse-error');
         setTimeout(() => saveBtn.classList.remove('save-pulse-success', 'save-pulse-error'), 1000);
     }
@@ -340,13 +432,16 @@ function init() {
     window.gameState = deepMerge(DEFAULT_GAME_STATE, window.gameState || {});
     window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, window.gameMetrics || {});
     
+    // Дополнительная валидация на старте сессии
+    reconstructMetricsFromAchievements();
+    
     startAutoSave();
 
     const forceSave = () => { if (window.gameState?.gameActive) window.flushCloudSave(); };
     window.addEventListener('beforeunload', forceSave);
     document.addEventListener('visibilitychange', () => { if (document.hidden) forceSave(); });
 
-    console.log('💾 Автоматическая Save System v3.0 готова. Слияние исправлено.');
+    console.log('💾 Автоматическая Save System v3.1 готова. Метрики под защитой.');
 }
 
 if (document.readyState === 'loading') {
