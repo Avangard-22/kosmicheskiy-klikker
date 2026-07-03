@@ -1,1314 +1,178 @@
-/* ==========================================
-   🎨 COSMIC CLICKER - MAIN STYLESHEET v2.0
-   ========================================== */
+/* COSMIC CLICKER STYLES v3.0 — compressed */
+*,*::before,*::after{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hidden;position:relative;background:#000;width:100vw;height:100vh;color:#fff}
+
+/* ═══ ФОН И ЗАГОЛОВОК ═══ */
+#planetBackgroundCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1}
+#header{position:absolute;top:0;left:0;width:100%;text-align:center;z-index:20;padding:8px 50px 8px 0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.5)}
+#gameTitle{margin:0;font-size:clamp(1.1em,4vw,1.4em);color:#fff;text-shadow:0 0 10px rgba(255,255,255,.3)}
+
+/* ═══ HUD ═══ */
+#hud-left{position:absolute;top:10px;left:10px;z-index:25;display:flex;flex-direction:column;gap:3px;background:transparent;padding:4px 6px;min-width:100px;max-width:120px}
+.hud-item{font-size:clamp(.55em,2vw,.7em);display:flex;align-items:center;gap:3px;color:#fff;white-space:nowrap;text-shadow:0 0 3px rgba(0,0,0,.8);padding:2px 4px;background:rgba(0,0,0,.3);border-radius:4px}
+.hud-item i{width:14px;text-align:center;font-size:.85em}
+#coins-value{color:#FFD54F;text-shadow:0 0 4px rgba(255,213,79,.6)}
+#clickPower-value{color:#4FC3F7;text-shadow:0 0 4px rgba(79,195,247,.6)}
+#critChance-value,#critMultiplier-value{color:#FFD700;text-shadow:0 0 4px rgba(255,215,0,.6)}
+#darkMatter-value{color:#9c27b0;text-shadow:0 0 6px rgba(156,39,176,.6)}
+
+/* ═══ ПРОГРЕСС-БАР ═══ */
+#progressContainer{position:absolute;top:45px;left:50%;transform:translateX(-50%);width:min(90%,400px);height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;z-index:25}
+#progressBar{height:100%;background:linear-gradient(90deg,#bb86fc,#4a55e0);border-radius:4px;width:0%;transition:width .3s}
+#progressText{position:absolute;top:60px;left:50%;transform:translateX(-50%);font-size:clamp(.6em,2.5vw,.7em);color:#a0d2ff;text-shadow:0 0 3px rgba(160,210,255,.6);z-index:25;text-align:center;width:min(90%,400px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ═══ КНОПКИ ═══ */
+#saveBtn{position:absolute;top:10px;right:10px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);color:#4CAF50;transition:transform .1s,background .3s,color .3s}
+#saveBtn:active{transform:scale(.92)}
+#saveIndicator{position:absolute;top:55px;right:10px;padding:4px 8px;background:rgba(0,0,0,.7);color:#4CAF50;border-radius:4px;font-size:.75em;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;font-family:'Orbitron',sans-serif;letter-spacing:.5px}
+
+/* ═══ АНИМАЦИИ СОХРАНЕНИЯ ═══ */
+@keyframes savePending{0%,100%{opacity:.6;transform:scale(1);color:#4CAF50}50%{opacity:1;transform:scale(1.05);color:#FFD700}}
+@keyframes savePulse{0%{box-shadow:0 0 0 0 rgba(76,175,80,.8);transform:scale(1)}50%{box-shadow:0 0 15px 6px rgba(76,175,80,.5);transform:scale(1.12);color:#fff;background:#388E3C}100%{box-shadow:0 0 0 0 rgba(76,175,80,0);transform:scale(1)}}
+@keyframes savePulseErr{0%{box-shadow:0 0 0 0 rgba(244,67,54,.8);transform:scale(1)}50%{box-shadow:0 0 15px 6px rgba(244,67,54,.5);transform:scale(1.12);color:#fff;background:#d32f2f}100%{box-shadow:0 0 0 0 rgba(244,67,54,0);transform:scale(1)}}
+.save-pending{animation:savePending 1.5s ease-in-out infinite;pointer-events:none}
+.save-pulse-success{animation:savePulse .8s cubic-bezier(.175,.885,.32,1.275)forwards}
+.save-pulse-error{animation:savePulseErr .8s cubic-bezier(.175,.885,.32,1.275)forwards}
+
+/* ═══ УЛУЧШЕНИЯ ═══ */
+.upgrade-btn{position:absolute;right:8px;width:clamp(44px,11vw,52px);height:clamp(44px,11vw,52px);border:none;border-radius:8px;font-size:clamp(1em,3.5vw,1.3em);cursor:pointer;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 3px 6px rgba(0,0,0,.3);padding:2px;overflow:hidden}
+.upgrade-btn:active{transform:scale(.92)}
+.upgrade-btn.btn-available:hover{transform:scale(1.05);box-shadow:0 0 15px rgba(76,175,80,.5)}
+.upgrade-btn.btn-available{background:linear-gradient(135deg,#4CAF50,#388E3C);color:#fff}
+.upgrade-btn.btn-unavailable{background:linear-gradient(135deg,#666,#444);color:#ccc;cursor:not-allowed;opacity:.7}
+#upgradeClickBtn{bottom:70px}#upgradeHelperBtn{bottom:130px}#upgradeCritChanceBtn{bottom:190px}#upgradeCritMultBtn{bottom:250px}#upgradeHelperDmgBtn{bottom:310px}
+.upgrade-cost{font-size:clamp(.45em,2vw,.55em);margin-top:1px;font-weight:700;text-shadow:0 0 2px rgba(0,0,0,.8);line-height:1.1}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(.95)}100%{transform:scale(1)}}
+.upgrade-btn.btn-available:active{animation:pulse .3s}
+
+/* ═══ БЛОКИ ═══ */
+#gameArea{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;z-index:5}
+.moving-block{position:absolute;left:50%;transform:translateX(-50%);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;font-weight:700;font-size:clamp(.8em,4vw,.9em);font-family:'Orbitron',monospace;transition:transform .1s;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,.8);overflow:hidden;min-width:60px;min-height:60px}
+.crack-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;background-image:radial-gradient(circle at 30% 30%,transparent 60%,rgba(0,0,0,.3) 65%),radial-gradient(circle at 70% 70%,transparent 60%,rgba(0,0,0,.3) 65%),radial-gradient(circle at 50% 20%,transparent 60%,rgba(0,0,0,.3) 65%);opacity:0;transition:opacity .3s}
+.crack-1{opacity:.3}.crack-2{opacity:.6}.crack-3{opacity:.9}
+
+/* ═══ РЕДКИЕ БЛОКИ ═══ */
+.block-gold{background:linear-gradient(135deg,#ffd700,#ff6b00)!important;animation:gold 3s infinite}
+.block-rainbow{background:linear-gradient(45deg,red,#ff7f00,#ff0,#0f0,#0ff,#00f,#8b00ff)!important;background-size:400% 400%;animation:rainbow 3s infinite}
+.block-crystal{background:linear-gradient(45deg,#0ff,#fff,#0ff)!important;box-shadow:0 0 25px #0ff,0 0 10px #fff inset!important;animation:crystal 2s ease-in-out infinite!important}
+.block-mystery{background:linear-gradient(45deg,#9b59b6,#e74c3c,#3498db)!important;background-size:300% 300%!important;box-shadow:0 0 20px rgba(155,89,182,.7)!important;animation:mystery 4s ease-in-out infinite!important}
+@keyframes gold{0%,100%{box-shadow:0 0 10px rgba(255,215,0,.5)}50%{box-shadow:0 0 20px rgba(255,215,0,.8)}}
+@keyframes rainbow{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+@keyframes crystal{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.05)}}
+@keyframes mystery{0%,100%{background-position:0 50%;filter:hue-rotate(0deg)}50%{background-position:100% 50%;filter:hue-rotate(180deg)}}
+
+/* ═══ BOBO ═══ */
+.helper{position:fixed;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:32px;z-index:9999;pointer-events:none;filter:drop-shadow(0 0 12px rgba(0,198,255,.7));animation:helper 3s ease-in-out infinite;left:0;top:0}
+@keyframes helper{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(0,-8px) scale(1.05)}}
+
+/* ═══ ТЕКСТОВЫЕ ЭФФЕКТЫ ═══ */
+.damage-text,.combo-text,.reward-text{position:absolute;pointer-events:none;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.8),0 0 10px rgba(0,0,0,.9);-webkit-text-stroke:1px #000;text-align:center}
+.damage-text{font-size:clamp(1em,4vw,1.1em);z-index:50;color:#fff;animation:up .8s ease-out forwards}
+.combo-text{font-size:clamp(1.4em,5vw,1.8em);z-index:51;color:#FFD700;max-width:150px;font-family:'Orbitron',monospace;animation:combo 1s ease-out forwards}
+.reward-text{font-size:clamp(1.1em,4vw,1.3em);z-index:52;color:#4CAF50;max-width:120px;font-family:'Orbitron',monospace;animation:reward 1.5s ease-out forwards}
+@keyframes up{0%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-80px);opacity:0}}
+@keyframes combo{0%{transform:translate(-50%,0) scale(.8);opacity:1}50%{transform:translate(-50%,-40px) scale(1.2);opacity:1}100%{transform:translate(-50%,-80px) scale(1);opacity:0}}
+@keyframes reward{0%{transform:translate(-50%,-50%) scale(.8);opacity:1}50%{transform:translate(-50%,-70%) scale(1.1);opacity:1}100%{transform:translate(-50%,-90%) scale(1);opacity:0}}
+
+/* ═══ ВЗРЫВЫ ═══ */
+.explosion{position:absolute;pointer-events:none;z-index:15;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9)0%,transparent 70%);transform:translate(-50%,-50%);animation:explode .6s ease-out forwards}
+.explosion-particle{position:absolute;pointer-events:none;z-index:14;width:12px;height:12px;border-radius:50%;animation:particle .8s ease-out forwards}
+@keyframes explode{0%{transform:translate(-50%,-50%)scale(0);opacity:1}50%{opacity:.8}100%{transform:translate(-50%,-50%)scale(2.5);opacity:0}}
+@keyframes particle{0%{transform:translate(0,0)scale(1);opacity:1}100%{transform:translate(var(--tx),var(--ty))scale(0);opacity:0}}
+@keyframes rare{0%{opacity:0;transform:translate(-50%,-50%)scale(.5)}20%{opacity:1;transform:translate(-50%,-50%)scale(1.1)}80%{opacity:1;transform:translate(-50%,-50%)scale(1)}100%{opacity:0;transform:translate(-50%,-50%)scale(.8)}}
+.rare-block-announce{position:fixed;top:50%;left:50%;font-size:1.8em;font-weight:700;color:gold;z-index:1000;text-shadow:0 0 10px #000,0 0 20px gold;pointer-events:none;animation:rare 2s ease-out forwards}
+#levelAnnounce{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(1.2em,5vw,1.5em);font-weight:700;z-index:40;opacity:0;pointer-events:none;transition:opacity .3s;font-family:'Orbitron',sans-serif;text-align:center;color:#fff;text-shadow:0 0 10px rgba(0,0,0,.8)}
+.tooltip{position:absolute;bottom:70px;right:15px;padding:5px 8px;border-radius:6px;font-size:clamp(.75em,3vw,.85em);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;background:rgba(0,0,0,.8);color:#fff;z-index:35}
+@keyframes fadeInOut{0%{opacity:0;transform:translate(-50%,-50%)scale(.5)}50%{opacity:1;transform:translate(-50%,-50%)scale(1.2)}100%{opacity:0;transform:translate(-50%,-50%)scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-5px)}20%,40%,60%,80%{transform:translateX(5px)}}
+
+/* ═══ МАГАЗИН ═══ */
+.shop-container{position:absolute;bottom:10px;right:10px;z-index:30}
+.shop-btn,.achievements-btn{width:50px;height:50px;border:none;border-radius:8px;font-size:1.3em;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:transform .2s;box-shadow:0 4px 8px rgba(0,0,0,.3)}
+.shop-btn{background:linear-gradient(135deg,#9c27b0,#673ab7)}
+.achievements-btn{background:linear-gradient(135deg,#FF9800,#F57C00)}
+.shop-btn:active,.achievements-btn:active{transform:scale(.92)}
+.shop-panel{position:absolute;bottom:60px;right:0;width:92vw;max-width:480px;max-height:70vh;overflow-y:auto;background:linear-gradient(180deg,rgba(10,15,30,.96),rgba(20,25,40,.96));border-radius:16px;padding:14px;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 40px rgba(0,0,0,.5);display:none;flex-direction:column;gap:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:31}
+.shop-panel::-webkit-scrollbar{width:6px}
+.shop-panel::-webkit-scrollbar-track{background:rgba(255,255,255,.1);border-radius:3px}
+.shop-panel::-webkit-scrollbar-thumb{background:rgba(255,215,0,.4);border-radius:3px}
+.shop-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.shop-title{margin:0;color:#FFD700;font-family:'Orbitron',sans-serif;font-size:1.1em}
+.shop-close-btn{background:rgba(255,255,255,.08);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:1.3em;cursor:pointer;transition:background .15s}
+.shop-close-btn:hover{background:rgba(255,255,255,.18)}
+.shop-balance{color:#FFD54F;font-family:'Orbitron',monospace;font-size:.85em;margin:4px 0 12px}
+.shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.shop-card{--idx:0;position:relative;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 8px 10px;text-align:center;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s,opacity .15s;animation:shopCard .35s ease-out both;animation-delay:calc(var(--idx,0)*.04s);user-select:none}
+@keyframes shopCard{from{opacity:0;transform:translateY(10px)scale(.96)}to{opacity:1;transform:translateY(0)scale(1)}}
+.shop-card:hover{transform:translateY(-2px)}.shop-card:active{transform:scale(.96)}
+.shop-card-icon{font-size:1.7em;color:#4FC3F7;margin-bottom:6px;filter:drop-shadow(0 0 6px rgba(79,195,247,.4))}
+.shop-card-name{color:#fff;font-weight:700;font-size:.85em;margin-bottom:4px;font-family:'Orbitron',sans-serif}
+.shop-card-desc{color:#aaa;font-size:.7em;line-height:1.25;min-height:2.4em}
+.shop-card-cost{margin-top:8px;padding:4px 8px;border-radius:6px;background:rgba(255,215,0,.15);color:#FFD54F;font-weight:700;font-size:.8em;font-family:'Orbitron',monospace}
+.shop-card.disabled{opacity:.55;filter:grayscale(60%);cursor:not-allowed;background:rgba(0,0,0,.4)}
+.shop-card.disabled .shop-card-cost{background:rgba(255,255,255,.05);color:#888}
+.shop-card.active{border-color:#4CAF50;background:linear-gradient(135deg,rgba(76,175,80,.2),rgba(76,175,80,.05));box-shadow:0 0 14px rgba(76,175,80,.25)}
+.shop-card.active .shop-card-icon{color:#4CAF50;filter:drop-shadow(0 0 6px rgba(76,175,80,.6))}
+.shop-card.active .shop-card-name::after{content:' ●';color:#4CAF50;animation:shopDot 1.4s ease-in-out infinite}
+@keyframes shopDot{0%,100%{opacity:.5}50%{opacity:1}}
+.shop-card.active .shop-card-cost{background:rgba(76,175,80,.25);color:#c8f7c5}
+.shop-card-timer{margin-top:6px;color:#c8f7c5;font-size:.8em;display:flex;align-items:center;gap:6px;justify-content:center;font-family:'Orbitron',monospace}
+.shop-card-timer-bar{flex:1;height:4px;background:rgba(255,255,255,.12);border-radius:2px;overflow:hidden}
+.shop-card-timer-bar>span{display:block;height:100%;background:linear-gradient(90deg,#4CAF50,#8BC34A);transition:width .4s linear}
+.shop-card.shake{animation:shopShake .45s}
+@keyframes shopShake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+.shop-card.bought{animation:shopBought .8s}
+@keyframes shopBought{0%{box-shadow:0 0 0 0 rgba(76,175,80,.7);transform:scale(1)}50%{box-shadow:0 0 25px 6px rgba(76,175,80,.4);transform:scale(1.04)}100%{box-shadow:0 0 0 0 rgba(76,175,80,0);transform:scale(1)}}
+#activeBoosts{position:fixed;top:120px;right:20px;display:none;flex-wrap:wrap;gap:5px;z-index:32;max-width:300px}
+
+/* ═══ ДОСТИЖЕНИЯ ═══ */
+.achievements-container{position:absolute;top:60px;right:10px;z-index:30}
+.achievements-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-width:500px;max-height:70vh;background:rgba(0,0,0,.85);border-radius:15px;padding:20px;display:none;flex-direction:column;gap:10px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:3px solid #FFD700;z-index:1000;overflow-y:auto;box-shadow:0 10px 40px rgba(255,215,0,.3)}
+.achievements-panel::-webkit-scrollbar{width:6px}
+.achievements-panel::-webkit-scrollbar-track{background:rgba(255,255,255,.1);border-radius:3px}
+.achievements-panel::-webkit-scrollbar-thumb{background:#FFD700;border-radius:3px}
+
+/* ═══ ПЕРЕХОД ═══ */
+.transition-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;width:min(90vw,400px);background:rgba(10,15,30,.96);border:2px solid #4FC3F7;border-radius:16px;padding:24px;text-align:center;font-family:'Orbitron',sans-serif;box-shadow:0 10px 60px rgba(0,0,0,.7);animation:modal .4s ease-out;color:#fff}
+.transition-modal h2{margin:0 0 8px;font-size:1.4em}
+.transition-modal .tm-description{color:#aaa;font-size:.85em;margin-bottom:16px;line-height:1.4}
+.transition-modal .tm-perk-box{background:rgba(255,215,0,.12);border-radius:12px;padding:12px;margin-bottom:12px;border:1px solid rgba(255,215,0,.3)}
+.transition-modal .tm-perk-title{color:#FFD700;font-size:.9em;font-weight:700}
+.transition-modal .tm-perk-name{color:#fff;font-size:1em;margin-top:4px}
+.transition-modal .tm-darkmatter-box{background:rgba(79,195,247,.08);border-radius:12px;padding:12px;margin-bottom:16px;border:1px solid rgba(79,195,247,.2)}
+.transition-modal .tm-darkmatter-title{color:#4FC3F7;font-size:.85em;font-weight:700}
+.transition-modal .tm-darkmatter-desc{color:#aaa;font-size:.75em;margin:4px 0 8px;line-height:1.4}
+.transition-modal .tm-balance{color:#aaa;font-size:.7em;margin-bottom:8px}
+.transition-modal .tm-btn,.transition-modal .tm-proceed-btn{border-radius:8px;color:#fff;padding:10px 24px;cursor:pointer;font-family:'Orbitron',sans-serif;transition:all .2s;border:1px solid #4FC3F7;background:linear-gradient(135deg,rgba(79,195,247,.3),rgba(33,150,243,.3))}
+.transition-modal .tm-btn:hover{background:linear-gradient(135deg,rgba(79,195,247,.5),rgba(33,150,243,.5))}
+.transition-modal .tm-proceed-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);margin-top:8px;padding:8px 20px}
+.transition-modal .tm-proceed-btn:hover{background:rgba(255,255,255,.15)}
+@keyframes modal{from{opacity:0;transform:translate(-50%,-50%)scale(.85)}to{opacity:1;transform:translate(-50%,-50%)scale(1)}}
+
+/* ═══ ЕЖЕДНЕВНЫЙ БОНУС ═══ */
+#dailyBonusIcon{position:fixed;top:180px;right:20px;width:60px;height:60px;background:linear-gradient(135deg,rgba(255,215,0,.3),rgba(255,140,0,.3));border:2px solid #FFD700;border-radius:50%;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:all .3s;box-shadow:0 4px 15px rgba(255,215,0,.4);font-family:'Orbitron',sans-serif}
+#dailyBonusDay{font-size:.65em;color:#FFD700;font-weight:700;margin-bottom:2px}
+#dailyBonusTimer{font-size:.5em;color:#fff;font-weight:700}
+#dailyBonusIcon:hover{transform:scale(1.1)}#dailyBonusIcon:active{transform:scale(.95)}
+@keyframes dailyPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* ═══ ЭКРАНЫ ═══ */
+#welcomeScreen,#gameOverScreen,#saveScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:100;color:#fff;text-align:center;padding:15px;background:rgba(0,0,0,.85)}
+#welcomeScreen h2{font-size:clamp(1.5em,6vw,2em);margin-bottom:15px}
+#welcomeScreen p{max-width:95%;text-align:center;margin:8px 0;line-height:1.4;font-size:clamp(.9em,3.5vw,1em)}
+.btn{padding:clamp(10px,3vw,12px)clamp(25px,6vw,30px);margin-top:15px;font-size:clamp(1em,4vw,1.1em);background:#4CAF50;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Orbitron',sans-serif;transition:transform .1s;min-height:44px}
+#continueBtn{background:#2196F3;margin-bottom:10px}
+#continueBtn.save-available{background:#4CAF50}
+#continueBtn.no-save{background:#f44336}
+#gameOverScreen h2{font-size:clamp(1.6em,6vw,2.2em);margin-bottom:15px}
+#finalScore{font-size:clamp(1.1em,4vw,1.4em);margin-bottom:15px}
+#restartBtn,#shareBtn{padding:clamp(8px,2.5vw,10px)clamp(20px,5vw,24px);margin:6px;font-size:clamp(.9em,3.5vw,1em);border:none;border-radius:8px;cursor:pointer;font-family:'Orbitron',sans-serif;transition:transform .1s;min-height:44px}
+#restartBtn{background:#4CAF50;color:#fff}#shareBtn{background:#00c853;color:#fff}
+#langBtn-welcome{position:absolute;top:15px;right:15px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.5em;cursor:pointer;z-index:35;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);color:#fff;transition:transform .1s}
+#langBtn-welcome:active{transform:scale(.92)}
+
+/* ═══ МУЗЫКА ═══ */
+#musicMuteBtn{position:fixed;top:10px;right:60px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);color:#fff;transition:transform .1s,background .2s}
+#musicMuteBtn:hover{background:rgba(0,0,0,.7);transform:scale(1.1)}
+#musicMuteBtn:active{transform:scale(.92)}
 
-/* ✅ Универсальный сброс и мобильная адаптация */
-*, *::before, *::after {
-    box-sizing: border-box;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-body {
-    font-family: 'Orbitron', 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    position: relative;
-    background: #000;
-    width: 100vw;
-    height: 100vh;
-    color: #fff;
-}
-
-/* ==========================================
-   🌌 ФОН И ЗАГОЛОВОК
-   ========================================== */
-#planetBackgroundCanvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-}
-
-#header {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    text-align: center;
-    z-index: 20;
-    padding: 8px 50px 8px 0;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    background: rgba(0, 0, 0, 0.5);
-}
-
-#gameTitle {
-    margin: 0;
-    font-size: clamp(1.1em, 4vw, 1.4em);
-    color: white;
-    text-shadow: 0 0 10px rgba(255,255,255,0.3);
-}
-
-/* ==========================================
-   📊 HUD (ИНТЕРФЕЙС)
-   ========================================== */
-#hud-left {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 25;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;                    /* ✅ Уменьшили gap */
-    background: transparent;     /* ✅ Полностью прозрачный фон */
-    padding: 4px 6px;            /* ✅ Уменьшили padding */
-    border-radius: 0;            /* ✅ Убрали скругление */
-    backdrop-filter: none;       /* ✅ Убрали blur */
-    -webkit-backdrop-filter: none;
-    border: none;                /* ✅ Убрали границу */
-    min-width: 100px;            /* ✅ Уменьшили min-width */
-    max-width: 120px;            /* ✅ Уменьшили max-width */
-}
-
-.hud-item {
-    font-size: clamp(0.55em, 2vw, 0.7em);  /* ✅ Уменьшили шрифт */
-    display: flex;
-    align-items: center;
-    gap: 3px;                    /* ✅ Уменьшили gap */
-    color: white;
-    white-space: nowrap;
-    text-shadow: 0 0 3px rgba(0,0,0,0.8);  /* ✅ Добавили тень для читаемости */
-}
-
-.hud-item i {
-    width: 14px;                 /* ✅ Уменьшили иконки */
-    text-align: center;
-    font-size: 0.85em;
-}
-
-#coins-value { color: #FFD54F; text-shadow: 0 0 4px rgba(255,213,79,0.6); }
-#clickPower-value { color: #4FC3F7; text-shadow: 0 0 4px rgba(79,195,247,0.6); }
-#critChance-value, #critMultiplier-value { color: #FFD700; text-shadow: 0 0 4px rgba(255,215,0,0.6); }
-#darkMatter-value { color: #9c27b0; text-shadow: 0 0 6px rgba(156, 39, 176, 0.6); }
-
-/* Прогресс-бар */
-#progressContainer {
-    position: absolute;
-    top: 45px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(90%, 400px);
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    overflow: hidden;
-    z-index: 25;
-}
-
-#progressBar {
-    height: 100%;
-    background: linear-gradient(90deg, #bb86fc, #4a55e0);
-    border-radius: 4px;
-    width: 0%;
-    transition: width 0.3s ease;
-}
-
-#progressText {
-    position: absolute;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: clamp(0.6em, 2.5vw, 0.7em);
-    color: #a0d2ff;
-    text-shadow: 0 0 3px rgba(160,210,255,0.6);
-    z-index: 25;
-    text-align: center;
-    width: min(90%, 400px);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Кнопка сохранения */
-#saveBtn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.2em;
-    cursor: pointer;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
-    color: #4CAF50;
-    transition: transform 0.1s, background-color 0.3s, color 0.3s;
-}
-
-#saveBtn:active { transform: scale(0.92); }
-
-#saveIndicator {
-    position: absolute;
-    top: 55px;
-    right: 10px;
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.7);
-    color: #4CAF50;
-    border-radius: 4px;
-    font-size: 0.75em;
-    z-index: 9999;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    font-family: 'Orbitron', sans-serif;
-    letter-spacing: 0.5px;
-}
-
-/* ==========================================
-   ⏳ ЭФФЕКТЫ И ИМПУЛЬСЫ СИСТЕМЫ СОХРАНЕНИЯ
-   ========================================== */
-@keyframes savePendingAnimation {
-    0%, 100% { opacity: 0.6; transform: scale(1); color: #4CAF50; }
-    50% { opacity: 1; transform: scale(1.05); color: #FFD700; }
-}
-
-@keyframes savePulseSuccessAnimation {
-    0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.8); transform: scale(1); }
-    50% { box-shadow: 0 0 15px 6px rgba(76, 175, 80, 0.5); transform: scale(1.12); color: #fff; background: #388E3C; }
-    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); transform: scale(1); }
-}
-
-@keyframes savePulseErrorAnimation {
-    0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.8); transform: scale(1); }
-    50% { box-shadow: 0 0 15px 6px rgba(244, 67, 54, 0.5); transform: scale(1.12); color: #fff; background: #d32f2f; }
-    100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); transform: scale(1); }
-}
-
-.save-pending {
-    animation: savePendingAnimation 1.5s ease-in-out infinite;
-    pointer-events: none;
-}
-
-.save-pulse-success {
-    animation: savePulseSuccessAnimation 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-.save-pulse-error {
-    animation: savePulseErrorAnimation 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* ==========================================
-   🔧 КНОПКИ УЛУЧШЕНИЙ
-   ========================================== */
-.upgrade-btn {
-    position: absolute;
-    right: 8px;
-    width: clamp(44px, 11vw, 52px);
-    height: clamp(44px, 11vw, 52px);
-    border: none;
-    border-radius: 8px;
-    font-size: clamp(1em, 3.5vw, 1.3em);
-    cursor: pointer;
-    z-index: 30;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-    padding: 2px;
-    overflow: hidden;
-}
-
-.upgrade-btn:active { transform: scale(0.92); }
-.upgrade-btn.btn-available:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(76, 175, 80, 0.5); }
-
-#upgradeClickBtn { bottom: 70px; }
-#upgradeHelperBtn { bottom: 130px; }
-#upgradeCritChanceBtn { bottom: 190px; }
-#upgradeCritMultBtn { bottom: 250px; }
-#upgradeHelperDmgBtn { bottom: 310px; }
-
-.upgrade-cost {
-    font-size: clamp(0.45em, 2vw, 0.55em);
-    margin-top: 1px;
-    font-weight: bold;
-    text-shadow: 0 0 2px rgba(0,0,0,0.8);
-    line-height: 1.1;
-}
-
-.upgrade-btn.btn-available { background: linear-gradient(135deg, #4CAF50, #388E3C); color: white; }
-.upgrade-btn.btn-unavailable { background: linear-gradient(135deg, #666, #444); color: #ccc; cursor: not-allowed; opacity: 0.7; }
-
-@keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.95); } 100% { transform: scale(1); } }
-.upgrade-btn.btn-available:active { animation: pulse 0.3s; }
-
-/* ==========================================
-   🧱 БЛОКИ И ИГРОВАЯ ЗОНА
-   ========================================== */
-#gameArea {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: 5;
-}
-
-.moving-block {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    font-weight: bold;
-    font-size: clamp(0.8em, 4vw, 0.9em);
-    font-family: 'Orbitron', monospace;
-    transition: transform 0.1s;
-    color: white;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    overflow: hidden;
-    min-width: 60px;
-    min-height: 60px;
-}
-
-.crack-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    background-image: radial-gradient(circle at 30% 30%, transparent 60%, rgba(0,0,0,0.3) 65%),
-                      radial-gradient(circle at 70% 70%, transparent 60%, rgba(0,0,0,0.3) 65%),
-                      radial-gradient(circle at 50% 20%, transparent 60%, rgba(0,0,0,0.3) 65%);
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-.crack-1 { opacity: 0.3; }
-.crack-2 { opacity: 0.6; }
-.crack-3 { opacity: 0.9; }
-
-/* Редкие блоки */
-.block-gold { background: linear-gradient(135deg, #ffd700, #ff6b00) !important; animation: gold-shimmer 3s infinite; }
-.block-rainbow { background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #00ffff, #0000ff, #8b00ff) !important; background-size: 400% 400%; animation: rainbow 3s ease infinite; }
-.block-crystal { background: linear-gradient(45deg, #00ffff, #ffffff, #00ffff) !important; box-shadow: 0 0 25px #00ffff, 0 0 10px #ffffff inset !important; animation: crystalPulse 2s ease-in-out infinite !important; }
-.block-mystery { background: linear-gradient(45deg, #9b59b6, #e74c3c, #3498db) !important; background-size: 300% 300% !important; box-shadow: 0 0 20px rgba(155, 89, 182, 0.7) !important; animation: mysteryShift 4s ease-in-out infinite !important; }
-
-@keyframes gold-shimmer { 0% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } 50% { box-shadow: 0 0 20px rgba(255,215,0,0.8); } 100% { box-shadow: 0 0 10px rgba(255,215,0,0.5); } }
-@keyframes rainbow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-@keyframes crystalPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
-@keyframes mysteryShift { 0%, 100% { background-position: 0% 50%; filter: hue-rotate(0deg); } 50% { background-position: 100% 50%; filter: hue-rotate(180deg); } }
-
-/* ==========================================
-   🤖 BOBO (ПОМОЩНИК)
-   ========================================== */
-.helper {
-    position: fixed;
-    width: 44px;
-    height: 44px;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    line-height: 1;
-    z-index: 9999;
-    pointer-events: none;
-    filter: drop-shadow(0 0 12px rgba(0, 198, 255, 0.7));
-    animation: helperFloat 3s ease-in-out infinite;
-    left: 0;
-    top: 0;
-}
-
-.helper::before { content: ''; }
-
-@keyframes helperFloat {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(0, -8px) scale(1.05); }
-}
-
-/* ==========================================
-   💥 ЭФФЕКТЫ И АНИМАЦИИ
-   ========================================== */
-.damage-text {
-    font-size: clamp(1em, 4vw, 1.1em);
-    position: absolute;
-    pointer-events: none;
-    z-index: 50;
-    opacity: 1;
-    font-weight: bold;
-    color: #FFFFFF;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
-    max-width: 100px;
-    text-align: center;
-    -webkit-text-stroke: 1px #000000;
-    animation: damageFloat 0.8s ease-out forwards;
-}
-
-.combo-text {
-    font-size: clamp(1.4em, 5vw, 1.8em);
-    position: absolute;
-    pointer-events: none;
-    z-index: 51;
-    font-weight: bold;
-    color: #FFD700;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
-    font-family: 'Orbitron', monospace;
-    max-width: 150px;
-    text-align: center;
-    -webkit-text-stroke: 1px #000000;
-    animation: comboFloat 1s ease-out forwards;
-}
-
-.reward-text {
-    font-size: clamp(1.1em, 4vw, 1.3em);
-    position: absolute;
-    pointer-events: none;
-    z-index: 52;
-    font-weight: bold;
-    color: #4CAF50;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.9);
-    font-family: 'Orbitron', monospace;
-    max-width: 120px;
-    text-align: center;
-    -webkit-text-stroke: 1px #000000;
-    animation: rewardFloat 1.5s ease-out forwards;
-}
-
-@keyframes damageFloat {
-    0% { transform: translate(-50%, 0); opacity: 1; }
-    100% { transform: translate(-50%, -80px); opacity: 0; }
-}
-
-@keyframes comboFloat {
-    0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
-    50% { transform: translate(-50%, -40px) scale(1.2); opacity: 1; }
-    100% { transform: translate(-50%, -80px) scale(1); opacity: 0; }
-}
-
-@keyframes rewardFloat {
-    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
-    50% { transform: translate(-50%, -70%) scale(1.1); opacity: 1; }
-    100% { transform: translate(-50%, -90%) scale(1); opacity: 0; }
-}
-
-.explosion {
-    position: absolute;
-    pointer-events: none;
-    z-index: 15;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 70%);
-    transform: translate(-50%, -50%);
-    animation: explode 0.6s ease-out forwards;
-}
-
-.explosion-particle {
-    position: absolute;
-    pointer-events: none;
-    z-index: 14;
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    animation: particleFly 0.8s ease-out forwards;
-}
-
-@keyframes explode { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0; } }
-@keyframes particleFly { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; } }
-
-.rare-block-announce {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    font-size: 1.8em;
-    font-weight: bold;
-    color: gold;
-    z-index: 1000;
-    text-shadow: 0 0 10px black, 0 0 20px gold;
-    pointer-events: none;
-    animation: rareBlockAnnounce 2s ease-out forwards;
-}
-
-@keyframes rareBlockAnnounce {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-}
-
-#levelAnnounce {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: clamp(1.2em, 5vw, 1.5em);
-    font-weight: bold;
-    z-index: 40;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    font-family: 'Orbitron', sans-serif;
-    text-align: center;
-    color: white;
-    text-shadow: 0 0 10px rgba(0,0,0,0.8);
-}
-
-.tooltip {
-    position: absolute;
-    bottom: 70px; right: 15px;
-    padding: 5px 8px;
-    border-radius: 6px;
-    font-size: clamp(0.75em, 3vw, 0.85em);
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    z-index: 35;
-}
-
-@keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%,-50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1); } }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
-
-/* ==========================================
-   🛒 МАГАЗИН — КАРТОЧКИ (v2.0)
-   ========================================== */
-.shop-container { position: absolute; bottom: 10px; right: 10px; z-index: 30; }
-
-.shop-btn {
-    width: 50px; height: 50px;
-    border: none; border-radius: 8px;
-    font-size: 1.3em; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, #9c27b0, #673ab7);
-    color: white; transition: transform 0.2s;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-.shop-btn:active { transform: scale(0.92); }
-
-/* ✅ ЕДИНСТВЕННОЕ определение .shop-panel (старое удалено) */
-.shop-panel {
-    position: absolute;
-    bottom: 60px;
-    right: 0;
-    width: 92vw;
-    max-width: 480px;
-    max-height: 70vh;
-    overflow-y: auto;
-    background: linear-gradient(180deg, rgba(10, 15, 30, 0.96), rgba(20, 25, 40, 0.96));
-    border-radius: 16px;
-    padding: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 31;
-    scrollbar-width: thin;
-    scrollbar-color: #4CAF50 #222;
-}
-
-.shop-panel::-webkit-scrollbar { width: 6px; }
-.shop-panel::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
-.shop-panel::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.4); border-radius: 3px; }
-
-.shop-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-}
-
-.shop-title {
-    margin: 0;
-    color: #FFD700;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.1em;
-}
-
-.shop-close-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: none;
-    color: #fff;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    font-size: 1.3em;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.shop-close-btn:hover { background: rgba(255, 255, 255, 0.18); }
-.shop-close-btn:active { transform: scale(0.92); }
-
-.shop-balance {
-    color: #FFD54F;
-    font-family: 'Orbitron', monospace;
-    font-size: 0.85em;
-    margin: 4px 0 12px;
-    opacity: 0.9;
-}
-
-/* === СЕТКА КАРТОЧЕК === */
-.shop-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.shop-card {
-    --idx: 0;
-    position: relative;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 12px 8px 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, opacity 0.15s;
-    animation: shopCardEnter 0.35s ease-out both;
-    animation-delay: calc(var(--idx, 0) * 0.04s);
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-@keyframes shopCardEnter {
-    from { opacity: 0; transform: translateY(10px) scale(0.96); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.shop-card:hover { transform: translateY(-2px); }
-.shop-card:active { transform: scale(0.96); }
-
-.shop-card-icon {
-    font-size: 1.7em;
-    color: #4FC3F7;
-    margin-bottom: 6px;
-    filter: drop-shadow(0 0 6px rgba(79, 195, 247, 0.4));
-}
-
-.shop-card-name {
-    color: #fff;
-    font-weight: bold;
-    font-size: 0.85em;
-    margin-bottom: 4px;
-    font-family: 'Orbitron', sans-serif;
-}
-
-.shop-card-desc {
-    color: #aaa;
-    font-size: 0.7em;
-    line-height: 1.25;
-    min-height: 2.4em;
-}
-
-.shop-card-cost {
-    margin-top: 8px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: rgba(255, 215, 0, 0.15);
-    color: #FFD54F;
-    font-weight: bold;
-    font-size: 0.8em;
-    font-family: 'Orbitron', monospace;
-    white-space: nowrap;
-}
-
-/* 🟡 Состояния */
-.shop-card.disabled {
-    opacity: 0.55;
-    filter: grayscale(60%);
-    cursor: not-allowed;
-    background: rgba(0, 0, 0, 0.4);
-}
-.shop-card.disabled .shop-card-cost {
-    background: rgba(255, 255, 255, 0.05);
-    color: #888;
-}
-
-.shop-card.active {
-    border-color: #4CAF50;
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.05));
-    box-shadow: 0 0 14px rgba(76, 175, 80, 0.25);
-}
-.shop-card.active .shop-card-icon {
-    color: #4CAF50;
-    filter: drop-shadow(0 0 6px rgba(76, 175, 80, 0.6));
-}
-.shop-card.active .shop-card-name::after {
-    content: ' ●';
-    color: #4CAF50;
-    animation: shopActiveDot 1.4s ease-in-out infinite;
-}
-.shop-card.active .shop-card-cost {
-    background: rgba(76, 175, 80, 0.25);
-    color: #c8f7c5;
-}
-
-@keyframes shopActiveDot {
-    0%, 100% { opacity: 0.5; }
-    50%     { opacity: 1; }
-}
-
-.shop-card-timer {
-    margin-top: 6px;
-    color: #c8f7c5;
-    font-size: 0.8em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    justify-content: center;
-    font-family: 'Orbitron', monospace;
-}
-
-.shop-card-timer-bar {
-    flex: 1;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 2px;
-    overflow: hidden;
-}
-.shop-card-timer-bar > span {
-    display: block;
-    height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #8BC34A);
-    transition: width 0.4s linear;
-}
-
-/* Feedback-анимации */
-@keyframes shopShake {
-    10%, 90% { transform: translateX(-2px); }
-    20%, 80% { transform: translateX(4px); }
-    30%, 50%, 70% { transform: translateX(-8px); }
-    40%, 60% { transform: translateX(8px); }
-}
-.shop-card.shake { animation: shopShake 0.45s; }
-
-@keyframes shopBought {
-    0%   { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); transform: scale(1); }
-    50%  { box-shadow: 0 0 25px 6px rgba(76, 175, 80, 0.4); transform: scale(1.04); }
-    100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); transform: scale(1); }
-}
-.shop-card.bought { animation: shopBought 0.8s; }
-
-/* Активные бусты HUD */
-#activeBoosts {
-    position: fixed;
-    top: 120px;
-    right: 20px;
-    display: none;
-    flex-wrap: wrap;
-    gap: 5px;
-    z-index: 32;
-    max-width: 300px;
-}
-
-/* ==========================================
-   🏆 ДОСТИЖЕНИЯ
-   ========================================== */
-.achievements-container { position: absolute; top: 60px; right: 10px; z-index: 30; }
-
-.achievements-btn {
-    width: 50px; height: 50px;
-    border: none; border-radius: 8px;
-    font-size: 1.3em; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(135deg, #FF9800, #F57C00);
-    color: white; transition: transform 0.2s;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-.achievements-btn:active { transform: scale(0.92); }
-
-.achievements-panel {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 500px;
-    max-height: 70vh;
-    background: rgba(0, 0, 0, 0.85);
-    border-radius: 15px;
-    padding: 20px;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 3px solid #FFD700;
-    z-index: 1000;
-    overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(255, 215, 0, 0.3);
-}
-
-.achievements-panel::-webkit-scrollbar { width: 6px; }
-.achievements-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
-.achievements-panel::-webkit-scrollbar-thumb { background: #FFD700; border-radius: 3px; }
-
-/* ✅ Мёртвые .achievement-item удалены — achievements.js использует .ach-icon-card */
-
-/* ==========================================
-   ☄️ ПЕРЕХОД МЕЖДУ ПЛАНЕТАМИ (транзишн-модал)
-   ========================================== */
-.transition-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 200;
-    width: min(90vw, 400px);
-    background: rgba(10, 15, 30, 0.96);
-    border: 2px solid #4FC3F7;
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    font-family: 'Orbitron', sans-serif;
-    box-shadow: 0 10px 60px rgba(0, 0, 0, 0.7);
-    animation: modalEnter 0.4s ease-out;
-    color: #fff;
-}
-
-.transition-modal h2 {
-    margin: 0 0 8px;
-    font-size: 1.4em;
-}
-
-.transition-modal .tm-description {
-    color: #aaa;
-    font-size: 0.85em;
-    margin-bottom: 16px;
-    line-height: 1.4;
-}
-
-.transition-modal .tm-perk-box {
-    background: rgba(255, 215, 0, 0.12);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 12px;
-    border: 1px solid rgba(255, 215, 0, 0.3);
-}
-
-.transition-modal .tm-perk-title {
-    color: #FFD700;
-    font-size: 0.9em;
-    font-weight: bold;
-}
-
-.transition-modal .tm-perk-name {
-    color: #fff;
-    font-size: 1em;
-    margin-top: 4px;
-}
-
-.transition-modal .tm-darkmatter-box {
-    background: rgba(79, 195, 247, 0.08);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 16px;
-    border: 1px solid rgba(79, 195, 247, 0.2);
-}
-
-.transition-modal .tm-darkmatter-title {
-    color: #4FC3F7;
-    font-size: 0.85em;
-    font-weight: bold;
-}
-
-.transition-modal .tm-darkmatter-desc {
-    color: #aaa;
-    font-size: 0.75em;
-    margin: 4px 0 8px;
-    line-height: 1.4;
-}
-
-.transition-modal .tm-balance {
-    color: #aaa;
-    font-size: 0.7em;
-    margin-bottom: 8px;
-}
-
-.transition-modal .tm-btn {
-    border-radius: 10px;
-    border: 1px solid #4FC3F7;
-    color: #fff;
-    padding: 10px 24px;
-    cursor: pointer;
-    background: linear-gradient(135deg, rgba(79, 195, 247, 0.3), rgba(33, 150, 243, 0.3));
-    font-family: 'Orbitron', sans-serif;
-    font-weight: bold;
-    transition: all 0.2s;
-}
-.transition-modal .tm-btn:hover {
-    background: linear-gradient(135deg, rgba(79, 195, 247, 0.5), rgba(33, 150, 243, 0.5));
-}
-.transition-modal .tm-btn:active { transform: scale(0.95); }
-
-.transition-modal .tm-proceed-btn {
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
-    padding: 8px 20px;
-    cursor: pointer;
-    margin-top: 8px;
-    font-family: 'Orbitron', sans-serif;
-    transition: all 0.2s;
-}
-.transition-modal .tm-proceed-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-@keyframes modalEnter {
-    from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-}
-
-/* ==========================================
-   🎁 ЕЖЕДНЕВНЫЙ БОНУС
-   ========================================== */
-#dailyBonusIcon {
-    position: fixed;
-    top: 180px;
-    right: 20px;
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(255, 140, 0, 0.3));
-    border: 2px solid #FFD700;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
-    font-family: 'Orbitron', sans-serif;
-}
-
-#dailyBonusDay { font-size: 0.65em; color: #FFD700; font-weight: bold; margin-bottom: 2px; }
-#dailyBonusTimer { font-size: 0.5em; color: #fff; font-weight: bold; }
-#dailyBonusIcon:hover { transform: scale(1.1); }
-#dailyBonusIcon:active { transform: scale(0.95); }
-
-@keyframes dailyBonusPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-}
-
-/* ==========================================
-   🖥️ ЭКРАНЫ (WELCOME / GAME OVER)
-   ========================================== */
-#welcomeScreen, #gameOverScreen, #saveScreen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    color: white;
-    text-align: center;
-    padding: 15px;
-    box-sizing: border-box;
-    background: rgba(0,0,0,0.85);
-}
-
-#welcomeScreen h2 { font-size: clamp(1.5em, 6vw, 2em); margin-bottom: 15px; }
-#welcomeScreen p { max-width: 95%; text-align: center; margin: 8px 0; line-height: 1.4; font-size: clamp(0.9em, 3.5vw, 1em); }
-
-.btn {
-    padding: clamp(10px, 3vw, 12px) clamp(25px, 6vw, 30px);
-    margin-top: 15px;
-    font-size: clamp(1em, 4vw, 1.1em);
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: 'Orbitron', sans-serif;
-    transition: transform 0.1s;
-    min-height: 44px;
-}
-
-#continueBtn { background: #2196F3; margin-bottom: 10px; }
-#continueBtn.save-available { background: #4CAF50; }
-#continueBtn.no-save { background: #f44336; }
-
-#gameOverScreen h2 { font-size: clamp(1.6em, 6vw, 2.2em); margin-bottom: 15px; }
-#finalScore { font-size: clamp(1.1em, 4vw, 1.4em); margin-bottom: 15px; }
-
-#restartBtn, #shareBtn {
-    padding: clamp(8px, 2.5vw, 10px) clamp(20px, 5vw, 24px);
-    margin: 6px;
-    font-size: clamp(0.9em, 3.5vw, 1em);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: 'Orbitron', sans-serif;
-    transition: transform 0.1s;
-    min-height: 44px;
-}
-#restartBtn { background: #4CAF50; color: white; }
-#shareBtn { background: #00c853; color: white; }
-
-#langBtn-welcome {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.5em;
-    cursor: pointer;
-    z-index: 35;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    transition: transform 0.1s;
-}
-#langBtn-welcome:active { transform: scale(0.92); }
-
-/* ==========================================
-   🎵 МУЗЫКАЛЬНАЯ КНОПКА
-   ========================================== */
-#musicMuteBtn {
-    position: fixed;
-    top: 10px;
-    right: 60px;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.2em;
-    cursor: pointer;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    transition: transform 0.1s, background 0.2s;
-}
-
-#musicMuteBtn:hover {
-    background: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
-}
-
-#musicMuteBtn:active { transform: scale(0.92); }
-
-/* ==========================================
-   📱 МОБИЛЬНАЯ АДАПТАЦИЯ
-   ========================================== */
-
-/* ✅ Планшеты и большие телефоны */
-@media (max-width: 768px) {
-    /* HUD слева — прозрачный фон, компактный */
-    #hud-left {
-        top: 65px;
-        left: 8px;
-        padding: 4px 6px;
-        min-width: 100px;
-        max-width: 120px;
-        gap: 1px;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        max-height: calc(100vh - 80px);
-        overflow-y: auto;
-    }
-
-    .hud-item {
-        font-size: clamp(0.55em, 2vw, 0.65em);
-        gap: 3px;
-        padding: 2px 4px;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 4px;
-        text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
-    }
-
-    .hud-item i {
-        width: 14px;
-        font-size: 0.8em;
-    }
-
-    /* ✅ Компактный Voyager Tracker */
-    .voyager-hud-container {
-        margin-top: 8px;
-        padding-top: 6px;
-    }
-
-    .voyager-hud-title {
-        font-size: 0.6em;
-        margin-bottom: 4px;
-    }
-
-    .voyager-hud-item {
-        font-size: 0.65em;
-        padding: 4px 6px;
-        margin-bottom: 3px;
-    }
-
-    /* Кнопки улучшений справа */
-    .upgrade-btn {
-        width: 42px;
-        height: 42px;
-        right: 6px;
-    }
-
-    .upgrade-cost {
-        font-size: 0.45em;
-    }
-
-    #upgradeClickBtn { bottom: 65px; }
-    #upgradeHelperBtn { bottom: 115px; }
-    #upgradeCritChanceBtn { bottom: 165px; }
-    #upgradeCritMultBtn { bottom: 215px; }
-    #upgradeHelperDmgBtn { bottom: 265px; }
-
-    /* Прогресс-бар */
-    #progressContainer { top: 40px; height: 6px; }
-    #progressText { top: 52px; font-size: 0.6em; }
-
-    /* Панели */
-    .achievements-panel { width: 95%; padding: 15px; }
-    .shop-panel { width: 220px; padding: 12px; }
-
-    /* Кнопка музыки */
-    #musicMuteBtn {
-        top: 65px;
-        right: 8px;
-        width: 36px;
-        height: 36px;
-        font-size: 1em;
-    }
-}
-
-/* ✅ Маленькие телефоны */
-@media (max-width: 480px) {
-    #hud-left {
-        top: 60px;
-        left: 5px;
-        padding: 3px 4px;
-        min-width: 90px;
-        max-width: 110px;
-        gap: 1px;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-    }
-
-    .hud-item {
-        font-size: clamp(0.5em, 2vw, 0.6em);
-        gap: 2px;
-        padding: 2px 3px;
-        background: rgba(0, 0, 0, 0.35);
-        border-radius: 3px;
-    }
-
-    .hud-item i {
-        width: 12px;
-        font-size: 0.75em;
-    }
-
-    /* Voyager ещё компактнее */
-    .voyager-hud-container {
-        margin-top: 6px;
-        padding-top: 4px;
-    }
-
-    .voyager-hud-title {
-        font-size: 0.55em;
-        margin-bottom: 3px;
-    }
-
-    .voyager-hud-item {
-        font-size: 0.6em;
-        padding: 3px 5px;
-        margin-bottom: 2px;
-        border-left-width: 2px;
-    }
-
-    .voyager-hud-emoji {
-        font-size: 1em;
-    }
-
-    /* Кнопки улучшений */
-    .upgrade-btn {
-        width: 40px;
-        height: 40px;
-        right: 5px;
-    }
-
-    .upgrade-cost {
-        font-size: 0.4em;
-    }
-
-    #upgradeClickBtn { bottom: 60px; }
-    #upgradeHelperBtn { bottom: 108px; }
-    #upgradeCritChanceBtn { bottom: 156px; }
-    #upgradeCritMultBtn { bottom: 204px; }
-    #upgradeHelperDmgBtn { bottom: 252px; }
-
-    /* Заголовки */
-    #gameTitle { font-size: 1.1em; }
-    #welcomeScreen h2 { font-size: 1.5em; }
-    #welcomeScreen p { font-size: 0.85em; }
-
-    /* Магазин */
-    .shop-grid { grid-template-columns: repeat(2, 1fr); }
-    .shop-card-name { font-size: 0.8em; }
-    .shop-card-desc { font-size: 0.65em; }
-
-    /* Daily Bonus иконка меньше */
-    #dailyBonusIcon {
-        top: 160px;
-        width: 50px;
-        height: 50px;
-    }
-
-    #dailyBonusDay { font-size: 0.55em; }
-    #dailyBonusTimer { font-size: 0.45em; }
-}
-
-/* ✅ Средние экраны — 3 колонки в магазине */
-@media (min-width: 480px) {
-    .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-
-/* ✅ Очень маленькие экраны */
-@media (max-width: 360px) {
-    #hud-left {
-        max-width: 100px;
-        min-width: 85px;
-    }
-
-    .hud-item {
-        font-size: 0.5em;
-    }
-
-    .shop-card-name { font-size: 0.8em; }
-    .shop-card-desc { font-size: 0.65em; }
-
-    .upgrade-btn {
-        width: 38px;
-        height: 38px;
-    }
-
-    #upgradeClickBtn { bottom: 55px; }
-    #upgradeHelperBtn { bottom: 100px; }
-    #upgradeCritChanceBtn { bottom: 145px; }
-    #upgradeCritMultBtn { bottom: 190px; }
-    #upgradeHelperDmgBtn { bottom: 235px; }
-}
-
-/* ✅ Альбомная ориентация на низких экранах */
-@media (max-height: 500px) and (orientation: landscape) {
-    #header {
-        padding: 4px 40px 4px 0;
-    }
-
-    #gameTitle {
-        font-size: 1em;
-    }
-
-    #hud-left {
-        top: 50px;
-        left: 8px;
-        gap: 1px;
-        padding: 3px 6px;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        max-height: calc(100vh - 55px);
-        overflow-y: auto;
-    }
-
-    .hud-item {
-        font-size: 0.55em;
-        padding: 1px 3px;
-        background: rgba(0, 0, 0, 0.3);
-    }
-
-    /* Voyager в ландшафте — горизонтальный */
-    .voyager-hud-container {
-        display: flex;
-        flex-direction: row;
-        gap: 6px;
-        margin-top: 4px;
-        padding-top: 4px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .voyager-hud-title {
-        display: none; /* Скрываем заголовок в ландшафте */
-    }
-
-    .voyager-hud-item {
-        font-size: 0.55em;
-        padding: 2px 4px;
-        margin-bottom: 0;
-    }
-
-    /* Кнопки улучшений — компактные */
-    .upgrade-btn {
-        width: 38px;
-        height: 38px;
-        right: 6px;
-    }
-
-    #upgradeClickBtn { bottom: 55px; }
-    #upgradeHelperBtn { bottom: 100px; }
-    #upgradeCritChanceBtn { bottom: 145px; }
-    #upgradeCritMultBtn { bottom: 190px; }
-    #upgradeHelperDmgBtn { bottom: 235px; }
-
-    /* Прогресс-бар */
-    #progressContainer { top: 35px; height: 6px; }
-    #progressText { top: 46px; font-size: 0.55em; }
-
-    /* Daily Bonus — меньше */
-    #dailyBonusIcon {
-        top: 130px;
-        width: 45px;
-        height: 45px;
-    }
-}
-
-/* ✅ Скроллбар для HUD на мобильных */
-#hud-left::-webkit-scrollbar {
-    width: 3px;
-}
-
-#hud-left::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#hud-left::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 2px;
-}
