@@ -312,18 +312,35 @@ function updateIconDisplay() {
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
     } else if (data.currentDay > 30) {
-        timerEl.textContent = '';
+        timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         icon.style.borderColor = '#FFD700';
         icon.style.animation = 'none';
     } else {
-        // Показываем таймер до доступности
-        const hoursSince = data.lastClaimTimestamp > 0 
-            ? (now - data.lastClaimTimestamp) / (1000 * 60 * 60) 
-            : 0;
-        const hoursLeft = Math.max(0, Math.ceil(23 - hoursSince));
+        // ✅ Показываем точный таймер: часы и минуты
+        if (data.lastClaimTimestamp > 0) {
+            const minInterval = 23 * 60 * 60 * 1000; // 23 часа в миллисекундах
+            const timeSinceLastClaim = now - data.lastClaimTimestamp;
+            const timeLeft = Math.max(0, minInterval - timeSinceLastClaim);
+            
+            // Вычисляем часы и минуты
+            const totalMinutesLeft = Math.floor(timeLeft / (1000 * 60));
+            const hoursLeft = Math.floor(totalMinutesLeft / 60);
+            const minutesLeft = totalMinutesLeft % 60;
+            
+            // ✅ Формат: "12ч 34м" или "45м" (если часов 0)
+            let timerText;
+            if (hoursLeft > 0) {
+                timerText = `${hoursLeft}ч ${String(minutesLeft).padStart(2, '0')}м`;
+            } else {
+                timerText = `${minutesLeft}м`;
+            }
+            
+            timerEl.textContent = timerText;
+        } else {
+            timerEl.textContent = '00ч 00м';
+        }
         
-        timerEl.textContent = `${hoursLeft}ч`;
         timerEl.style.color = '#FF9800';
         icon.style.borderColor = '#FF9800';
         icon.style.animation = 'none';
