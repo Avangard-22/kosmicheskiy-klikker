@@ -287,36 +287,45 @@ function createBonusIcon() {
 function updateIconDisplay() {
     const data = window.gameState?.dailyBonus;
     if (!data) return;
-    
     const dayEl = document.getElementById('dailyBonusDay');
     const timerEl = document.getElementById('dailyBonusTimer');
     const icon = document.getElementById('dailyBonusIcon');
-    
-    if (!dayEl || !timerEl || !icon) return;    
+    if (!dayEl || !timerEl || !icon) return;
+
     const today = getToday();
     const dayNumber = (data.totalClaimed || 0) + 1;
-    const isAvailable = data.lastClaimDate !== today;
+    const now = Date.now();
+
+    // ✅ ДВОЙНАЯ ПРОВЕРКА: дата + timestamp
+    const dateChanged = data.lastClaimDate !== today;
+    const timePassed = data.lastClaimTimestamp > 0 
+        ? (now - data.lastClaimTimestamp) / (1000 * 60 * 60) >= 23 
+        : true;
     
+    const isAvailable = dateChanged && timePassed;
+
     dayEl.textContent = `День ${dayNumber}`;
-    
+
     if (isAvailable) {
         timerEl.textContent = '✅';
         timerEl.style.color = '#4CAF50';
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
-    } else {
-        // Таймер до полуночи UTC
-        const now = new Date();
-        const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-        const diff = tomorrow - now;
-        
-        const h = Math.floor(diff / (1000 * 60 * 60));
-        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((diff % (1000 * 60)) / 1000);
-        
-        timerEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-        timerEl.style.color = '#4FC3F7';
+    } else if (data.currentDay > 30) {
+        timerEl.textContent = '';
+        timerEl.style.color = '#FFD700';
         icon.style.borderColor = '#FFD700';
+        icon.style.animation = 'none';
+    } else {
+        // Показываем таймер до доступности
+        const hoursSince = data.lastClaimTimestamp > 0 
+            ? (now - data.lastClaimTimestamp) / (1000 * 60 * 60) 
+            : 0;
+        const hoursLeft = Math.max(0, Math.ceil(23 - hoursSince));
+        
+        timerEl.textContent = `${hoursLeft}ч`;
+        timerEl.style.color = '#FF9800';
+        icon.style.borderColor = '#FF9800';
         icon.style.animation = 'none';
     }
 }
