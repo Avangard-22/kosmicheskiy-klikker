@@ -44,33 +44,33 @@
         style.textContent = `
             /* HUD элементы */
             .voyager-hud-container {
-                margin-top: 15px;
-                padding-top: 10px;
+                margin-top: 8px;
+                padding-top: 6px;
                 border-top: 1px solid rgba(255, 255, 255, 0.1);
             }
             .voyager-hud-title {
-                font-size: 0.7em;
+                font-size: 0.6em;
                 color: #888;
-                margin-bottom: 8px;
+                margin-bottom: 4px;
                 text-align: center;
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
-            .voyager-hud-item {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-size: 0.75em;
-                margin-bottom: 5px;
-                padding: 6px 8px;
-                background: rgba(255, 255, 255, 0.03);
-                border-radius: 6px;
-                border-left: 3px solid currentColor;
-                cursor: pointer;
-                transition: all 0.2s;
-                user-select: none;
-                -webkit-user-select: none;
-            }
+         .voyager-hud-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65em;
+    margin-bottom: 3px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border-left: 3px solid currentColor;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+}
             .voyager-hud-item:hover,
             .voyager-hud-item.active {
                 background: rgba(255, 255, 255, 0.08);
@@ -242,12 +242,12 @@
             item.className = 'voyager-hud-item';
             item.id = `voyager-hud-${key}`;
             item.style.color = voyager.color;
-            item.innerHTML = `
-                <span class="voyager-hud-emoji">🛸</span>
-                <span class="voyager-hud-label">${voyager.label}:</span>
-                <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
-                <span class="voyager-hud-unit">AU</span>
-            `;
+    item.innerHTML = `
+    <span class="voyager-hud-emoji">🛸</span>
+    <span class="voyager-hud-label">${voyager.label}: </span>
+    <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
+    <span class="voyager-hud-unit">AU</span>
+`;
 
             // Обработчики для трассировки
             item.addEventListener('mouseenter', () => showTracer(key));
