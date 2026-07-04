@@ -63,6 +63,7 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
 
 /* ═══ BOBO ═══ */
 .helper{position:fixed;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:32px;z-index:9999;pointer-events:none;filter:drop-shadow(0 0 12px rgba(0,198,255,.7));animation:helper 3s ease-in-out infinite;left:0;top:0}
+.helper::before{content:'🤖'}
 @keyframes helper{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(0,-8px) scale(1.05)}}
 
 /* ═══ ТЕКСТОВЫЕ ЭФФЕКТЫ ═══ */
