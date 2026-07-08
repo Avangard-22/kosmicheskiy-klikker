@@ -1,4 +1,4 @@
-// js/game-core.js (v3.0 — MERGED)
+// js/game-core.js (v2.0)
 (function() {
 'use strict';
 
@@ -6,12 +6,13 @@ const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
 
-// ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ
 if (!window.gameState) {
-    console.warn('⚠️ [CORE] gameState не инициализирован, ждём save-system...');
+    console.warn('⚠️ [CORE] gameState не инициализирован');
+    window.gameState = {};
 }
 if (!window.gameMetrics) {
-    console.warn('⚠️ [CORE] gameMetrics не инициализирован, ждём save-system...');
+    console.warn('⚠️ [CORE] gameMetrics не инициализирован');
+    window.gameMetrics = {};
 }
 
 window.GAME_CORE = {
@@ -26,8 +27,8 @@ window.GAME_CORE = {
     magnetInterval: null,
     blockSpeed: CFG.isMobile ? 25 : 20,
     lastHapticTime: 0,
-    
-    // ✅ Permanent-множители (из версии 2)
+
+    // Permanent-множители (устанавливаются PerkSystem)
     permanentClickMult: 1,
     permanentBlockHpMult: 1,
     permanentRewardMult: 1,
@@ -59,16 +60,17 @@ window.GAME_CORE = {
         if (window.gameState) window.gameState.gamePaused = false;
     },
 
-    // ✅ Piecewise прогрессия (из версии 2)
+    // ✅ Piecewise прогрессия силы удара
     calculateClickPower: function() {
         const lvl = window.gameState.clickUpgradeLevel || 0;
         const prog = CFG.balanceConfig.damageProgression;
+
         const baseAt = (n) => 1 + (n *
             Math.pow(prog.diminishingReturns, Math.min(n, prog.maxLevelEffect)) *
             Math.sqrt(n + 1) * prog.baseMultiplier);
-        
+
         if (lvl <= 50) return baseAt(lvl);
-        
+
         const at50 = baseAt(50);
         // 51..100: +1/ур
         const r1 = Math.min(Math.max(lvl - 50, 0), 50);
@@ -76,13 +78,13 @@ window.GAME_CORE = {
         const r2 = Math.min(Math.max(lvl - 100, 0), 400);
         // 501+: +0.25/ур
         const r3 = Math.max(lvl - 500, 0);
-        
+
         let power = at50 + r1 * 1.0 + r2 * 0.5 + r3 * 0.25;
-        
+
         // Permanent-бонусы
         const perkMult = this.permanentClickMult || 1;
         const startAdd = (window.gameState?.planetDamageDealt === 0) ? (this.permanentStartBonus || 0) : 0;
-        
+
         return Math.max(1, Math.round(power * perkMult + startAdd));
     },
 
@@ -92,7 +94,7 @@ window.GAME_CORE = {
         return speed * this.getBonus('getSpeedMultiplier', 1);
     },
 
-    // ✅ Делегирование с fallback (из версии 1)
+    // Делегирует в CombatSystem
     calculateBlockHealth: function() {
         if (window.CombatSystem?.calculateBlockHealth) {
             return window.CombatSystem.calculateBlockHealth();
@@ -104,7 +106,6 @@ window.GAME_CORE = {
         return Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
     },
 
-    // ✅ Чистый код с dataset (из версии 1)
     createMovingBlock: function() {
         if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
         const gameArea = document.getElementById('gameArea');
@@ -122,7 +123,7 @@ window.GAME_CORE = {
 
         const theme = CFG.locations[window.gameState.currentLocation];
         const rareType = this.getRareBlockType();
-        
+
         if (rareType) {
             const rb = CFG.rareBlocks[rareType];
             block.classList.add(rb.className);
@@ -137,18 +138,8 @@ window.GAME_CORE = {
             block.textContent = this.currentBlockHealth;
         }
 
-        // ✅ Предотвращение двойного срабатывания (из версии 1)
-        let lastTouchTime = 0;
-        block.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            lastTouchTime = Date.now();
-            this.hitBlock(block, window.gameState.clickPower, false);
-        }, { passive: false });
-        
-        block.addEventListener('click', () => {
-            if (Date.now() - lastTouchTime < 500) return;
-            this.hitBlock(block, window.gameState.clickPower, false);
-        });
+        block.addEventListener('click', () => this.hitBlock(block, window.gameState.clickPower, false));
+        block.addEventListener('touchstart', (e) => { e.preventDefault(); this.hitBlock(block, window.gameState.clickPower, false); }, { passive: false });
 
         gameArea.appendChild(block);
         this.currentBlock = block;
@@ -179,8 +170,10 @@ window.GAME_CORE = {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
         const move = () => {
-            if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
-                requestAnimationFrame(move); return;
+            if (!window.gameState?.gameActive || this.currentBlock !== block) return;
+            if (this.isGamePaused) {
+                requestAnimationFrame(move);
+                return;
             }
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
@@ -194,11 +187,11 @@ window.GAME_CORE = {
         move();
     },
 
-    // ✅ Делегирование + isAuto + throttling (объединено)
+    // ✅ Делегирование в CombatSystem + поддержка isAuto
     hitBlock: function(block, damage, isAuto = false) {
         if (!window.gameState?.gameActive || this.isGamePaused) return;
-        
-        // Тактильный отклик только для игрока
+
+        // Тактильный отклик только для игрока (не для Бобо и не для автокликера)
         if (!isAuto) {
             const now = Date.now();
             if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
@@ -207,12 +200,13 @@ window.GAME_CORE = {
                 this.lastHapticTime = now;
                 this.playSound('clickSound');
             }
+
             block.style.transform = 'translateX(-50%) scale(0.85)';
             setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
         }
 
-        // Делегируем в CombatSystem
         const result = window.CombatSystem.applyHit(damage, isAuto);
+
         this.createDamageText(result.damage, block, result.isCrit ? '#FFD700' : (isAuto ? '#69f0ae' : '#ff4444'));
         UI.checkLocationUpgrade();
 
@@ -224,9 +218,10 @@ window.GAME_CORE = {
         }
     },
 
-    // ✅ Делегирование + isAuto (из версии 2)
+    // ✅ Делегирование в CombatSystem + поддержка isAuto
     destroyBlock: function(block, isAuto = false) {
         if (!window.gameState || !block) return;
+
         const result = window.CombatSystem.applyDestroy(block, isAuto);
         if (!result) return;
 
@@ -255,14 +250,19 @@ window.GAME_CORE = {
         t.className = 'damage-text';
         t.textContent = `-${dmg}`;
         t.style.color = col;
+
         let l = r.left + r.width / 2;
         let tp = r.top;
+
         if (l < 50) l = 50;
         if (l > window.innerWidth - 50) l = window.innerWidth - 50;
         if (tp < 50) tp = 50;
+
         t.style.left = l + 'px';
         t.style.top = tp + 'px';
+
         document.body.appendChild(t);
+
         t.addEventListener('animationend', () => {
             if (t.parentNode) t.parentNode.removeChild(t);
         });
@@ -273,14 +273,19 @@ window.GAME_CORE = {
         const t = document.createElement('div');
         t.className = 'combo-text';
         t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+
         let l = r.left + r.width / 2;
         let tp = r.top;
+
         if (l < 75) l = 75;
         if (l > window.innerWidth - 75) l = window.innerWidth - 75;
         if (tp < 50) tp = 50;
+
         t.style.left = l + 'px';
         t.style.top = tp + 'px';
+
         document.body.appendChild(t);
+
         t.addEventListener('animationend', () => {
             if (t.parentNode) t.parentNode.removeChild(t);
         });
@@ -293,12 +298,16 @@ window.GAME_CORE = {
         t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
         let l = rct.left + rct.width / 2;
         let tp = rct.top + rct.height / 2;
+
         if (l < 60) l = 60;
         if (l > window.innerWidth - 60) l = window.innerWidth - 60;
         if (tp < 50) tp = 50;
+
         t.style.left = l + 'px';
         t.style.top = tp + 'px';
+
         document.body.appendChild(t);
+
         t.addEventListener('animationend', () => {
             if (t.parentNode) t.parentNode.removeChild(t);
         });
@@ -358,75 +367,93 @@ window.GAME_CORE = {
     createHelperEffect: function() {
         if (!this.currentBlock || !this.helperElement) return;
         this.initEffectCanvas();
+
         const br = this.currentBlock.getBoundingClientRect();
         const hr = this.helperElement.getBoundingClientRect();
+
         const sx = hr.left + hr.width / 2;
         const sy = hr.top + hr.height / 2;
         const ex = br.left + br.width / 2;
         const ey = br.top + br.height / 2;
+
         const cv = this.effectCanvas;
         const ctx = cv.getContext('2d');
+
         let st = Date.now();
         const an = () => {
             const el = Date.now() - st;
             const p = Math.min(el / 300, 1);
+
             ctx.clearRect(0, 0, cv.width, cv.height);
+
             if (p > 0) {
                 const cx = sx + (ex - sx) * p;
                 const cy = sy + (ey - sy) * p;
+
                 const g = ctx.createLinearGradient(sx, sy, cx, cy);
                 g.addColorStop(0, 'rgba(105, 240, 174, 0.9)');
                 g.addColorStop(0.7, 'rgba(105, 240, 174, 0.5)');
                 g.addColorStop(1, 'rgba(105, 240, 174, 0)');
+
                 ctx.beginPath();
                 ctx.moveTo(sx, sy);
                 ctx.lineTo(cx, cy);
                 ctx.lineWidth = 4 + (4 * (1 - p));
                 ctx.strokeStyle = g;
                 ctx.stroke();
+
                 ctx.beginPath();
                 ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
                 ctx.fill();
             }
+
             if (p < 1) {
                 requestAnimationFrame(an);
             } else {
                 ctx.clearRect(0, 0, cv.width, cv.height);
             }
         };
+
         an();
         this.playSound('helperSound');
     },
 
-    // ✅ Бобо использует CombatSystem (из версии 2)
+    // ✅ Бобо использует CombatSystem с isAuto=true
     helperAttack: function() {
         if (!this.currentBlock || !window.gameState || !window.gameState.helperActive || !this.helperElement || this.isGamePaused) return;
+
         this.createHelperEffect();
+
         let dmg = window.gameState.clickPower *
                   (1 + (window.gameState.helperDamageBonus || 0)) *
                   (1 + (window.gameState.helperUpgradeLevel || 0) * 0.2) *
                   this.getBonus('getDamageMultiplier', 1);
+
+        // Делегируем математику в CombatSystem с isAuto=true
         const result = window.CombatSystem.applyHit(dmg, true);
+
         this.createDamageText(result.damage, this.currentBlock, '#69f0ae');
         UI.checkLocationUpgrade();
+
         if (result.destroyed) {
             this.destroyBlock(this.currentBlock, true);
         } else {
             this.currentBlock.textContent = Math.floor(this.currentBlockHealth || 0);
             this.updateCracks(this.currentBlock, this.currentBlockHealth || 0);
         }
+
         // ✅ Хук перка Bobo hit
         if (window.PerkSystem?.onBoboHit) window.PerkSystem.onBoboHit();
     },
 
-    // ✅ setLocation с полной очисткой (из версии 2)
+    // ✅ Новый setLocation с doReset
     setLocation: function(loc, doReset = false) {
         if (!window.gameState) return;
         const currentIdx = CFG.planetOrder.indexOf(window.gameState.currentLocation);
         const newIdx = CFG.planetOrder.indexOf(loc);
         if (newIdx < currentIdx || newIdx === currentIdx) return;
-        
+
         if (doReset) {
             // ── Сброс боевых параметров ──
             window.gameState.clickUpgradeLevel = 0;
@@ -444,13 +471,13 @@ window.GAME_CORE = {
             window.gameState.planetFirstBlockCleared = false;
             window.gameState.comboCount = 0;
             window.gameState.lastDestroyTime = 0;
-            
-            // ✅ Сброс мусорных счётчиков (из версии 2)
+
+            // ✅ Сброс мусорных счётчиков
             delete window.gameState._boboHitCounter;
             delete window.gameState._boboCallCounter;
             delete window.gameState._crystalIntervalStart;
             delete window.gameState._crystalIntervalActive;
-            
+
             // Уничтожить Bobo
             if (this.helperInterval) clearInterval(this.helperInterval);
             if (this.helperTimer) clearInterval(this.helperTimer);
@@ -458,10 +485,10 @@ window.GAME_CORE = {
             this.helperElement = null;
             this.helperInterval = null;
             this.helperTimer = null;
-            
+
             // Сбросить автокликер магазина
             if (window.shopSystem?.stopAutoClicker) window.shopSystem.stopAutoClicker();
-            
+
             // Событие для подписчиков
             if (window.EventBus) {
                 window.EventBus.emit('game:planetTransition', {
@@ -470,23 +497,26 @@ window.GAME_CORE = {
                     planetIndex: newIdx
                 });
             }
-            
+
             // Выдать permanent-бонус (кроме Меркурия)
             if (newIdx > 0 && window.PerkSystem?.activatePerk) {
                 window.PerkSystem.activatePerk(newIdx);
             }
-            
+
             // UI перехода
             this.showTransitionUI(loc, newIdx);
         }
-        
+
         // Новая локация
         window.gameState.currentLocation = loc;
+
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
         if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
         if (header) header.style.borderColor = CFG.locations[loc].borderColor;
+
         if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
+
         const ann = document.getElementById('levelAnnounce');
         if (ann) {
             ann.textContent = CFG.locations[loc].name;
@@ -494,6 +524,7 @@ window.GAME_CORE = {
             ann.style.opacity = "1";
             setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
+
         if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
         if (window.EventBus) window.EventBus.emit('game:planetChanged', loc);
         UI.updateProgressBar();
@@ -501,18 +532,21 @@ window.GAME_CORE = {
         UI.updateUpgradeButtons();
     },
 
-    // ✅ Модалка перехода (из версии 2)
+    // ✅ Модалка перехода
     showTransitionUI: function(loc, idx) {
         const old = document.getElementById('transitionModal');
         if (old) old.remove();
+
         const info = CFG.locations[loc];
         const modal = document.createElement('div');
         modal.id = 'transitionModal';
         modal.className = 'transition-modal';
         modal.style.animation = 'modalEnter 0.4s ease-out';
+
         const bonus = (idx > 0 && window.PerkSystem?.getPerkForPlanet)
             ? window.PerkSystem.getPerkForPlanet(idx)
             : null;
+
         modal.innerHTML = `
             <h2 style="margin:0 0 8px;color:${info.borderColor}">${info.name}</h2>
             <div class="tm-description">🛡️ Параметры сброшены к базовым<br>Достижения сохранены</div>
@@ -523,30 +557,33 @@ window.GAME_CORE = {
                 <div style="color:#aaa;font-size:0.75em;margin-top:4px">${bonus.desc}</div>
             </div>` : ''}
             <div class="tm-darkmatter-box">
-                <div class="tm-darkmatter-title"> Тёмная материя</div>
+                <div class="tm-darkmatter-title">⚫ Тёмная материя</div>
                 <div class="tm-darkmatter-desc">Таинственная субстанция, необходимая для скачков в дальний космос. Пригодится для преодоления пространственных разломов за пределами Солнечной системы.</div>
                 <div class="tm-balance">💎 Баланс: <span id="tmCrystals">${Math.floor(window.gameState.coins).toLocaleString()}</span></div>
-                <button id="convertDarkMatterBtn" class="tm-btn"> Обменять всё на Тёмную материю</button>
+                <button id="convertDarkMatterBtn" class="tm-btn">⚫ Обменять всё на Тёмную материю</button>
             </div>
             <button id="closeTransitionBtn" class="tm-proceed-btn">Продолжить</button>
         `;
+
         document.body.appendChild(modal);
+
         document.getElementById('convertDarkMatterBtn').addEventListener('click', () => {
             this.convertCrystalsToDarkMatter();
             const el = document.getElementById('tmCrystals');
             if (el) el.textContent = Math.floor(window.gameState.coins).toLocaleString();
         });
+
         document.getElementById('closeTransitionBtn').addEventListener('click', () => modal.remove());
     },
 
-    // ✅ Конвертация кристаллов (из версии 2)
+    // ✅ Конвертация кристаллов в тёмную материю
     convertCrystalsToDarkMatter: function() {
         if (!window.gameState) return;
         const rate = 100000;
         const maxConvert = Math.floor(window.gameState.coins / rate);
         if (maxConvert <= 0) {
             if (window.showTooltip) {
-                window.showTooltip(' Недостаточно кристаллов (нужно 100 000 за 1 ед.)');
+                window.showTooltip('❌ Недостаточно кристаллов (нужно 100 000 за 1 ед.)');
                 setTimeout(window.hideTooltip, 2000);
             }
             return;
@@ -557,7 +594,7 @@ window.GAME_CORE = {
         if (typeof window.saveGame === 'function') window.saveGame();
         if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
         if (window.showTooltip) {
-            window.showTooltip(` +${amount} Тёмной материи (осталось 💎 ${Math.floor(window.gameState.coins).toLocaleString()})`);
+            window.showTooltip(`⚫ +${amount} Тёмной материи (осталось 💎 ${Math.floor(window.gameState.coins).toLocaleString()})`);
             setTimeout(window.hideTooltip, 3000);
         }
     },
@@ -569,26 +606,31 @@ window.GAME_CORE = {
         } else {
             window.gameState.clickPower = this.calculateClickPower();
         }
+
         this.isGamePaused = false;
         if (window.gameState) window.gameState.gamePaused = false;
         window.gameState.helperActive = false;
         window.gameState.helperTimeLeft = 0;
         window.gameState.boboCoinBonus = 0;
+
         if (this.helperInterval) { clearInterval(this.helperInterval); this.helperInterval = null; }
         if (this.helperTimer) { clearInterval(this.helperTimer); this.helperTimer = null; }
         if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
         this.helperElement = null;
         if (this.autoClickInterval) { clearInterval(this.autoClickInterval); this.autoClickInterval = null; }
         if (this.magnetInterval) { clearInterval(this.magnetInterval); this.magnetInterval = null; }
+
         const ga = document.getElementById('gameArea');
         if (ga) ga.innerHTML = "";
         const ws = document.getElementById('welcomeScreen'),
               gs = document.getElementById('gameOverScreen');
         if (ws) ws.style.display = "none";
         if (gs) gs.style.display = "none";
+
         window.gameState.gameActive = true;
         window.gameState.comboCount = 0;
         window.gameState.lastDestroyTime = 0;
+
         if (reset) {
             window.gameMetrics.startTime = Date.now();
             window.gameMetrics.blocksDestroyed = 0;
@@ -602,20 +644,24 @@ window.GAME_CORE = {
         } else {
             window.gameMetrics.startTime = Date.now();
         }
+
         // ✅ Применить перки
         if (window.PerkSystem?.applyAllPerks) window.PerkSystem.applyAllPerks();
+
         UI.updateHUD();
         UI.updateUpgradeButtons();
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
+
         if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
         if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
+
         setTimeout(() => this.createMovingBlock(), 500);
     },
 
-    // ✅ continueGame с полной инициализацией (из версии 2)
     continueGame: async function() {
         console.log('🔄 [GAME] Starting continueGame...');
+
         if (!window.gameState || Object.keys(window.gameState).length === 0) {
             window.gameState = {
                 coins: 0,
@@ -652,8 +698,9 @@ window.GAME_CORE = {
                     streak: 0
                 }
             };
-            console.log(' [GAME] gameState инициализирован дефолтными значениями');
+            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
+
         if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
             window.gameMetrics = {
                 startTime: 0,
@@ -670,6 +717,7 @@ window.GAME_CORE = {
                 planetStats: {}
             };
         }
+
         if (typeof window.cloudInit === 'function') {
             console.log('☁️ [GAME] cloudInit вызывается...');
             try {
@@ -681,15 +729,18 @@ window.GAME_CORE = {
         } else {
             console.warn('⚠️ [GAME] cloudInit function NOT found');
         }
+
         console.log('✅ [GAME] Load successful, starting game...');
         console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
         console.log('⚫ [GAME] gameState.darkMatter:', window.gameState.darkMatter);
         console.log('🌟 [GAME] permanentBonuses:', window.gameState.permanentBonuses);
+
         UI.updateHUD();
         UI.updateUpgradeButtons();
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
+
         if (window.showTooltip && window.formatString) {
             const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
                 coins: Math.floor(window.gameState.coins || 0).toLocaleString()
@@ -703,27 +754,29 @@ window.GAME_CORE = {
         this.startGame(true);
     },
 
-    initEventHandlers: function() {
-        const langBtn = document.getElementById('langBtn-welcome');
-        if (langBtn) {
-            langBtn.addEventListener('click', window.switchLanguage);
-            langBtn.addEventListener('touchstart', e => { e.preventDefault(); window.switchLanguage(); }, { passive: false });
-        }
-        // ✅ Кнопка таблицы лидеров (из версии 2)
-        const leaderboardBtn = document.getElementById('leaderboardBtnWelcome');
-        if (leaderboardBtn) {
-            leaderboardBtn.addEventListener('click', () => {
-                if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
-                    window.leaderboardSystem.togglePanel();
-                }
-            });
-            leaderboardBtn.addEventListener('touchstart', e => {
-                e.preventDefault();
-                if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
-                    window.leaderboardSystem.togglePanel();
-                }
-            }, { passive: false });
-        }
+initEventHandlers: function() {
+    const langBtn = document.getElementById('langBtn-welcome');
+    if (langBtn) {
+        langBtn.addEventListener('click', window.switchLanguage);
+        langBtn.addEventListener('touchstart', e => { e.preventDefault(); window.switchLanguage(); }, { passive: false });
+    }
+
+    // ✅ Кнопка таблицы лидеров на welcome screen
+    const leaderboardBtn = document.getElementById('leaderboardBtnWelcome');
+    if (leaderboardBtn) {
+        leaderboardBtn.addEventListener('click', () => {
+            if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
+                window.leaderboardSystem.togglePanel();
+            }
+        });
+        leaderboardBtn.addEventListener('touchstart', e => {
+            e.preventDefault();
+            if (window.leaderboardSystem && window.leaderboardSystem.togglePanel) {
+                window.leaderboardSystem.togglePanel();
+            }
+        }, { passive: false });
+    }
+
         const contBtn = document.getElementById('continueBtn');
         if (contBtn) {
             contBtn.addEventListener('click', () => {
@@ -738,6 +791,7 @@ window.GAME_CORE = {
                 this.continueGame();
             }, { passive: false });
         }
+
         const add = (id, fn) => {
             const b = document.getElementById(id);
             if (b) {
@@ -745,14 +799,16 @@ window.GAME_CORE = {
                 b.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
             }
         };
+
         add('upgradeClickBtn', () => FEAT.buyClickPower());
         add('upgradeHelperBtn', () => FEAT.buyHelper());
         add('upgradeCritChanceBtn', () => FEAT.buyCritChance());
         add('upgradeCritMultBtn', () => FEAT.buyCritMultiplier());
         add('upgradeHelperDmgBtn', () => FEAT.buyHelperDamage());
+
         add('shareBtn', () => {
             if (!window.gameState) return;
-            const txt = `🎮 Я нанёс ${Math.floor(window.gameState.totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(window.gameState.coins)} Кристаллов! `;
+            const txt = `🎮 Я нанёс ${Math.floor(window.gameState.totalDamageDealt).toLocaleString()} урона и собрал ${Math.floor(window.gameState.coins)} Кристаллов! 🌌`;
             if (navigator.share) {
                 navigator.share({ title: 'Космический Кликер', text: txt }).then(() => {
                     window.gameState.coins += 50;
@@ -762,7 +818,9 @@ window.GAME_CORE = {
                 });
             }
         });
+
         add('saveBtn', () => { if (typeof window.saveGame === 'function') window.saveGame(); });
+
         const tips = {
             upgradeClickBtn: 'tooltips.upgradeClick',
             upgradeHelperBtn: 'tooltips.upgradeHelper',
@@ -770,6 +828,7 @@ window.GAME_CORE = {
             upgradeCritMultBtn: 'tooltips.upgradeCritMult',
             upgradeHelperDmgBtn: 'tooltips.upgradeHelperDmg'
         };
+
         Object.entries(tips).forEach(([id, tk]) => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -783,6 +842,7 @@ window.GAME_CORE = {
                 });
             }
         });
+
         window.addEventListener('resize', () => {
             if (this.helperElement) this.moveHelperToRandomPosition();
         });
@@ -825,5 +885,4 @@ document.addEventListener('DOMContentLoaded', () => {
         window.EventBus.emit('core:ready');
     }
 });
-
 })();
