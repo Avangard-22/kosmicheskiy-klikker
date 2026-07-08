@@ -1,4 +1,4 @@
-// js/planet-background.js (v2.1 — статичный фон глубокого космоса)
+// js/planet-background.js (v2.2 — Полностью оптимизированный фон глубокого космоса)
 (function() {
     'use strict';
 
@@ -33,7 +33,7 @@
             nebulaIntensity: isLowEnd ? 2 : 3,
             starDensity: isLowEnd ? 1 : 2,
             maxParticles: isLowEnd ? 100 : 200,
-            deepSpaceStars: isLowEnd ? 150 : 300  // ✅ НОВОЕ: количество звёзд в глубоком космосе
+            deepSpaceStars: isLowEnd ? 150 : 300
         };
     };
 
@@ -47,7 +47,8 @@
     const fixedSettings = getAdaptiveSettings();
 
     let animationId = null;
-    let currentPlanet = 'mercury';    let time = 0;
+    let currentPlanet = 'mercury';
+    let time = 0;
     let particles = [];
     let specialElements = [];
     let nebulae = [];
@@ -60,14 +61,13 @@
     // 🌌 СТАТИЧНЫЙ ФОН ГЛУБОКОГО КОСМОСА
     // ==========================================
     let deepSpaceCanvas = null;
-    let deepSpaceStars = [];  // ✅ Массив звёзд для мерцания
+    let deepSpaceStars = []; // Массив звезд заднего плана (использует класс Particle для мерцания)
 
     /**
-     * Генерирует статичный фон глубокого космоса
-     * Вызывается один раз при смене планеты
+     * Генерирует статичную подложку (космос + туманности) и инициализирует фоновые звезды
      */
     function generateDeepSpaceBackground() {
-        // Создаём offscreen canvas для статичного фона
+        // Создаём offscreen canvas строго в физическом разрешении основного холста
         deepSpaceCanvas = document.createElement('canvas');
         deepSpaceCanvas.width = canvas.width;
         deepSpaceCanvas.height = canvas.height;
@@ -96,7 +96,8 @@
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
             
             const nebulaGradient = deepCtx.createRadialGradient(x, y, 0, x, y, radius);
-            nebulaGradient.addColorStop(0, color + '30');  // 18% opacity            nebulaGradient.addColorStop(1, color + '00');
+            nebulaGradient.addColorStop(0, color + '25'); // Оптимизированная прозрачность для наложения
+            nebulaGradient.addColorStop(1, color + '00');
             
             deepCtx.fillStyle = nebulaGradient;
             deepCtx.beginPath();
@@ -104,37 +105,30 @@
             deepCtx.fill();
         }
 
-        // === СТАТИЧНЫЕ ЗВЁЗДЫ (фон) ===
-        const staticStarCount = fixedSettings.deepSpaceStars;
-        deepSpaceStars = [];
-        
-        for (let i = 0; i < staticStarCount; i++) {
-            const x = Math.random() * deepSpaceCanvas.width;
-            const y = Math.random() * deepSpaceCanvas.height;
-            const radius = Math.random() * 1.2 + 0.3;
-            const brightness = Math.random() * 0.6 + 0.2;  // 0.2 - 0.8
-            
-            // Рисуем статичную звезду
-            deepCtx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
-            deepCtx.beginPath();
-            deepCtx.arc(x, y, radius, 0, Math.PI * 2);
-            deepCtx.fill();
-            
-            // Сохраняем данные для мерцания
-            deepSpaceStars.push({
-                x: x,
-                y: y,
-                radius: radius,
-                baseBrightness: brightness,
-                twinklePhase: Math.random() * Math.PI * 2,
-                twinkleSpeed: 0.02 + Math.random() * 0.03
-            });
-        }
-
-        // === ПЛАНЕТАРНЫЕ ОСОБЕННОСТИ ===
+        // === ПЛАНЕТАРНЫЕ ОСОБЕННОСТЬ ===
         addPlanetSpecificFeatures(deepCtx, currentPlanet, deepSpaceCanvas.width, deepSpaceCanvas.height);
 
-        console.log(`🌌 [BACKGROUND] Deep space generated: ${staticStarCount} stars`);
+        // === ИНИЦИАЛИЗАЦИЯ ЗВЕЗД ГЛУБОКОГО КОСМОСА ===
+        // Передаем 0 как параллакс-фактор, чтобы они оставались статичными на экране,
+        // но мерцали через кэшированные спрайты без вызовов ctx.arc!
+        const staticStarCount = fixedSettings.deepSpaceStars;
+        deepSpaceStars = [];
+        const starColors = ['#ffffff', '#f8f8ff', '#e6e6fa', '#fffacd', '#f0f8ff'];
+        
+        for (let i = 0; i < staticStarCount; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = Math.random() * 1.0 + 0.3; // Чуть меньше для иллюзии глубины
+            const color = starColors[Math.floor(Math.random() * starColors.length)];
+            
+            const starParticle = new Particle(x, y, radius, color, { x: 0, y: 0 }, 'star', 0);
+            // Делаем глубокое космическое мерцание более медленным и кинематографичным
+            starParticle.twinkleSpeed = 0.01 + Math.random() * 0.02;
+            
+            deepSpaceStars.push(starParticle);
+        }
+
+        console.log(`🌌 [BACKGROUND] Deep space context & ${staticStarCount} optimized stars initialized`);
     }
 
     /**
@@ -145,7 +139,7 @@
         
         switch (planet) {
             case 'mercury':
-                // Металлическое свечение                const mercuryGlow = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 200);
+                const mercuryGlow = ctx.createRadialGradient(width * 0.7, height * 0.3, 0, width * 0.7, height * 0.3, 200);
                 mercuryGlow.addColorStop(0, 'rgba(255, 170, 51, 0.1)');
                 mercuryGlow.addColorStop(1, 'rgba(255, 170, 51, 0)');
                 ctx.fillStyle = mercuryGlow;
@@ -153,7 +147,6 @@
                 break;
 
             case 'venus':
-                // Оранжевые облака
                 for (let i = 0; i < 5; i++) {
                     const x = Math.random() * width;
                     const y = Math.random() * height;
@@ -171,7 +164,6 @@
                 break;
 
             case 'jupiter':
-                // Полосы штормов
                 for (let i = 0; i < 4; i++) {
                     const y = (height / 5) * (i + 1);
                     const bandHeight = 25 + Math.random() * 30;
@@ -187,19 +179,18 @@
                 break;
 
             case 'saturn':
-                // Золотистое свечение колец
                 const ringsGlow = ctx.createRadialGradient(width/2, height/2, 80, width/2, height/2, 250);
                 ringsGlow.addColorStop(0, 'rgba(240, 230, 140, 0)');
                 ringsGlow.addColorStop(0.5, 'rgba(240, 230, 140, 0.08)');
                 ringsGlow.addColorStop(1, 'rgba(240, 230, 140, 0)');
                 
                 ctx.fillStyle = ringsGlow;
-                ctx.beginPath();                ctx.ellipse(width/2, height/2, 250, 80, 0, 0, Math.PI * 2);
+                ctx.beginPath();                
+                ctx.ellipse(width/2, height/2, 250, 80, 0, 0, Math.PI * 2);
                 ctx.fill();
                 break;
 
             case 'neptune':
-                // Глубокие синие вихри
                 for (let i = 0; i < 2; i++) {
                     const x = Math.random() * width;
                     const y = Math.random() * height;
@@ -217,33 +208,10 @@
         }
     }
 
-    /**
-     * Рисует мерцающие звёзды глубокого космоса
-     * Вызывается каждый кадр
-     */
-    function drawTwinklingStars() {
-        if (!deepSpaceStars || deepSpaceStars.length === 0) return;
-
-        for (let i = 0; i < deepSpaceStars.length; i++) {
-            const star = deepSpaceStars[i];
-            
-            // Мерцание через изменение яркости
-            const twinkleFactor = 0.5 + 0.5 * Math.sin(star.twinklePhase);
-            const brightness = star.baseBrightness * twinkleFactor;
-            
-            ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
-            ctx.beginPath();
-            ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Обновляем фазу мерцания
-            star.twinklePhase += star.twinkleSpeed;
-        }
-    }
-
     // ==========================================
     // 🚀 СИСТЕМА КЭШИРОВАНИЯ СПРАЙТОВ
-    // ==========================================    const spriteCache = new Map();
+    // ==========================================
+    const spriteCache = new Map();
     const MAX_CACHE_SIZE = 500;
 
     function createStarSprite(radius, color) {
@@ -292,7 +260,8 @@
                     const ix = Math.cos(angle) * radius;
                     const iy = Math.sin(angle) * radius;
                     if (i === 0) offCtx.moveTo(ix, iy);
-                    else offCtx.lineTo(ix, iy);                }
+                    else offCtx.lineTo(ix, iy);                
+                }
                 offCtx.closePath();
                 offCtx.fillStyle = color;
                 offCtx.fill();
@@ -439,7 +408,8 @@
             this.sprite = null;
             if (type === 'star') {
                 this.sprite = createStarSprite(radius, color);
-            } else if (type === 'nebula') {                this.sprite = createNebulaSprite(radius, color);
+            } else if (type === 'nebula') {                
+                this.sprite = createNebulaSprite(radius, color);
             } else {
                 this.sprite = createParticleSprite(type, radius, color);
             }
@@ -477,6 +447,7 @@
         }
 
         update() {
+            // Если parallaxFactor равен 0 (звезды глубокого космоса), они не будут двигаться
             const parallaxSpeed = parallaxSettings.baseSpeed * this.parallaxFactor;
             this.x += parallaxSettings.directionX * parallaxSpeed;
             this.y += parallaxSettings.directionY * parallaxSpeed;
@@ -488,7 +459,8 @@
             this.x += this.velocity.x;
             this.y += this.velocity.y;
             this.rotation += this.rotationSpeed;
-            this.pulse += 0.05;            this.twinkle += this.twinkleSpeed;
+            this.pulse += 0.05;            
+            this.twinkle += this.twinkleSpeed;
 
             const radius2 = this.radius * 2;
             if (this.x < -radius2) this.x = canvas.width + radius2;
@@ -536,8 +508,9 @@
     }
 
     // ==========================================
-    // 🪐 ГЕНЕРАТОРЫ ПЛАНЕТ (без изменений)
-    // ==========================================    function generateMercury() {
+    // 🪐 ГЕНЕРАТОРЫ ПЛАНЕТ
+    // ==========================================    
+    function generateMercury() {
         const data = planetData.mercury;
         const count = fixedSettings.density * 15;
         particles = [];
@@ -586,7 +559,8 @@
         const count = fixedSettings.density * 25;
         particles = [];
         for (let i = 0; i < count; i++) {
-            const x = Math.random() * canvas.width;            const y = Math.random() * canvas.height;
+            const x = Math.random() * canvas.width;            
+            const y = Math.random() * canvas.height;
             const radius = Math.random() * fixedSettings.size * 2 + 2;
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
             const speedValue = (Math.random() * 0.5 + 0.2) * fixedSettings.speed / 5;
@@ -635,7 +609,8 @@
         const ringCount = fixedSettings.density * 10;
         for (let i = 0; i < ringCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const distance = 100 + Math.random() * 150;            const x = canvas.width / 2 + Math.cos(angle) * distance;
+            const distance = 100 + Math.random() * 150;            
+            const x = canvas.width / 2 + Math.cos(angle) * distance;
             const y = canvas.height / 2 + Math.sin(angle) * distance;
             const radius = Math.random() * fixedSettings.size * 2 + 5;
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
@@ -684,7 +659,8 @@
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
             const speedValue = (Math.random() * 0.8 + 0.3) * fixedSettings.speed / 5;
             const dx = x - cx, dy = y - cy;
-            const dist = Math.sqrt(dx * dx + dy * dy);            const angle = Math.atan2(dy, dx) + Math.PI / 2;
+            const dist = Math.sqrt(dx * dx + dy * dy);            
+            const angle = Math.atan2(dy, dx) + Math.PI / 2;
             particles.push(new Particle(x, y, radius, color, {
                 x: Math.cos(angle) * speedValue * (1 + dist / 200),
                 y: Math.sin(angle) * speedValue * (1 + dist / 200)
@@ -733,21 +709,25 @@
         saturn: generateSaturn,
         uranus: generateUranus,
         neptune: generateNeptune,
-        pluto: generatePluto    };
+        pluto: generatePluto    
+    };
 
     // ==========================================
     // 🎬 АНИМАЦИЯ (ОПТИМИЗИРОВАННАЯ)
     // ==========================================
     function animateParticles() {
-        // ✅ 1. Рисуем статичный фон глубокого космоса
+        // ✅ 1. Рисуем предрассчитанный offscreen фон глубокого космоса (без звезд)
         if (deepSpaceCanvas) {
             ctx.drawImage(deepSpaceCanvas, 0, 0);
         }
         
-        // ✅ 2. Рисуем мерцающие звёзды глубокого космоса
-        drawTwinklingStars();
+        // ✅ 2. Обновляем и рисуем мерцающие звёзды глубокого космоса из спрайт-кэша
+        deepSpaceStars.forEach(s => {
+            s.update(); // Фаза мерцания меняется, позиция стоит на месте (parallax factor = 0)
+            s.draw();
+        });
         
-        // ✅ 3. Рисуем динамические частицы (туманности, звёзды, частицы планет)
+        // ✅ 3. Рисуем динамические слои параллакса
         nebulae.forEach(n => {
             n.update();
             n.draw();
@@ -770,12 +750,7 @@
     }
 
     function animate(timestamp) {
-        if (document.hidden) {
-            animationId = requestAnimationFrame(animate);
-            return;
-        }
-
-        if (isPaused) {
+        if (document.hidden || isPaused) {
             animationId = requestAnimationFrame(animate);
             return;
         }
@@ -805,10 +780,10 @@
 
         spriteCache.clear();
 
-        // ✅ Генерируем статичный фон глубокого космоса
+        // ✅ Генерируем статичный фон глубокого космоса + мерцающие подложки
         generateDeepSpaceBackground();
         
-        // ✅ Генерируем динамические частицы
+        // ✅ Генерируем слои динамических частиц параллакса
         generateStars();
         generateNebulae();
 
@@ -831,7 +806,8 @@
         generatePlanetBackground();
     }
 
-    function pause() { isPaused = true; }    function resume() { isPaused = false; }
+    function pause() { isPaused = true; }    
+    function resume() { isPaused = false; }
     function stop() {
         if (animationId) {
             cancelAnimationFrame(animationId);
@@ -840,14 +816,25 @@
     }
 
     // ==========================================
-    // 🚀 ИНИЦИАЛИЗАЦИЯ
+    // 🚀 ИНИЦИАЛИЗАЦИЯ И РЕЗАЙЗ
     // ==========================================
     function setCanvasSize() {
         if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
         const pixelRatio = window.devicePixelRatio || 1;
-        canvas.width = canvas.offsetWidth * pixelRatio;
-        canvas.height = canvas.offsetHeight * pixelRatio;
-        ctx.scale(pixelRatio, pixelRatio);
+        
+        // Задаем физический размер буфера холста
+        canvas.width = rect.width * pixelRatio;
+        canvas.height = rect.height * pixelRatio;
+        
+        // Фиксируем CSS-размеры, чтобы избежать размытия или искажения пропорций
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+
+        // ✅ Перегенерируем всю сцену, если изменение размера произошло на лету (например, поворот смартфона)
+        if (isInitialized) {
+            generatePlanetBackground();
+        }
     }
 
     function init() {
@@ -856,6 +843,7 @@
         setCanvasSize();
         generatePlanetBackground();
 
+        // Оптимизированный слушатель ресайза
         window.addEventListener('resize', setCanvasSize);
 
         document.addEventListener('visibilitychange', () => {
@@ -874,13 +862,14 @@
         });
 
         isInitialized = true;
-        console.log('✅ Planet Background System v2.1 initialized (DEEP SPACE + TWINKLING)');
+        console.log('✅ Planet Background System v2.2 initialized (FIXED SCALE & ARC RENDERING)');
     }
 
     // ✅ Экспорт API
     window.planetBackground = {
         init: init,
-        setPlanet: changePlanet,        setCanvasSize: setCanvasSize,
+        setPlanet: changePlanet,        
+        setCanvasSize: setCanvasSize,
         pause: pause,
         resume: resume,
         stop: stop,
