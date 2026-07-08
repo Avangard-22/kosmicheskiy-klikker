@@ -25,7 +25,9 @@ const ASTRONOMICAL_UNITS = {
 };
 
 // === ВИЗУАЛЬНЫЕ ТЕМЫ ПЛАНЕТ ===
+// ✅ ИСПРАВЛЕНО: каждая планета имеет уникальную цветовую схему
 const LOCATIONS = {
+    // ☿ Меркурий — раскалённая серо-коричневая поверхность
     mercury: {
         name: '☿ Меркурий',
         color: '#bb86fc',
@@ -33,6 +35,7 @@ const LOCATIONS = {
         borderColor: '#4a55e0',
         blockColors: ['#2962ff', '#4fc3f7', '#bb86fc', '#f8bbd0']
     },
+    // ♀ Венера — горячие оранжево-красные облака
     venus: {
         name: '♀ Венера',
         color: '#ffab91',
@@ -40,6 +43,7 @@ const LOCATIONS = {
         borderColor: '#ff5722',
         blockColors: ['#ff5722', '#ff9800', '#ff5722', '#e91e63']
     },
+    // ♁ Земля — океанические синие тона
     earth: {
         name: '♁ Земля',
         color: '#80deea',
@@ -47,12 +51,15 @@ const LOCATIONS = {
         borderColor: '#0288d1',
         blockColors: ['#0288d1', '#29b6f6', '#00bcd4', '#00e5ff']
     },
-    mars: {        name: '♂ Марс',
+    // ♂ Марс — красно-зелёные пустыни
+    mars: {
+        name: '♂ Марс',
         color: '#a5d6a7',
         coinColor: '#a0d2ff',
         borderColor: '#388e3c',
         blockColors: ['#388e3c', '#66bb6a', '#9ccc65', '#d4e157']
     },
+    // ♃ Юпитер — оранжево-коричневые полосы газового гиганта
     jupiter: {
         name: '♃ Юпитер',
         color: '#d2a679',
@@ -60,6 +67,7 @@ const LOCATIONS = {
         borderColor: '#8b4513',
         blockColors: ['#c9a961', '#d2691e', '#a0522d', '#8b4513']
     },
+    // ♄ Сатурн — золотистые кольца
     saturn: {
         name: '♄ Сатурн',
         color: '#f0e68c',
@@ -67,6 +75,7 @@ const LOCATIONS = {
         borderColor: '#b8860b',
         blockColors: ['#f0e68c', '#daa520', '#b8860b', '#ffd700']
     },
+    // ♅ Уран — ледяной голубовато-зелёный
     uranus: {
         name: '♅ Уран',
         color: '#7fffd4',
@@ -74,6 +83,7 @@ const LOCATIONS = {
         borderColor: '#20b2aa',
         blockColors: ['#afeeee', '#7fffd4', '#40e0d0', '#48d1cc']
     },
+    // ♆ Нептун — глубокий синий
     neptune: {
         name: '♆ Нептун',
         color: '#6495ed',
@@ -81,6 +91,7 @@ const LOCATIONS = {
         borderColor: '#0000cd',
         blockColors: ['#4169e1', '#1e90ff', '#0000cd', '#191970']
     },
+    // ♇ Плутон — серо-коричневый лёд (карликовая планета)
     pluto: {
         name: '♇ Плутон',
         color: '#b0b0b0',
@@ -96,7 +107,8 @@ const RARE_BLOCKS = {
         name: 'Золотой',
         chance: 0.03,
         multiplier: 8,
-        healthMultiplier: 1.8,        className: 'block-gold'
+        healthMultiplier: 1.8,
+        className: 'block-gold'
     },
     RAINBOW: {
         name: 'Радужный',
@@ -146,10 +158,12 @@ const COSTS = {
     baseCritMultiplierCost: 800,
     baseHelperDmgCost: 1000
 };
+
 // === КОНВЕРТАЦИЯ УРОНА В А.Е. ===
+// ✅ ВАЖНО: используется в game-ui.js для прогресс-бара
 const AU_TO_DAMAGE = 149597870.691;
 
-// === ГЕНЕРАТОР ЭКЗОПЛАНЕТ ===
+// === ГЕНЕРАТОР ЭКЗОПЛАНЕТ (для пост-Плутон контента) ===
 function generateExoplanet(seed, distanceFromPluto) {
     const types = ['ice_giant', 'super_earth', 'pulsar', 'nebula', 'black_hole'];
     const type = types[Math.floor(seed * types.length)];
@@ -173,6 +187,7 @@ function generateExoplanet(seed, distanceFromPluto) {
 }
 
 // === ЕДИНАЯ КОНФИГУРАЦИЯ ПРОГРЕССИИ ===
+// ✅ ИСПРАВЛЕНО: использует единый PLANET_ORDER и ASTRONOMICAL_UNITS
 const PROGRESSION_CONFIG = PLANET_ORDER.reduce((acc, planet, index) => {
     acc[planet] = {
         targetAU: ASTRONOMICAL_UNITS[planet],
@@ -183,141 +198,20 @@ const PROGRESSION_CONFIG = PLANET_ORDER.reduce((acc, planet, index) => {
 }, {});
 
 // === ОПРЕДЕЛЕНИЕ МОБИЛЬНОГО УСТРОЙСТВА ===
+// ✅ НОВОЕ: Единый флаг для всех модулей
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-// ==========================================
-// 📱 АДАПТИВНЫЕ НАСТРОЙКИ ДЛЯ УСТРОЙСТВ
-// ==========================================
-
-/**
- * Определяет производительность устройства
- */
-function detectDevicePerformance() {
-    const ua = navigator.userAgent || '';
-    const cores = navigator.hardwareConcurrency || 4;    const memory = navigator.deviceMemory || 4;
-    
-    // Определение модели
-    let deviceModel = 'unknown';
-    let deviceBrand = 'unknown';
-    
-    if (/realme/i.test(ua)) {
-        deviceBrand = 'Realme';
-        const match = ua.match(/realme\s+([^\s;)]+)/i);
-        deviceModel = match ? match[1] : 'unknown';
-    } else if (/samsung/i.test(ua)) {
-        deviceBrand = 'Samsung';
-        const match = ua.match(/SM-([^\s;)]+)/i);
-        deviceModel = match ? match[1] : 'unknown';
-    } else if (/xiaomi|mi\s/i.test(ua)) {
-        deviceBrand = 'Xiaomi';
-        const match = ua.match(/MI\s+([^\s;)]+)/i);
-        deviceModel = match ? match[1] : 'unknown';
-    } else if (/iphone/i.test(ua)) {
-        deviceBrand = 'Apple';
-        deviceModel = 'iPhone';
-    } else if (/android/i.test(ua)) {
-        deviceBrand = 'Android';
-        deviceModel = 'unknown';
-    }
-    
-    // Определение tier
-    let tier = 'medium';
-    if (cores >= 8 && memory >= 6) {
-        tier = 'high';
-    } else if (cores <= 4 || memory <= 3) {
-        tier = 'low';
-    }
-    
-    // Специальная обработка для Realme 10 Pro
-    if (deviceBrand === 'Realme' && deviceModel.includes('10')) {
-        tier = 'medium-low';
-    }
-    
-    return {
-        brand: deviceBrand,
-        model: deviceModel,
-        cores: cores,
-        memory: memory,
-        tier: tier
-    };
-}
-
-/**
- * Получает адаптивные настройки для игры */
-function getAdaptiveSettings() {
-    const device = detectDevicePerformance();
-    
-    const settings = {
-        // Базовые настройки
-        blockSpeed: 20,
-        blockHealthMultiplier: 1.0,
-        particleDensity: 1.0
-    };
-    
-    // Адаптация по tier
-    switch (device.tier) {
-        case 'high':
-            settings.blockSpeed = 25;
-            settings.blockHealthMultiplier = 1.2;
-            settings.particleDensity = 1.0;
-            break;
-            
-        case 'medium':
-            settings.blockSpeed = 30;
-            settings.blockHealthMultiplier = 1.1;
-            settings.particleDensity = 0.8;
-            break;
-            
-        case 'medium-low':
-            // Специально для Realme 10 Pro и подобных
-            settings.blockSpeed = 35;
-            settings.blockHealthMultiplier = 1.3;
-            settings.particleDensity = 0.7;
-            break;
-            
-        case 'low':
-        default:
-            settings.blockSpeed = 40;
-            settings.blockHealthMultiplier = 1.5;
-            settings.particleDensity = 0.5;
-            break;
-    }
-    
-    console.log('📱 [CONFIG] Device:', device.brand, device.model, '| Tier:', device.tier);
-    console.log('⚙️  [CONFIG] Adaptive settings:', settings);
-    
-    return settings;
-}
-
-// Инициализируем адаптивные настройки
-const ADAPTIVE_SETTINGS = getAdaptiveSettings();
-
-// === ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ===window.GAME_CONFIG = {
+// === ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ===
+window.GAME_CONFIG = {
     // Астрономия
     AU_TO_DAMAGE: AU_TO_DAMAGE,
     astronomicalUnits: ASTRONOMICAL_UNITS,
     planetOrder: PLANET_ORDER,
 
-    // ✅ Мобильное устройство
+// ✅ НОВОЕ: Флаг мобильного устройства
     isMobile: IS_MOBILE,
     
-    // ✅ Адаптивные настройки
-    adaptiveSettings: ADAPTIVE_SETTINGS,
-    
-    // ✅ Функции для получения адаптивных параметров
-    getBlockSpeed: function() {
-        return ADAPTIVE_SETTINGS.blockSpeed;
-    },
-    
-    getBlockHealthMultiplier: function() {
-        return ADAPTIVE_SETTINGS.blockHealthMultiplier;
-    },
-    
-    getParticleDensity: function() {
-        return ADAPTIVE_SETTINGS.particleDensity;
-    },
-    
-    // Визуал
+// Визуал
     locations: LOCATIONS,
     rareBlocks: RARE_BLOCKS,
 
@@ -333,5 +227,4 @@ const ADAPTIVE_SETTINGS = getAdaptiveSettings();
 };
 
 console.log('📋 Game Config initialized. Planets:', PLANET_ORDER.length);
-console.log('📱 Device tier:', ADAPTIVE_SETTINGS);
 })();
