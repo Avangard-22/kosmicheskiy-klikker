@@ -1,4 +1,4 @@
-// js/music-system.js (v2.0 — рандомные треки для планет)
+// js/music-system.js (v2.1 — реальные названия + бегущая строка)
 (function() {
 'use strict';
 
@@ -7,50 +7,49 @@
 // ==========================================
 const PLANET_TRACKS = {
     mercury: [
-        'audio/mercury/mercury_01.mp3',
-        'audio/mercury/mercury_02.mp3',
-        'audio/mercury/mercury_03.mp3',
-       
+        'audio/mercury/Copper_Noon.mp3',
+        'audio/mercury/Solar_Meridian.mp3',
+        'audio/mercury/Stones_Under_the_Midday_Sun.mp3'
     ],
     venus: [
-        'audio/venus/venus_01.mp3',
-        'audio/venus/venus_02.mp3',
-        'audio/venus/venus_03.mp3'
+        'audio/venus/Below_the_Sulfur_Clouds.mp3',
+        'audio/venus/Beneath_the_Blind_Sun.mp3',
+        'audio/venus/Beneath_The_Heavy_Air.mp3'
     ],
     earth: [
-        'audio/earth/earth_01.mp3',
-        'audio/earth/earth_02.mp3',
-        'audio/earth/earth_03.mp3'
+        'audio/earth/Under_Canopy_Light.mp3',
+        'audio/earth/Waking_Under_Salt_and_Soil.mp3',
+        'audio/earth/Where_the_Grass_Breathes.mp3'
     ],
     mars: [
-        'audio/mars/mars_01.mp3',
-        'audio/mars/mars_02.mp3',
-        'audio/mars/mars_03.mp3'
+        'audio/mars/Basalt_Under_Thin_Light.mp3',
+        'audio/mars/Sands_Before_Dawn.mp3',
+        'audio/mars/Under_a_Cold_Sun.mp3'
     ],
     jupiter: [
-        'audio/jupiter/jupiter_01.mp3',
-        'audio/jupiter/jupiter_02.mp3',
-        'audio/jupiter/jupiter_03.mp3'
+        'audio/jupiter/Beneath_the_Ochre_Clouds.mp3',
+        'audio/jupiter/Thousand_Year_Storm.mp3',
+        'audio/jupiter/Weight_of_Granite.mp3'
     ],
     saturn: [
-        'audio/saturn/saturn_01.mp3',
-        'audio/saturn/saturn_02.mp3',
-        'audio/saturn/saturn_03.mp3'
+        'audio/saturn/Frozen_Orbit.mp3',
+        'audio/saturn/Gravity_s_Slow_Descent.mp3',
+        'audio/saturn/Ice_Over_The_Horizon.mp3'
     ],
     uranus: [
-        'audio/uranus/uranus_01.mp3',
-        'audio/uranus/uranus_02.mp3',
-        'audio/uranus/uranus_03.mp3'
+        'audio/uranus/Glass_Horizon.mp3',
+        'audio/uranus/Morning_at_the_Outer_Rim.mp3',
+        'audio/uranus/Planetary_Breath.mp3'
     ],
     neptune: [
-        'audio/neptune/neptune_01.mp3',
-        'audio/neptune/neptune_02.mp3',
-        'audio/neptune/neptune_03.mp3'
+        'audio/neptune/Beneath_the_Azure_Cloud.mp3',
+        'audio/neptune/Beneath_the_Frozen_Mantle.mp3',
+        'audio/neptune/Weight_of_the_Deep.mp3'
     ],
     pluto: [
-        'audio/pluto/pluto_01.mp3',
-        'audio/pluto/pluto_02.mp3',
-        'audio/pluto/pluto_03.mp3'
+        'audio/pluto/Glass_Bells_at_the_Edge.mp3',
+        'audio/pluto/The_Weight_of_Stillness.mp3',
+        'audio/pluto/Twilight_at_Forty.mp3'
     ]
 };
 
@@ -70,6 +69,7 @@ let currentBuffer = null;
 let currentSource = null;
 let currentPlanet = null;
 let currentTrackIndex = -1;
+let currentTrackName = '';
 let isMuted = false;
 let isMusicStarted = false;
 let gainNode = null;
@@ -93,6 +93,97 @@ function getRandomTrack(planet) {
     
     currentTrackIndex = randomIndex;
     return tracks[randomIndex];
+}
+
+// ==========================================
+// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
+// ==========================================
+function extractTrackName(trackUrl) {
+    // Извлекаем имя файла из пути
+    const filename = trackUrl.split('/').pop();
+    // Убираем расширение .mp3
+    const nameWithoutExt = filename.replace('.mp3', '');
+    // Заменяем underscores на пробелы
+    const readableName = nameWithoutExt.replace(/_/g, ' ');
+    return readableName;
+}
+
+// ==========================================
+// 🎵 UI: БЕГУЩАЯ СТРОКА
+// ==========================================
+function createTrackDisplay() {
+    // Удаляем старый элемент если есть
+    const existing = document.getElementById('trackDisplay');
+    if (existing) existing.remove();
+    
+    // Создаём контейнер
+    const container = document.createElement('div');
+    container.id = 'trackDisplay';
+    container.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(90%, 400px);
+        height: 30px;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        overflow: hidden;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-family: 'Orbitron', sans-serif;
+    `;
+    
+    // Создаём текст с анимацией
+    const text = document.createElement('div');
+    text.id = 'trackName';
+    text.style.cssText = `
+        white-space: nowrap;
+        color: #FFD700;
+        font-size: 0.8em;
+        font-weight: bold;
+        text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
+        animation: marquee 15s linear infinite;
+        padding: 0 20px;
+    `;
+    text.textContent = '🎵 Загрузка музыки...';
+    
+    container.appendChild(text);
+    document.body.appendChild(container);
+    
+    // Добавляем CSS анимацию если ещё не добавлена
+    if (!document.getElementById('marqueeStyle')) {
+        const style = document.createElement('style');
+        style.id = 'marqueeStyle';
+        style.textContent = `
+            @keyframes marquee {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    console.log('[MUSIC] Track display created');
+}
+
+function updateTrackDisplay(trackUrl) {
+    const trackName = extractTrackName(trackUrl);
+    currentTrackName = trackName;
+    
+    const textElement = document.getElementById('trackName');
+    if (textElement) {
+        textElement.textContent = `🎵 ${trackName}`;
+        // Перезапускаем анимацию
+        textElement.style.animation = 'none';
+        void textElement.offsetWidth; // Force reflow
+        textElement.style.animation = 'marquee 15s linear infinite';
+    }
 }
 
 // ==========================================
@@ -239,7 +330,7 @@ function fadeOut(duration, callback) {
 }
 
 // ==========================================
-// 🎵 PLAY PLANET MUSIC (с рандомным треком)
+// 🎵 PLAY PLANET MUSIC (с бегущей строкой)
 // ==========================================
 async function playPlanetMusic(planet) {
     if (!PLANET_TRACKS[planet]) {
@@ -259,6 +350,9 @@ async function playPlanetMusic(planet) {
     }
     
     currentPlanet = planet;
+    
+    // ✅ Обновляем бегущую строку
+    updateTrackDisplay(trackUrl);
     
     const buffer = await loadAudioBuffer(trackUrl);
     if (!buffer) return;
@@ -359,6 +453,7 @@ function init() {
     }
     
     createMuteButton();
+    createTrackDisplay(); // ✅ Создаём бегущую строку
     
     // Запускаем музыку при первом взаимодействии
     const startOnFirstInteraction = async function() {
@@ -381,7 +476,7 @@ function init() {
     document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
     document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('[MUSIC] Music System v2.0 initialized (RANDOM TRACKS)');
+    console.log('[MUSIC] Music System v2.1 initialized (REAL NAMES + MARQUEE)');
     console.log('📋 Available planets:', Object.keys(PLANET_TRACKS));
 }
 
@@ -397,12 +492,14 @@ window.MusicSystem = {
     getCurrentTrack: function() {
         const tracks = PLANET_TRACKS[currentPlanet];
         return tracks ? tracks[currentTrackIndex] : null;
-    }
+    },
+    getCurrentTrackName: function() { return currentTrackName; }
 };
 
 // Экспортируем для внешнего использования
 window.PLANET_TRACKS = PLANET_TRACKS;
 window.getRandomTrack = getRandomTrack;
+window.extractTrackName = extractTrackName;
 
 // Auto-start
 if (document.readyState === 'loading') {
