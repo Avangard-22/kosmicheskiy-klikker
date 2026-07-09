@@ -187,8 +187,7 @@ window.GAME_FEATURES = {
             window.gameState.coins -= cost;
             window.gameState.clickUpgradeLevel++;
             window.gameState.clickPower = core.calculateClickPower();
-            
-            window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
+           
             if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
 
             UI.updateHUD();
@@ -230,8 +229,7 @@ window.GAME_FEATURES = {
         if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.helperActivations = (window.gameState.helperActivations || 0) + 1;
-            window.gameMetrics.helpersBought = (window.gameMetrics.helpersBought || 0) + 1;
-
+            
             if (window.achievementsSystem) window.achievementsSystem.incrementHelpers(1);
 
             const btn = document.getElementById('upgradeHelperBtn');
@@ -294,7 +292,6 @@ window.GAME_FEATURES = {
             window.gameState.critMultiplier += 0.2;
             window.gameState.critMultiplierUpgradeLevel++;
             
-            window.gameMetrics.upgradesBought = (window.gameMetrics.upgradesBought || 0) + 1;
             if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
 
             UI.updateHUD();
