@@ -946,21 +946,39 @@ function updateTimePlayed() {
     }
 }
 
+// ✅ УБРАН setTimeout — используем Ready Gate
 function safeInit() {
     if (!document.getElementById('achievementsBtn')) {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
+        // Ждём DOM, но НЕ ждём другие модули через setTimeout
+        document.addEventListener('DOMContentLoaded', safeInit);
         return;
     }
-    if (!window.gameState || !window.GAME_CORE) {
-        setTimeout(safeInit, 200);
-        return;
-    }
+    
     init();
+    
+    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
+    if (window.EventBus) {
+        window.EventBus.moduleReady('achievements');
+    }
 }
 
+// ✅ Подписка на Ready Gate вместо setTimeout
+if (window.EventBus) {
+    // Если save уже готов — инициируемся сразу по событию
+    window.EventBus.once('game:allReady', () => {
+        // Двойная проверка: если уже инициализировались через DOMContentLoaded
+        if (!document.getElementById('achievementsBtn')) {
+            document.addEventListener('DOMContentLoaded', safeInit);
+        } else {
+            safeInit();
+        }
+    });
+}
+
+// Fallback: если EventBus не загрузился (не должно происходить)
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
+    document.addEventListener('DOMContentLoaded', safeInit);
 } else {
-    setTimeout(safeInit, 100);
+    safeInit();
 }
 })();
