@@ -57,7 +57,6 @@
     if (result.isCrit) {
         window.gameMetrics.totalCrits = (window.gameMetrics.totalCrits || 0) + 1;
     }
-    window.gameMetrics.totalClicks = (window.gameMetrics.totalClicks || 0) + 1;
 
     // Применяем урон к состоянию
     if (window.GAME_CORE) {
