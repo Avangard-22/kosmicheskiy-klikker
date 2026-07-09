@@ -1,23 +1,13 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#000000">
-    
-    <!-- SEO и шаринг -->
     <title>Космический Кликер</title>
-    <meta name="description" content="Разрушайте блоки, покоряйте планеты Солнечной системы и собирайте космические Кристаллы!">
-    <meta property="og:title" content="Космический Кликер">
-    <meta property="og:description" content="Покори все 9 планет Солнечной системы!">
-    <meta property="og:type" content="website">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
-    
-    <!-- Telegram WebApp SDK с fallback -->
-    <script src="https://telegram.org/js/telegram-web-app.js" 
-            onerror="console.warn('Telegram SDK failed to load, running in browser mode')"></script>
+
+    <!-- Telegram WebApp SDK (должен быть первым!) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <!-- Шрифты и иконки -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,43 +17,14 @@
 
     <!-- Стили игры -->
     <link rel="stylesheet" href="css/styles.css">
-    
-    <!-- Критические inline стили для loading-экрана -->
-    <style>
-        #loadingScreen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 10000;
-            font-family: 'Orbitron', sans-serif; color: #4FC3F7;
-            transition: opacity 0.5s;
-        }
-        #loadingScreen.hidden { opacity: 0; pointer-events: none; }
-        .loading-spinner {
-            width: 40px; height: 40px; border: 3px solid rgba(79,195,247,0.3);
-            border-top-color: #4FC3F7; border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
 </head>
 <body>
-    <!-- Loading Screen (показывается пока скрипты загружаются) -->    <div id="loadingScreen">
-        <div class="loading-spinner"></div>
-        <div>Загрузка...</div>
-    </div>
-
-    <!-- Noscript fallback -->
-    <noscript>
-        <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-family:sans-serif;text-align:center;padding:20px;z-index:99999;">
-            <div>
-                <h2>⚠️ JavaScript отключён</h2>
-                <p>Для работы «Космического Кликера» необходимо включить JavaScript в настройках браузера.</p>
-            </div>
-        </div>
-    </noscript>
+    <!-- ========================================== -->
+    <!-- ИГРОВОЙ ИНТЕРФЕЙС                          -->
+    <!-- ========================================== -->
 
     <!-- Фоновый canvas с планетой -->
-    <canvas id="planetBackgroundCanvas" width="1920" height="1080"></canvas>
+    <canvas id="planetBackgroundCanvas"></canvas>
 
     <!-- Заголовок с названием планеты -->
     <div id="header">
@@ -96,71 +57,73 @@
         <div class="hud-item">
             <i class="fas fa-bolt" style="color: #FFD700;"></i>
             <span>Множ.крита: </span>
-            <span id="critMultiplier-value">x2.0</span>        </div>
+            <span id="critMultiplier-value">x2.0</span>
+        </div>
     </div>
 
     <!-- Активные бусты -->
     <div id="activeBoosts"></div>
 
     <!-- Игровая зона (блоки) -->
-    <div id="gameArea" role="application" aria-label="Игровая зона"></div>
+    <div id="gameArea"></div>
 
     <!-- Уведомления о смене уровня и штрафах -->
-    <div id="levelAnnounce" role="status" aria-live="polite"></div>
-    <div id="penaltyAnnounce" role="alert" aria-live="assertive"></div>
+    <div id="levelAnnounce"></div>
+    <div id="penaltyAnnounce"></div>
 
     <!-- Кнопки улучшений -->
     <div id="upgrades-container">
-        <button class="upgrade-btn btn-available" id="upgradeClickBtn" title="Увеличить силу удара" aria-label="Улучшение силы удара">
+        <div class="upgrade-btn btn-available" id="upgradeClickBtn" title="Увеличить силу удара">
             <i class="fas fa-fist-raised"></i>
             <div class="upgrade-cost">80</div>
-        </button>
-        <button class="upgrade-btn btn-available" id="upgradeHelperBtn" title="Активировать Bobo" aria-label="Активировать помощника Bobo">
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeHelperBtn" title="Активировать Bobo">
             <i class="fas fa-robot"></i>
             <div class="upgrade-cost">1500</div>
-        </button>
-        <button class="upgrade-btn btn-available" id="upgradeCritChanceBtn" title="Увеличить шанс крита" aria-label="Улучшение шанса крита">
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeCritChanceBtn" title="Увеличить шанс крита">
             <i class="fas fa-star"></i>
             <div class="upgrade-cost">500</div>
-        </button>
-        <button class="upgrade-btn btn-available" id="upgradeCritMultBtn" title="Увеличить множитель крита" aria-label="Улучшение множителя крита">
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeCritMultBtn" title="Увеличить множитель крита">
             <i class="fas fa-bolt"></i>
             <div class="upgrade-cost">800</div>
-        </button>
-        <button class="upgrade-btn btn-available" id="upgradeHelperDmgBtn" title="Увеличить урон Bobo" aria-label="Улучшение урона Bobo">
+        </div>
+        <div class="upgrade-btn btn-available" id="upgradeHelperDmgBtn" title="Увеличить урон Bobo">
             <i class="fas fa-chart-line"></i>
             <div class="upgrade-cost">1000</div>
-        </button>
+        </div>
     </div>
 
     <!-- Магазин бонусов -->
     <div class="shop-container">
-        <button id="shopBtn" class="shop-btn" title="Магазин бонусов" aria-label="Открыть магазин">🛒</button>
-        <div id="shopPanel" class="shop-panel" role="dialog" aria-label="Магазин бонусов"></div>
+        <button id="shopBtn" class="shop-btn" title="Магазин бонусов">🛒</button>
+        <div id="shopPanel" class="shop-panel"></div>
     </div>
 
     <!-- Достижения -->
     <div class="achievements-container">
-        <button id="achievementsBtn" class="achievements-btn" title="Достижения" aria-label="Открыть достижения">
+        <button id="achievementsBtn" class="achievements-btn" title="Достижения">
             <i class="fas fa-trophy"></i>
-            <span id="achievementsCount">0/0</span>
+            <span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/0</span>
         </button>
     </div>
-    <!-- Кнопка ручного сохранения -->
-    <button id="saveBtn" title="Сохранить игру" aria-label="Сохранить прогресс">
+
+     <!-- Кнопка ручного сохранения -->
+    <button id="saveBtn" title="Сохранить игру">
         <i class="fas fa-save"></i>
     </button>
 
     <!-- Тултип (подсказки) -->
-    <div id="tooltip" class="tooltip" role="tooltip"></div>
+    <div id="tooltip" class="tooltip"></div>
 
     <!-- ========================================== -->
     <!-- ЭКРАНЫ                                     -->
     <!-- ========================================== -->
 
     <!-- Экран приветствия -->
-    <div id="welcomeScreen" role="dialog" aria-label="Главное меню">
-        <button id="langBtn-welcome" aria-label="Сменить язык">🇷🇺</button>
+    <div id="welcomeScreen">
+        <button id="langBtn-welcome">🇷🇺</button>
         <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
         <p>Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
         <p>Каждый блок требует определённого количества ударов для разрушения.</p>
@@ -175,60 +138,31 @@
     </div>
 
     <!-- Панель достижений -->
-    <div id="achievementsPanel" class="achievements-panel" role="dialog" aria-label="Панель достижений"></div>
-
-    <!-- ========================================== -->
-    <!-- АУДИО (скрытые элементы)                   -->
-    <!-- ========================================== -->
-    <audio id="clickSound" preload="auto"><source src="audio/click.mp3" type="audio/mpeg"></audio>
-    <audio id="breakSound" preload="auto"><source src="audio/break.mp3" type="audio/mpeg"></audio>
-    <audio id="comboSound" preload="auto"><source src="audio/combo.mp3" type="audio/mpeg"></audio>
-    <audio id="helperSound" preload="auto"><source src="audio/helper.mp3" type="audio/mpeg"></audio>
-    <audio id="upgradeSound" preload="auto"><source src="audio/upgrade.mp3" type="audio/mpeg"></audio>
-    <audio id="penaltySound" preload="auto"><source src="audio/penalty.mp3" type="audio/mpeg"></audio>
+    <div id="achievementsPanel" class="achievements-panel"></div>
 
     <!-- ========================================== -->
     <!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
     <!-- ========================================== -->
-    <!-- 1. EventBus — ПЕРВЫМ! -->
-    <script src="js/event-bus.js"></script>
-    <!-- 2. Конфигурация -->
-    <script src="js/game-config.js"></script>
-    <script src="js/translations.js"></script>    <!-- 3. Save System — ДО Core! -->
-    <script src="js/save-system.js"></script>
-    <!-- 4. Ядро -->
-    <script src="js/combat-system.js"></script>
-    <script src="js/game-core.js"></script>
-    <script src="js/game-features.js"></script>
-    <script src="js/game-ui.js"></script>
-    <!-- 5. Системы (Ready Gate) -->
-    <script src="js/achievements.js"></script>
-    <script src="js/shop.js"></script>
-    <script src="js/daily-bonus.js"></script>
-    <script src="js/music-system.js"></script>
-    <script src="js/planet-background.js"></script>
-    <script src="js/voyager-tracker.js"></script>
-    <script src="js/telegram-integration.js"></script>
+<!-- 1. EventBus — ПЕРВЫМ! -->
+<script src="js/event-bus.js"></script>
+<!-- 2. Конфигурация -->
+<script src="js/game-config.js"></script>
+<script src="js/translations.js"></script>
+<!-- 3. Save System — ДО Core! -->
+<script src="js/save-system.js"></script>
+<!-- 4. Ядро -->
+<script src="js/combat-system.js"></script>
+<script src="js/game-core.js"></script>
+<script src="js/game-features.js"></script>
+<script src="js/game-ui.js"></script>
+<!-- 5. Системы (порядок не важен, т.к. Ready Gate) -->
+<script src="js/achievements.js"></script>
+<script src="js/shop.js"></script>
+<script src="js/daily-bonus.js"></script>
+<script src="js/music-system.js"></script>
+<script src="js/planet-background.js"></script>
+<script src="js/voyager-tracker.js"></script>
+<script src="js/telegram-integration.js"></script>
     
-    <!-- Скрытие loading screen после инициализации -->
-    <script>
-        if (window.EventBus) {
-            window.EventBus.once('game:allReady', function() {
-                var ls = document.getElementById('loadingScreen');
-                if (ls) {
-                    ls.classList.add('hidden');
-                    setTimeout(function() { ls.remove(); }, 500);
-                }
-            });
-        }
-        // Fallback: убираем loading через 5 секунд в любом случае
-        setTimeout(function() {
-            var ls = document.getElementById('loadingScreen');
-            if (ls) {
-                ls.classList.add('hidden');
-                setTimeout(function() { ls.remove(); }, 500);
-            }
-        }, 5000);
-    </script>
 </body>
 </html>
