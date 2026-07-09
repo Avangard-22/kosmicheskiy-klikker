@@ -52,17 +52,12 @@
 
     // Расчёт урона (чистая математика)
     const result = this.calculateHit(baseDamage);
-
-    // Обновляем метрики
-    if (result.isCrit) {
-        window.gameMetrics.totalCrits = (window.gameMetrics.totalCrits || 0) + 1;
     }
 
     // Применяем урон к состоянию
     if (window.GAME_CORE) {
         window.GAME_CORE.currentBlockHealth -= result.finalDamage;
     }
-    window.gameState.totalDamageDealt += result.finalDamage;
 
     // Проверяем разрушение
     const destroyed = window.GAME_CORE?.currentBlockHealth <= 0;
