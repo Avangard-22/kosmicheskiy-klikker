@@ -228,7 +228,6 @@ block.addEventListener('click', () => {
                 break;
             }
         }
-
         if (window.gameState.comboCount > 1) {
             let comboMult = CFG.balanceConfig.comboMultiplier * this.getBonus('getComboMultiplier', 1);
             const bns = Math.floor(r * (window.gameState.comboCount * comboMult));
