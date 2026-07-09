@@ -1,4 +1,4 @@
-// js/game-core.js
+// js/game-core.js (v3.2 — CombatSystem delegation + Ready Gate)
 (function() {
     'use strict';
 
@@ -6,7 +6,6 @@
     const UI = window.GAME_UI;
     const FEAT = window.GAME_FEATURES;
 
-    // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
     if (!window.gameState) {
         console.warn('⚠️ [CORE] gameState не инициализирован, ждём save-system...');
     }
@@ -27,9 +26,6 @@
         blockSpeed: CFG.isMobile ? 25 : 20,
         lastHapticTime: 0,
 
-        /**
-         * Получение бонуса из магазина или перков
-         */
         getBonus: function(type, fallback = 1) {
             if (window.shopSystem && typeof window.shopSystem[type] === 'function') {
                 return window.shopSystem[type]();
@@ -47,8 +43,8 @@
 
         pauseGame: function() {
             this.isGamePaused = true;
-            if (window.gameState) window.gameState.gamePaused = true;            
-            // Пауза для музыки
+            if (window.gameState) window.gameState.gamePaused = true;
+            
             if (window.MusicSystem && typeof window.MusicSystem.pause === 'function') {
                 window.MusicSystem.pause();
             }
@@ -64,15 +60,11 @@
             this.isGamePaused = false;
             if (window.gameState) window.gameState.gamePaused = false;
             
-            // Возобновление музыки
             if (window.MusicSystem && typeof window.MusicSystem.resume === 'function') {
                 window.MusicSystem.resume();
             }
         },
 
-        /**
-         * Расчёт силы клика (базовая формула, используется для отображения и базовых расчётов)
-         */
         calculateClickPower: function() {
             const lvl = window.gameState.clickUpgradeLevel || 0;
             const prog = CFG.balanceConfig.damageProgression;
@@ -85,18 +77,16 @@
             return speed * this.getBonus('getSpeedMultiplier', 1);
         },
 
-        /**
-         * ✅ УНИФИЦИРОВАНО: Делегирование в CombatSystem
-         */
+        // ✅ Делегирование в CombatSystem
         calculateBlockHealth: function() {
             if (window.CombatSystem) {
                 return window.CombatSystem.calculateBlockHealth();
             }
-            // Fallback на случай, если CombatSystem ещё не загружен
-            console.warn('[CORE] CombatSystem not available, using fallback health calc');
+            console.warn('[CORE] CombatSystem not available, using fallback');
             const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
             const base = CFG.balanceConfig.baseHealth * (1 + CFG.astronomicalUnits[window.gameState.currentLocation] * 2);
-            const random = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);            return Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
+            const random = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
+            return Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
         },
 
         createMovingBlock: function() {
@@ -137,7 +127,6 @@
                 block.textContent = this.currentBlockHealth;
             }
             
-            // ✅ Флаг для предотвращения двойного срабатывания на мобильных
             let lastTouchTime = 0;
             block.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -145,7 +134,8 @@
                 this.hitBlock(block, window.gameState.clickPower, false);
             }, { passive: false });
             
-            block.addEventListener('click', () => {                if (Date.now() - lastTouchTime < 500) return;
+            block.addEventListener('click', () => {
+                if (Date.now() - lastTouchTime < 500) return;
                 this.hitBlock(block, window.gameState.clickPower, false);
             });
             
@@ -194,21 +184,18 @@
                         setTimeout(() => this.createMovingBlock(), 500);
                     }
                     return;
-                }                
+                }
+                
                 requestAnimationFrame(move);
             };
             
             move();
         },
 
-        /**
-         * ✅ УНИФИЦИРОВАНО: hitBlock теперь делегирует математику в CombatSystem
-         * Оставляет только UI-обвязку: звуки, вибрацию, DOM-эффекты
-         */
+        // ✅ Делегирование в CombatSystem
         hitBlock: function(block, damage, isAuto = false) {
             if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
             
-            // Throttling вибрации — не чаще 1 раза в 150мс (только для ручных кликов)
             if (!isAuto) {
                 const now = Date.now();
                 if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
@@ -219,42 +206,34 @@
                 this.playSound('clickSound');
             }
             
-            // Визуальный эффект нажатия
             block.style.transform = 'translateX(-50%) scale(0.85)';
             setTimeout(() => { 
                 block.style.transform = 'translateX(-50%) scale(1)'; 
             }, 100);
             
-            // === ДЕЛЕГИРОВАНИЕ МАТЕМАТИКИ В COMBATSYSTEM ===
             let result;
             if (window.CombatSystem) {
                 result = window.CombatSystem.applyHit(damage, isAuto);
             } else {
-                // Fallback (не должно происходить в нормальном режиме)
                 console.error('[CORE] CombatSystem missing in hitBlock!');
                 return;
             }
             
-            // === UI-ОБРАБОТКА РЕЗУЛЬТАТА ===
             this.createDamageText(result.damage, block, result.isCrit ? '#FFD700' : '#ff4444');
-            
             UI.checkLocationUpgrade();
             
             if (result.destroyed) {
                 this.destroyBlock(block, isAuto);
             } else {
-                block.textContent = Math.floor(this.currentBlockHealth);                this.updateCracks(block, this.currentBlockHealth);
+                block.textContent = Math.floor(this.currentBlockHealth);
+                this.updateCracks(block, this.currentBlockHealth);
             }
         },
 
-        /**
-         * ✅ УНИФИЦИРОВАНО: destroyBlock делегирует награды и метрики в CombatSystem
-         * Оставляет только UI: звуки, частицы, удаление DOM, спавн нового блока
-         */
+        // ✅ Делегирование в CombatSystem
         destroyBlock: function(block, isAuto = false) {
             if (!window.gameState) return;
             
-            // === ДЕЛЕГИРОВАНИЕ НАГРАД И МЕТРИК В COMBATSYSTEM ===
             let rewardResult;
             if (window.CombatSystem) {
                 rewardResult = window.CombatSystem.applyDestroy(block, isAuto);
@@ -263,7 +242,6 @@
                 rewardResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
             }
             
-            // === UI-ОБРАБОТКА ===
             UI.updateHUD();
             UI.updateUpgradeButtons();
             
@@ -289,10 +267,10 @@
         },
 
         createDamageText: function(dmg, block, col) {
-            // Используем пул из GAME_UI если доступен, иначе fallback
             if (UI.createDamageText) {
                 UI.createDamageText(dmg, block, col);
-                return;            }
+                return;
+            }
             
             const r = block.getBoundingClientRect();
             const t = document.createElement('div');
@@ -341,7 +319,8 @@
                 return;
             }
             
-            const rct = block.getBoundingClientRect();            const t = document.createElement('div');
+            const rct = block.getBoundingClientRect();
+            const t = document.createElement('div');
             t.className = 'reward-text';
             t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
             let l = rct.left + rct.width / 2;
@@ -390,7 +369,8 @@
                 if (dist > 150 && rx > 60 && rx < window.innerWidth - 60 && ry > 100 && ry < window.innerHeight - 60) {
                     this.helperPosition = { x: rx, y: ry };
                     break;
-                }            }
+                }
+            }
             this.helperElement.style.left = this.helperPosition.x + 'px';
             this.helperElement.style.top = this.helperPosition.y + 'px';
         },
@@ -439,7 +419,8 @@
                     ctx.strokeStyle = g;
                     ctx.stroke();
                     ctx.beginPath();
-                    ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);                    ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
+                    ctx.arc(cx, cy, 8 * (1 - p), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(105, 240, 174, ${0.7 * (1 - p)})`;
                     ctx.fill();
                 }
                 if (p < 1) {
@@ -452,23 +433,15 @@
             this.playSound('helperSound');
         },
 
-        /**
-         * ✅ УНИФИЦИРОВАНО: helperAttack использует CombatSystem.calculateHit
-         */
+        // ✅ Делегирование в CombatSystem
         helperAttack: function() {
             if (!this.currentBlock || !window.gameState || !window.gameState.helperActive || !this.helperElement || this.isGamePaused) return;
             
             this.createHelperEffect();
             
-            // Расчёт урона помощника с учётом всех бонусов
             let baseDmg = window.gameState.clickPower * (1 + (window.gameState.helperDamageBonus || 0)) * (1 + (window.gameState.helperUpgradeLevel || 0) * 0.2);
             
-            // Используем CombatSystem для единообразия расчётов (crit, бонусы)
-            let finalDmg = baseDmg;
             if (window.CombatSystem) {
-                const hitResult = window.CombatSystem.calculateHit(baseDmg, true);
-                finalDmg = hitResult.finalDamage;
-                // Обновляем здоровье через CombatSystem.applyHit для корректного учёта метрик
                 const applyResult = window.CombatSystem.applyHit(baseDmg, true);
                 
                 this.createDamageText(applyResult.damage, this.currentBlock, '#69f0ae');
@@ -481,14 +454,12 @@
                     this.updateCracks(this.currentBlock, this.currentBlockHealth);
                 }
             } else {
-                // Fallback
+                let finalDmg = baseDmg;
                 this.currentBlockHealth -= finalDmg;
                 window.gameState.totalDamageDealt += finalDmg;
-                if (window.achievementsSystem) {
-                    window.achievementsSystem.incrementTotalDamage(finalDmg);
-                }
                 this.createDamageText(Math.round(finalDmg), this.currentBlock, '#69f0ae');
-                UI.checkLocationUpgrade();                if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock, true);
+                UI.checkLocationUpgrade();
+                if (this.currentBlockHealth <= 0) this.destroyBlock(this.currentBlock, true);
                 else {
                     this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
                     this.updateCracks(this.currentBlock, this.currentBlockHealth);
@@ -537,7 +508,8 @@
             this.isGamePaused = false;
             if (window.gameState) window.gameState.gamePaused = false;
             window.gameState.helperActive = false;
-            window.gameState.helperTimeLeft = 0;            window.gameState.boboCoinBonus = 0;
+            window.gameState.helperTimeLeft = 0;
+            window.gameState.boboCoinBonus = 0;
             
             if (this.helperInterval) { clearInterval(this.helperInterval); this.helperInterval = null; }
             if (this.helperTimer) { clearInterval(this.helperTimer); this.helperTimer = null; }
@@ -586,7 +558,8 @@
         continueGame: async function() {
             console.log('🔄 [GAME] Starting continueGame...');
             
-            if (!window.gameState || Object.keys(window.gameState).length === 0) {                window.gameState = {
+            if (!window.gameState || Object.keys(window.gameState).length === 0) {
+                window.gameState = {
                     coins: 0, clickPower: 1, critChance: 0.001, critMultiplier: 2.0,
                     currentLocation: 'mercury', totalDamageDealt: 0,
                     clickUpgradeLevel: 0, critChanceUpgradeLevel: 0, critMultiplierUpgradeLevel: 0,
@@ -635,7 +608,8 @@
                     coins: Math.floor(window.gameState.coins || 0).toLocaleString()
                 });
                 window.showTooltip(t);
-                setTimeout(window.hideTooltip, 3000);            }
+                setTimeout(window.hideTooltip, 3000);
+            }
         },
 
         restartGame: function() {
@@ -684,7 +658,8 @@
                 if (b) {
                     b.addEventListener('click', fn);
                     b.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
-                }            };
+                }
+            };
             
             add('upgradeClickBtn', () => FEAT.buyClickPower());
             add('upgradeHelperBtn', () => FEAT.buyHelper());
@@ -734,6 +709,7 @@
             });
         }
     };
+
     window.gameFunctions = {
         startGame: () => window.GAME_CORE.startGame(true),
         continueGame: () => window.GAME_CORE.continueGame(),
@@ -760,25 +736,25 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-    window.GAME_CORE.initEventHandlers();
-    UI.updateHUD();
-    UI.updateUpgradeButtons();
-    
-    if (window.updateLanguageFlag) window.updateLanguageFlag();
-    if (window.updateContinueButton) window.updateContinueButton();
-    
-    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ CORE
-    if (window.EventBus) {
-        window.EventBus.moduleReady('core');
-    }
-    
-    // ✅ Подписка на полную готовность всех систем
-    if (window.EventBus) {
-        window.EventBus.once('game:allReady', () => {
-            console.log('🎮 [CORE] Все системы готовы. Применяем локацию...');
-            if (window.gameState?.currentLocation) {
-                window.GAME_CORE.setLocation(window.gameState.currentLocation);
-            }
-        });
-    }
-});
+        window.GAME_CORE.initEventHandlers();
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        if (window.updateLanguageFlag) window.updateLanguageFlag();
+        if (window.updateContinueButton) window.updateContinueButton();
+        
+        // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ CORE
+        if (window.EventBus) {
+            window.EventBus.moduleReady('core');
+        }
+        
+        // ✅ Подписка на полную готовность всех систем
+        if (window.EventBus) {
+            window.EventBus.once('game:allReady', () => {
+                console.log('🎮 [CORE] Все системы готовы. Применяем локацию...');
+                if (window.gameState?.currentLocation) {
+                    window.GAME_CORE.setLocation(window.gameState.currentLocation);
+                }
+            });
+        }
+    });
+})();

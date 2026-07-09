@@ -54,10 +54,9 @@
 
         /**
          * ✅ НОВОЕ: Регистрация готовности модуля
-         * Когда все обязательные модули зарегистрировались, эмитится game:allReady
          */
         moduleReady: function(moduleName) {
-            if (allReadyFired) return; // Уже запущено
+            if (allReadyFired) return;
             
             readyModules.add(moduleName);
             console.log(`✅ [READY] ${moduleName} готов (${readyModules.size}/${REQUIRED_MODULES.length})`);

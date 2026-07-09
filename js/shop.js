@@ -6,73 +6,51 @@ const CFG = window.GAME_CONFIG;
 // ✅ Флаг защиты от двойной инициализации
 let isInitialized = false;
 
-// === КОНФИГУРАЦИЯ МАГАЗИНА ===
 const shopConfig = {
     timeWarp: {
-        id: 'timeWarp',
-        name: 'Искажение времени',
+        id: 'timeWarp', name: 'Искажение времени',
         desc: 'Блоки движутся на 50% медленнее',
-        cost: 500,
-        duration: 30000,
-        icon: 'fas fa-hourglass-half',
-        emoji: '⏳'
+        cost: 500, duration: 30000,
+        icon: 'fas fa-hourglass-half', emoji: '⏳'
     },
     crystalBoost: {
-        id: 'crystalBoost',
-        name: 'Усилитель кристаллов',
+        id: 'crystalBoost', name: 'Усилитель кристаллов',
         desc: '+100% к наградам за блоки',
-        cost: 800,
-        duration: 60000,
-        icon: 'fas fa-gem',
-        emoji: '💰'
+        cost: 800, duration: 60000,
+        icon: 'fas fa-gem', emoji: '💰'
     },
     powerSurge: {
-        id: 'powerSurge',
-        name: 'Скачок силы',
+        id: 'powerSurge', name: 'Скачок силы',
         desc: '+200% к силе клика',
-        cost: 1000,
-        duration: 45000,
-        icon: 'fas fa-bolt',
-        emoji: '⚡'
+        cost: 1000, duration: 45000,
+        icon: 'fas fa-bolt', emoji: '⚡'
     },
     luckyCharm: {
-        id: 'luckyCharm',
-        name: 'Талисман удачи',
+        id: 'luckyCharm', name: 'Талисман удачи',
         desc: '+50% шанс редких блоков',
-        cost: 1200,
-        duration: 60000,
-        icon: 'fas fa-clover',
-        emoji: '🍀'
+        cost: 1200, duration: 60000,
+        icon: 'fas fa-clover', emoji: '🍀'
     },
     invincible: {
-        id: 'invincible',
-        name: 'Неуязвимость',
+        id: 'invincible', name: 'Неуязвимость',
         desc: 'Защита от штрафов за пропуск блока',
-        cost: 1500,
-        duration: 45000,
-        icon: 'fas fa-shield-alt',
-        emoji: '🛡️'
+        cost: 1500, duration: 45000,
+        icon: 'fas fa-shield-alt', emoji: '🛡️'
     },
     autoClicker: {
-        id: 'autoClicker',
-        name: 'Авто-кликер',
+        id: 'autoClicker', name: 'Авто-кликер',
         desc: 'Автоматический клик каждые 0.5 сек',
-        cost: 2000,
-        duration: 30000,
-        icon: 'fas fa-robot',
-        emoji: '🤖'
+        cost: 2000, duration: 30000,
+        icon: 'fas fa-robot', emoji: '🤖'
     }
 };
 
-// Активные бусты
 let activeBoosts = {};
 let boostTimers = {};
 let shopPanelVisible = false;
 const _lastPurchase = {};
 
-// === ИНИЦИАЛИЗАЦИЯ ===
 function init() {
-    // ✅ Защита от повторной инициализации
     if (isInitialized) {
         console.warn('⚠️ [Shop] init() вызван повторно, пропускаем');
         return;
@@ -82,10 +60,9 @@ function init() {
     createShopUI();
     loadActiveBoosts();
     startBoostTimers();
-    console.log('🛒 Shop System v2.1 initialized (card UI + Ready Gate)');
+    console.log('🛒 Shop System v2.1 initialized (Ready Gate)');
 }
 
-// === СОЗДАНИЕ UI — КАРТОЧНАЯ СЕТКА ===
 function createShopUI() {
     const btn = document.getElementById('shopBtn');
     const panel = document.getElementById('shopPanel');
@@ -149,7 +126,6 @@ function createShopUI() {
     });
 }
 
-// === УПРАВЛЕНИЕ МАГАЗИНОМ ===
 function toggleShop() {
     if (shopPanelVisible) closeShop();
     else openShop();
@@ -158,15 +134,12 @@ function toggleShop() {
 function openShop() {
     const panel = document.getElementById('shopPanel');
     if (!panel) return;
-
     panel.style.display = 'flex';
     shopPanelVisible = true;
     updateShopDisplay();
-
     if (window.GAME_CORE && window.GAME_CORE.pauseGame) {
         window.GAME_CORE.pauseGame();
     }
-
     if (window.achievementsSystem && window.achievementsSystem.hideAchievementsPanel) {
         window.achievementsSystem.hideAchievementsPanel();
     }
@@ -175,21 +148,17 @@ function openShop() {
 function closeShop() {
     const panel = document.getElementById('shopPanel');
     if (!panel) return;
-
     panel.style.display = 'none';
     shopPanelVisible = false;
-
     if (window.GAME_CORE && window.GAME_CORE.resumeGame) {
         window.GAME_CORE.resumeGame();
     }
 }
 
-// === ПОКУПКА ===
 function purchaseItem(boostId) {
     const item = shopConfig[boostId];
     if (!item || !window.gameState) return;
 
-    // Защита от дабл-тапа
     const now = Date.now();
     if (_lastPurchase[boostId] && (now - _lastPurchase[boostId]) < 400) return;
     _lastPurchase[boostId] = now;
@@ -210,16 +179,12 @@ function purchaseItem(boostId) {
     }
 
     window.gameState.coins -= item.cost;
-
     if (!window.gameState.shopItems) window.gameState.shopItems = {};
     window.gameState.shopItems[boostId] = {
-        purchased: true,
-        active: true,
-        timeLeft: item.duration
+        purchased: true, active: true, timeLeft: item.duration
     };
 
     activeBoosts[boostId] = { active: true, timeLeft: item.duration };
-
     startBoostTimer(boostId);
 
     if (window.achievementsSystem) {
@@ -230,9 +195,7 @@ function purchaseItem(boostId) {
         window.EventBus.emit('shop:itemPurchased', { id: boostId, item: item });
     }
 
-    if (boostId === 'autoClicker') {
-        startAutoClicker();
-    }
+    if (boostId === 'autoClicker') startAutoClicker();
 
     updateShopDisplay();
     updateActiveBoostsHUD();
@@ -258,40 +221,32 @@ function purchaseItem(boostId) {
     if (typeof window.saveGame === 'function') window.saveGame();
 }
 
-// === ТАЙМЕРЫ БУСТОВ ===
 function startBoostTimers() {
     if (!window.gameState || !window.gameState.shopItems) return;
-
     Object.entries(window.gameState.shopItems).forEach(([id, data]) => {
         if (data && data.active && data.timeLeft > 0) {
             activeBoosts[id] = { active: true, timeLeft: data.timeLeft };
             startBoostTimer(id);
         }
     });
-
     updateActiveBoostsHUD();
 }
 
 function startBoostTimer(boostId) {
     if (boostTimers[boostId]) clearInterval(boostTimers[boostId]);
-
     boostTimers[boostId] = setInterval(() => {
         if (!activeBoosts[boostId] || !activeBoosts[boostId].active) {
             clearInterval(boostTimers[boostId]);
             delete boostTimers[boostId];
             return;
         }
-
         activeBoosts[boostId].timeLeft -= 1000;
-
         if (window.gameState?.shopItems?.[boostId]) {
             window.gameState.shopItems[boostId].timeLeft = activeBoosts[boostId].timeLeft;
         }
-
         if (activeBoosts[boostId].timeLeft <= 0) {
             deactivateBoost(boostId);
         }
-
         updateActiveBoostsHUD();
         updateShopDisplay();
     }, 1000);
@@ -302,34 +257,24 @@ function deactivateBoost(boostId) {
         clearInterval(boostTimers[boostId]);
         delete boostTimers[boostId];
     }
-
     activeBoosts[boostId] = { active: false, timeLeft: 0 };
-
     if (window.gameState?.shopItems?.[boostId]) {
         window.gameState.shopItems[boostId].active = false;
         window.gameState.shopItems[boostId].timeLeft = 0;
     }
-
-    if (boostId === 'autoClicker') {
-        stopAutoClicker();
-    }
-
+    if (boostId === 'autoClicker') stopAutoClicker();
     if (window.EventBus) {
         window.EventBus.emit('shop:itemExpired', { id: boostId });
     }
-
     updateShopDisplay();
     updateActiveBoostsHUD();
-
     const item = shopConfig[boostId];
     if (item) {
         showNotification(`⏰ ${item.name} завершился`, '#ff9800');
     }
-
     if (typeof window.saveGame === 'function') window.saveGame();
 }
 
-// === АВТО-КЛИКЕР ===
 let autoClickInterval = null;
 
 function startAutoClicker() {
@@ -351,22 +296,16 @@ function stopAutoClicker() {
     }
 }
 
-// === ЗАГРУЗКА АКТИВНЫХ БУСТОВ ===
 function loadActiveBoosts() {
     if (!window.gameState || !window.gameState.shopItems) return;
-
     Object.entries(window.gameState.shopItems).forEach(([id, data]) => {
         if (data && data.active && data.timeLeft > 0) {
             activeBoosts[id] = { active: true, timeLeft: data.timeLeft };
-
-            if (id === 'autoClicker') {
-                startAutoClicker();
-            }
+            if (id === 'autoClicker') startAutoClicker();
         }
     });
 }
 
-// === ОБНОВЛЕНИЕ UI КАРТОЧЕК ===
 function formatTime(s) {
     if (s >= 60) return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
     return `${s}с`;
@@ -376,21 +315,16 @@ function updateShopDisplay() {
     Object.values(shopConfig).forEach(item => {
         const card = document.getElementById(`shop-card-${item.id}`);
         if (!card) return;
-
         const isActive = activeBoosts[item.id] && activeBoosts[item.id].active;
         const canAfford = window.gameState && window.gameState.coins >= item.cost;
-
         card.classList.remove('active', 'disabled');
-
         const costEl = card.querySelector('.shop-card-cost');
         const timerEl = card.querySelector('.shop-card-timer');
-
         if (isActive) {
             card.classList.add('active');
             const total = activeBoosts[item.id].timeLeft || 0;
             const pct = Math.max(0, Math.min(100, (total / item.duration) * 100));
             const secs = Math.ceil(total / 1000);
-
             if (costEl) costEl.textContent = 'Активно';
             if (timerEl) {
                 timerEl.hidden = false;
@@ -405,32 +339,25 @@ function updateShopDisplay() {
             if (timerEl) timerEl.hidden = true;
         }
     });
-
     const bal = document.getElementById('shopBalanceValue');
     if (bal) bal.textContent = Math.floor(window.gameState?.coins || 0).toLocaleString();
 }
 
-// === HUD АКТИВНЫХ БУСТОВ ===
 function updateActiveBoostsHUD() {
     const container = document.getElementById('activeBoosts');
     if (!container) return;
-
     const activeList = Object.entries(activeBoosts)
         .filter(([_, data]) => data.active && data.timeLeft > 0);
-
     if (activeList.length === 0) {
         container.style.display = 'none';
         container.innerHTML = '';
         return;
     }
-
     container.style.display = 'flex';
     container.innerHTML = '';
-
     activeList.forEach(([id, data]) => {
         const item = shopConfig[id];
         if (!item) return;
-
         const secs = Math.ceil(data.timeLeft / 1000);
         const badge = document.createElement('div');
         badge.style.cssText = `
@@ -450,30 +377,22 @@ function updateActiveBoostsHUD() {
     });
 }
 
-// === УВЕДОМЛЕНИЯ ===
-// ✅ ИСПРАВЛЕНО: восстановлен обрезанный setTimeout
 function showNotification(text, color) {
     const notif = document.createElement('div');
     notif.textContent = text;
     notif.style.cssText = `
-        position: fixed;
-        top: 15%;
-        left: 50%;
+        position: fixed; top: 15%; left: 50%;
         transform: translateX(-50%);
         background: ${color || '#4CAF50'};
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 10px;
-        z-index: 3000;
+        color: #fff; padding: 10px 20px;
+        border-radius: 10px; z-index: 3000;
         font-family: 'Orbitron', sans-serif;
-        font-weight: bold;
-        font-size: 0.9em;
+        font-weight: bold; font-size: 0.9em;
         box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         animation: achSlideDown 0.3s ease-out;
         pointer-events: none;
     `;
     document.body.appendChild(notif);
-
     setTimeout(() => {
         notif.style.transition = 'opacity 0.3s';
         notif.style.opacity = '0';
@@ -481,7 +400,6 @@ function showNotification(text, color) {
     }, 2000);
 }
 
-// === ПУБЛИЧНЫЙ API ===
 window.shopSystem = {
     init: init,
     toggleShop: toggleShop,
@@ -491,7 +409,6 @@ window.shopSystem = {
     purchaseItem: purchaseItem,
     stopAutoClicker: stopAutoClicker,
     config: shopConfig,
-
     getSpeedMultiplier: () => (activeBoosts.timeWarp?.active) ? 0.5 : 1,
     getRewardMultiplier: () => (activeBoosts.crystalBoost?.active) ? 2 : 1,
     getDamageMultiplier: () => (activeBoosts.powerSurge?.active) ? 3 : 1,
@@ -509,33 +426,25 @@ window.shopSystem = {
 // ==========================================
 // 🚀 АВТОЗАПУСК (Ready Gate)
 // ==========================================
-
 function safeInit() {
-    // ✅ Защита от повторного вызова
     if (isInitialized) return;
-    
     init();
-    
-    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
     if (window.EventBus) {
         window.EventBus.moduleReady('shop');
     }
 }
 
-// ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
 if (window.EventBus) {
     window.EventBus.once('game:allReady', () => {
         console.log('[Shop] game:allReady получен, запускаем safeInit');
         safeInit();
     });
 } else {
-    // 🆘 FALLBACK: если EventBus не загрузился
-    console.warn('⚠️ [Shop] EventBus не найден! Используем fallback инициализацию');
+    console.warn('⚠️ [Shop] EventBus не найден! Используем fallback');
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 400), { once: true });
     } else {
         setTimeout(safeInit, 400);
     }
 }
-
 })();

@@ -1,14 +1,12 @@
-// js/voyager-tracker.js (v1.1 — Ready Gate + защита от двойной инициализации)
+// js/voyager-tracker.js (v1.1 — Ready Gate)
 (function() {
     'use strict';
 
-    // ✅ Флаг защиты от двойной инициализации
     let isInitialized = false;
 
     const VOYAGER_DATA = {
         voyager1: {
-            name: 'Вояджер-1',
-            label: 'V1',
+            name: 'Вояджер-1', label: 'V1',
             launchDate: new Date('1977-09-05'),
             speedAUperYear: 3.6,
             color: '#4FC3F7',
@@ -16,8 +14,7 @@
             position: { left: '60%', top: '48%' }
         },
         voyager2: {
-            name: 'Вояджер-2',
-            label: 'V2',
+            name: 'Вояджер-2', label: 'V2',
             launchDate: new Date('1977-08-20'),
             speedAUperYear: 3.25,
             color: '#81C784',
@@ -85,7 +82,6 @@
             .voyager-hud-label { flex: 1; font-weight: bold; }
             .voyager-hud-distance { font-weight: bold; font-family: 'Orbitron', monospace; }
             .voyager-hud-unit { opacity: 0.7; font-size: 0.9em; }
-
             .voyager-dot-container {
                 position: fixed;
                 z-index: 10;
@@ -131,7 +127,6 @@
             .voyager-dot.highlight .voyager-dot-ring {
                 animation: voyagerRingExpand 0.8s ease-out forwards;
             }
-
             @keyframes voyagerPulse {
                 0%, 100% { 
                     transform: scale(1);
@@ -176,7 +171,6 @@
                     opacity: 0;
                 }
             }
-
             #voyager-tracer-svg {
                 position: fixed;
                 top: 0;
@@ -201,7 +195,6 @@
             @keyframes tracerDash {
                 to { stroke-dashoffset: -24; }
             }
-
             @media (max-width: 768px) {
                 .voyager-dot {
                     width: 20px;
@@ -271,23 +264,19 @@
 
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
-
             const container = document.createElement('div');
             container.className = 'voyager-dot-container';
             container.id = `voyager-dot-${key}`;
             container.style.color = voyager.color;
-
             Object.keys(voyager.position).forEach(prop => {
                 container.style[prop] = voyager.position[prop];
             });
-
             container.innerHTML = `
                 <div class="voyager-dot">
                     <div class="voyager-dot-ring"></div>
                     <div class="voyager-dot-label">${voyager.label}</div>
                 </div>
             `;
-
             document.body.appendChild(container);
         });
     }
@@ -350,9 +339,7 @@
         const line = document.getElementById(`tracer-line-${voyagerKey}`);
         const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
         
-        if (line) {
-            line.classList.remove('visible');
-        }
+        if (line) line.classList.remove('visible');
         if (dotEl) {
             setTimeout(() => {
                 dotEl.classList.remove('highlight');
@@ -364,7 +351,6 @@
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
             const distance = calculateCurrentDistance(voyager);
-            
             const distanceEl = document.getElementById(`voyager-distance-${key}`);
             if (distanceEl) {
                 distanceEl.textContent = formatDistance(distance);
@@ -373,7 +359,6 @@
     }
 
     function init() {
-        // ✅ Защита от повторной инициализации
         if (isInitialized) {
             console.warn('⚠️ [Voyager] init() вызван повторно, пропускаем');
             return;
@@ -385,7 +370,6 @@
         createDots();
         createTracerSVG();
         
-        // Защита от утечки интервала при повторном вызове
         if (updateInterval) clearInterval(updateInterval);
         updateInterval = setInterval(updateDistances, 10000);
         
@@ -404,28 +388,21 @@
     // ==========================================
     // 🚀 АВТОЗАПУСК (Ready Gate)
     // ==========================================
-
     function safeInit() {
-        // ✅ Защита от повторного вызова
         if (isInitialized) return;
-        
         init();
-        
-        // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
         if (window.EventBus) {
             window.EventBus.moduleReady('voyager');
         }
     }
 
-    // ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
     if (window.EventBus) {
         window.EventBus.once('game:allReady', () => {
             console.log('[Voyager] game:allReady получен, запускаем safeInit');
             safeInit();
         });
     } else {
-        // 🆘 FALLBACK: если EventBus не загрузился
-        console.warn('⚠️ [Voyager] EventBus не найден! Используем fallback инициализацию');
+        console.warn('⚠️ [Voyager] EventBus не найден! Fallback');
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100), { once: true });
         } else {
