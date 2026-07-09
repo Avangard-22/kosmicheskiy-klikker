@@ -402,4 +402,22 @@
             return voyager ? calculateCurrentDistance(voyager) : 0;
         }
     };
+    // ✅ УБРАН setTimeout — используем Ready Gate
+function safeInit() {
+    init();
+    
+    if (window.EventBus) {
+        window.EventBus.moduleReady('voyager');
+    }
+}
+
+if (window.EventBus) {
+    window.EventBus.once('game:allReady', safeInit);
+} else {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', safeInit);
+    } else {
+        safeInit();
+    }
+}
 })();
