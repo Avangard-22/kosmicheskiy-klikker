@@ -502,10 +502,23 @@ window.getRandomTrack = getRandomTrack;
 window.extractTrackName = extractTrackName;
 
 // Auto-start
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 500); });
-} else {
-    setTimeout(init, 500);
+// ✅ УБРАН setTimeout — используем Ready Gate
+function safeInit() {
+    init();
+    
+    if (window.EventBus) {
+        window.EventBus.moduleReady('music');
+    }
 }
+
+if (window.EventBus) {
+    window.EventBus.once('game:allReady', safeInit);
+} else {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 500));
+    } else {
+        setTimeout(safeInit, 500);
+    }
+        }
 
 })();
