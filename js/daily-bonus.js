@@ -47,7 +47,8 @@ function getPlayerProgressMultiplier() {
 // ==========================================
 // 🎲 ГЕНЕРАТОР НАГРАД
 // ==========================================
-function generateReward(dayNumber) {    if (REWARD_CONFIG.milestoneRewards[dayNumber]) {
+function generateReward(dayNumber) {
+    if (REWARD_CONFIG.milestoneRewards[dayNumber]) {
         return REWARD_CONFIG.milestoneRewards[dayNumber];
     }
     
@@ -96,7 +97,8 @@ function claimDailyBonus() {
             totalClaimed: 0,
             streak: 0,
             lastClaimTimestamp: 0
-        };    }
+        };
+    }
     
     const today = getToday();
     const data = window.gameState.dailyBonus;
@@ -145,7 +147,8 @@ function claimDailyBonus() {
         showRewardNotification(reward, dayNumber);
         
         const sound = document.getElementById('upgradeSound');
-        if (sound) {            sound.currentTime = 0;
+        if (sound) {
+            sound.currentTime = 0;
             sound.play().catch(() => {});
         }
         if (window.telegramHaptic?.success) {
@@ -194,7 +197,8 @@ function applyReward(reward) {
             } else if (reward.upgrade === 'critMultiplier') {
                 window.gameState.critMultiplierUpgradeLevel += reward.levels;
                 window.gameState.critMultiplier = 2.0 + window.gameState.critMultiplierUpgradeLevel * 0.2;
-            } else if (reward.upgrade === 'helperDamage') {                window.gameState.helperUpgradeLevel += reward.levels;
+            } else if (reward.upgrade === 'helperDamage') {
+                window.gameState.helperUpgradeLevel += reward.levels;
             }
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
@@ -243,7 +247,8 @@ function createBonusIcon() {
     document.body.appendChild(icon);
     
     // ✅ ИСПРАВЛЕНО: сохраняем ID интервала для возможной очистки
-    if (updateTimerId) clearInterval(updateTimerId);    updateTimerId = setInterval(updateIconDisplay, 1000);
+    if (updateTimerId) clearInterval(updateTimerId);
+    updateTimerId = setInterval(updateIconDisplay, 1000);
 }
 
 function updateIconDisplay() {
@@ -292,7 +297,8 @@ function updateIconDisplay() {
             if (hoursLeft > 0) {
                 timerText = `${hoursLeft}ч ${String(minutesLeft).padStart(2, '0')}м`;
             } else {
-                timerText = `${minutesLeft}м`;            }
+                timerText = `${minutesLeft}м`;
+            }
             
             timerEl.textContent = timerText;
         } else {
@@ -341,7 +347,8 @@ function showRewardNotification(reward, dayNumber) {
         text-align: center;
         font-family: 'Orbitron', sans-serif;
         font-weight: bold;
-        box-shadow: 0 6px 30px rgba(255,215,0,0.6);        border: 3px solid #fff;
+        box-shadow: 0 6px 30px rgba(255,215,0,0.6);
+        border: 3px solid #fff;
         opacity: 0; transition: opacity 0.3s;
         pointer-events: none; max-width: 280px;
     `;
@@ -390,7 +397,8 @@ function init() {
         return;
     }
     
-    isInitialized = true;    createBonusIcon();
+    isInitialized = true;
+    createBonusIcon();
     updateIconDisplay();
     console.log('✅ Daily bonus system v2.1 initialized');
     

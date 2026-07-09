@@ -47,7 +47,8 @@
         style.textContent = `
             .voyager-hud-container {
                 margin-top: 8px;
-                padding-top: 6px;                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 6px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
             }
             .voyager-hud-title {
                 font-size: 0.6em;
@@ -96,7 +97,8 @@
                 height: 18px;
                 border-radius: 50%;
                 background: currentColor;
-                box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;                animation: voyagerPulse 2.5s ease-in-out infinite;
+                box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
+                animation: voyagerPulse 2.5s ease-in-out infinite;
             }
             .voyager-dot-ring {
                 position: absolute;
@@ -145,7 +147,8 @@
                     transform: translate(-50%, -50%) scale(1);
                     opacity: 0.4;
                 }
-                50% {                     transform: translate(-50%, -50%) scale(1.3);
+                50% { 
+                    transform: translate(-50%, -50%) scale(1.3);
                     opacity: 0.1;
                 }
             }
@@ -194,7 +197,8 @@
             .tracer-line.visible {
                 opacity: 0.9;
                 animation: tracerDash 1s linear infinite;
-            }            @keyframes tracerDash {
+            }
+            @keyframes tracerDash {
                 to { stroke-dashoffset: -24; }
             }
 
@@ -243,6 +247,7 @@
                 <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
                 <span class="voyager-hud-unit">AU</span>
             `;
+
             item.addEventListener('mouseenter', () => showTracer(key));
             item.addEventListener('mouseleave', () => hideTracer(key));
             item.addEventListener('touchstart', (e) => {
@@ -292,7 +297,8 @@
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'voyager-tracer-svg';
-        svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
 
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
@@ -341,7 +347,8 @@
     }
 
     function hideTracer(voyagerKey) {
-        const line = document.getElementById(`tracer-line-${voyagerKey}`);        const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
+        const line = document.getElementById(`tracer-line-${voyagerKey}`);
+        const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
         
         if (line) {
             line.classList.remove('visible');
@@ -390,7 +397,8 @@
         hideTracer,
         getDistance: (key) => {
             const voyager = VOYAGER_DATA[key];
-            return voyager ? calculateCurrentDistance(voyager) : 0;        }
+            return voyager ? calculateCurrentDistance(voyager) : 0;
+        }
     };
 
     // ==========================================

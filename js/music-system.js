@@ -47,7 +47,8 @@ const PLANET_TRACKS = {
     neptune: [
         'audio/neptune/Beneath_the_Azure_Cloud.mp3',
         'audio/neptune/Beneath_the_Frozen_Mantle.mp3',
-        'audio/neptune/Weight_of_the_Deep.mp3'    ],
+        'audio/neptune/Weight_of_the_Deep.mp3'
+    ],
     pluto: [
         'audio/pluto/Glass_Bells_at_the_Edge.mp3',
         'audio/pluto/The_Weight_of_Stillness.mp3',
@@ -96,7 +97,8 @@ function getRandomTrack(planet) {
     return tracks[randomIndex];
 }
 
-// ==========================================// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
+// ==========================================
+// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
 // ==========================================
 function extractTrackName(trackUrl) {
     const filename = trackUrl.split('/').pop();
@@ -145,7 +147,8 @@ function createTrackDisplay() {
         animation: marquee 15s linear infinite;
         padding: 0 20px;
     `;
-    text.textContent = '🎵 Загрузка музыки...';    
+    text.textContent = '🎵 Загрузка музыки...';
+    
     container.appendChild(text);
     document.body.appendChild(container);
     
@@ -194,7 +197,8 @@ function initAudioContext() {
         gainNode = audioContext.createGain();
         gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
         gainNode.connect(audioContext.destination);
-                console.log('[MUSIC] AudioContext initialized');
+        
+        console.log('[MUSIC] AudioContext initialized');
         return audioContext;
     } catch (e) {
         console.warn('[MUSIC] AudioContext creation error:', e);
@@ -244,6 +248,7 @@ function startSeamlessLoop(buffer) {
     
     scheduleLoop(buffer, audioContext.currentTime, duration);
 }
+
 function scheduleLoop(buffer, startTime, duration) {
     if (!audioContext || !buffer || currentBuffer !== buffer) return;
     
@@ -292,7 +297,8 @@ function stopCurrentSource() {
 function fadeIn(duration) {
     duration = duration || MUSIC_CONFIG.fadeDuration;
     
-    if (!gainNode || !audioContext) return;    
+    if (!gainNode || !audioContext) return;
+    
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
@@ -341,7 +347,8 @@ async function playPlanetMusic(planet) {
     const buffer = await loadAudioBuffer(trackUrl);
     if (!buffer) return;
     
-    if (currentSource) {        fadeOut(MUSIC_CONFIG.fadeDuration, () => {
+    if (currentSource) {
+        fadeOut(MUSIC_CONFIG.fadeDuration, () => {
             startSeamlessLoop(buffer);
             fadeIn(MUSIC_CONFIG.fadeDuration);
         });
@@ -390,7 +397,8 @@ function createMuteButton() {
     btn.title = isMuted ? 'Enable music' : 'Disable music';
     btn.innerHTML = isMuted ? '🔇' : '🎵';
     btn.style.cssText = 'position:fixed;top:10px;right:60px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);color:white;transition:transform 0.1s,background 0.2s;';
-        btn.addEventListener('click', function(e) {
+    
+    btn.addEventListener('click', function(e) {
         e.stopPropagation();
         toggleMute();
     });
@@ -439,7 +447,8 @@ function init() {
         });
     }
     
-    createMuteButton();    createTrackDisplay();
+    createMuteButton();
+    createTrackDisplay();
     
     const startOnFirstInteraction = async function() {
         if (isMusicStarted) return;
@@ -488,6 +497,7 @@ window.extractTrackName = extractTrackName;
 // ==========================================
 // 🚀 АВТОЗАПУСК (Ready Gate)
 // ==========================================
+
 function safeInit() {
     // ✅ Защита от повторного вызова
     if (isInitialized) return;

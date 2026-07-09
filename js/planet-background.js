@@ -48,6 +48,7 @@
     };
 
     const fixedSettings = getAdaptiveSettings();
+
     let animationId = null;
     let currentPlanet = 'mercury';
     let time = 0;
@@ -96,7 +97,8 @@
             nebulaGradient.addColorStop(1, color + '00');
             
             deepCtx.fillStyle = nebulaGradient;
-            deepCtx.beginPath();            deepCtx.arc(x, y, radius, 0, Math.PI * 2);
+            deepCtx.beginPath();
+            deepCtx.arc(x, y, radius, 0, Math.PI * 2);
             deepCtx.fill();
         }
 
@@ -145,7 +147,8 @@
                     
                     ctx.fillStyle = cloudGradient;
                     ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);                    ctx.fill();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
                 }
                 break;
 
@@ -194,7 +197,8 @@
         }
     }
 
-    // ==========================================    // 🚀 СИСТЕМА КЭШИРОВАНИЯ СПРАЙТОВ
+    // ==========================================
+    // 🚀 СИСТЕМА КЭШИРОВАНИЯ СПРАЙТОВ
     // ==========================================
     const spriteCache = new Map();
     const MAX_CACHE_SIZE = 500;
@@ -243,7 +247,8 @@
                 for (let i = 0; i < 6; i++) {
                     const angle = (i * Math.PI) / 3;
                     const ix = Math.cos(angle) * radius;
-                    const iy = Math.sin(angle) * radius;                    if (i === 0) offCtx.moveTo(ix, iy);
+                    const iy = Math.sin(angle) * radius;
+                    if (i === 0) offCtx.moveTo(ix, iy);
                     else offCtx.lineTo(ix, iy);                
                 }
                 offCtx.closePath();
@@ -292,7 +297,8 @@
         const size = Math.ceil(radius * 2);
         const offscreen = document.createElement('canvas');
         offscreen.width = size;
-        offscreen.height = size;        const offCtx = offscreen.getContext('2d');
+        offscreen.height = size;
+        const offCtx = offscreen.getContext('2d');
         const gradient = offCtx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, radius);
         gradient.addColorStop(0, color + 'aa');
         gradient.addColorStop(1, color + '00');
@@ -341,7 +347,8 @@
         jupiter: {
             name: 'Юпитер',
             colors: ['#d2b48c', '#bc8f8f', '#a0522d', '#ff7f50', '#e67347', '#cc663d', '#b35933'],
-            background: ['#2a1f14', '#4a3728', '#6b4f3c'],            type: 'stormy'
+            background: ['#2a1f14', '#4a3728', '#6b4f3c'],
+            type: 'stormy'
         },
         saturn: {
             name: 'Сатурн',
@@ -390,7 +397,8 @@
             
             this.sprite = null;
             if (type === 'star') {
-                this.sprite = createStarSprite(radius, color);            } else if (type === 'nebula') {                
+                this.sprite = createStarSprite(radius, color);
+            } else if (type === 'nebula') {                
                 this.sprite = createNebulaSprite(radius, color);
             } else {
                 this.sprite = createParticleSprite(type, radius, color);
@@ -439,7 +447,8 @@
 
             this.x += this.velocity.x;
             this.y += this.velocity.y;
-            this.rotation += this.rotationSpeed;            this.pulse += 0.05;            
+            this.rotation += this.rotationSpeed;
+            this.pulse += 0.05;            
             this.twinkle += this.twinkleSpeed;
 
             const radius2 = this.radius * 2;
@@ -488,7 +497,8 @@
     }
 
     // ==========================================
-    // 🪐 ГЕНЕРАТОРЫ ПЛАНЕТ    // ==========================================    
+    // 🪐 ГЕНЕРАТОРЫ ПЛАНЕТ
+    // ==========================================    
     function generateMercury() {
         const data = planetData.mercury;
         const count = fixedSettings.density * 15;
@@ -537,7 +547,8 @@
         const data = planetData.earth;
         const count = fixedSettings.density * 25;
         particles = [];
-        for (let i = 0; i < count; i++) {            const x = Math.random() * canvas.width;            
+        for (let i = 0; i < count; i++) {
+            const x = Math.random() * canvas.width;            
             const y = Math.random() * canvas.height;
             const radius = Math.random() * fixedSettings.size * 2 + 2;
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
@@ -586,7 +597,8 @@
         particles = [];
         const ringCount = fixedSettings.density * 10;
         for (let i = 0; i < ringCount; i++) {
-            const angle = Math.random() * Math.PI * 2;            const distance = 100 + Math.random() * 150;            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 100 + Math.random() * 150;            
             const x = canvas.width / 2 + Math.cos(angle) * distance;
             const y = canvas.height / 2 + Math.sin(angle) * distance;
             const radius = Math.random() * fixedSettings.size * 2 + 5;
@@ -635,7 +647,8 @@
             const radius = Math.random() * fixedSettings.size + 2;
             const color = data.colors[Math.floor(Math.random() * data.colors.length)];
             const speedValue = (Math.random() * 0.8 + 0.3) * fixedSettings.speed / 5;
-            const dx = x - cx, dy = y - cy;            const dist = Math.sqrt(dx * dx + dy * dy);            
+            const dx = x - cx, dy = y - cy;
+            const dist = Math.sqrt(dx * dx + dy * dy);            
             const angle = Math.atan2(dy, dx) + Math.PI / 2;
             particles.push(new Particle(x, y, radius, color, {
                 x: Math.cos(angle) * speedValue * (1 + dist / 200),
@@ -684,7 +697,8 @@
         jupiter: generateJupiter,
         saturn: generateSaturn,
         uranus: generateUranus,
-        neptune: generateNeptune,        pluto: generatePluto    
+        neptune: generateNeptune,
+        pluto: generatePluto    
     };
 
     // ==========================================
@@ -733,7 +747,8 @@
         time += safeDeltaTime * 0.001;
 
         animateParticles();
-        animationId = requestAnimationFrame(animate);    }
+        animationId = requestAnimationFrame(animate);
+    }
 
     // ==========================================
     // 🪐 УПРАВЛЕНИЕ ФОНАМИ
@@ -783,6 +798,7 @@
             animationId = null;
         }
     }
+
     // ==========================================
     // 🚀 ИНИЦИАЛИЗАЦИЯ И РЕЗАЙЗ
     // ==========================================
@@ -831,7 +847,8 @@
         }
 
         isInitialized = true;
-        console.log('✅ Planet Background System v2.3 initialized (Ready Gate + spriteCache fix)');    }
+        console.log('✅ Planet Background System v2.3 initialized (Ready Gate + spriteCache fix)');
+    }
 
     // ✅ Экспорт API
     window.planetBackground = {

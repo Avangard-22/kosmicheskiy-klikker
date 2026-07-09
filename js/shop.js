@@ -47,7 +47,8 @@ const shopConfig = {
     invincible: {
         id: 'invincible',
         name: 'Неуязвимость',
-        desc: 'Защита от штрафов за пропуск блока',        cost: 1500,
+        desc: 'Защита от штрафов за пропуск блока',
+        cost: 1500,
         duration: 45000,
         icon: 'fas fa-shield-alt',
         emoji: '🛡️'
@@ -96,7 +97,8 @@ function createShopUI() {
         toggleShop();
     }, { passive: false });
 
-    panel.innerHTML = `        <div class="shop-header">
+    panel.innerHTML = `
+        <div class="shop-header">
             <h3 class="shop-title">🛒 Магазин бонусов</h3>
             <button class="shop-close-btn" id="shopCloseBtn" aria-label="Закрыть">×</button>
         </div>
@@ -146,6 +148,7 @@ function createShopUI() {
         }
     });
 }
+
 // === УПРАВЛЕНИЕ МАГАЗИНОМ ===
 function toggleShop() {
     if (shopPanelVisible) closeShop();
@@ -195,6 +198,7 @@ function purchaseItem(boostId) {
         showNotification('⚠️ Бонус уже активен!', '#ff9800');
         return;
     }
+
     if (window.gameState.coins < item.cost) {
         showNotification('❌ Недостаточно кристаллов!', '#f44336');
         const errCard = document.getElementById(`shop-card-${boostId}`);
@@ -244,6 +248,7 @@ function purchaseItem(boostId) {
     else if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
     showNotification(`✅ ${item.name} активирован!`, '#4CAF50');
+
     const succCard = document.getElementById(`shop-card-${boostId}`);
     if (succCard) {
         succCard.classList.add('bought');
@@ -292,7 +297,8 @@ function startBoostTimer(boostId) {
     }, 1000);
 }
 
-function deactivateBoost(boostId) {    if (boostTimers[boostId]) {
+function deactivateBoost(boostId) {
+    if (boostTimers[boostId]) {
         clearInterval(boostTimers[boostId]);
         delete boostTimers[boostId];
     }
@@ -341,7 +347,8 @@ function startAutoClicker() {
 function stopAutoClicker() {
     if (autoClickInterval) {
         clearInterval(autoClickInterval);
-        autoClickInterval = null;    }
+        autoClickInterval = null;
+    }
 }
 
 // === ЗАГРУЗКА АКТИВНЫХ БУСТОВ ===
@@ -390,7 +397,8 @@ function updateShopDisplay() {
                 timerEl.innerHTML = `<span class="shop-card-timer-bar"><span style="width:${pct}%"></span></span>${formatTime(secs)}`;
             }
         } else if (!canAfford) {
-            card.classList.add('disabled');            if (costEl) costEl.textContent = `${item.cost} 💎`;
+            card.classList.add('disabled');
+            if (costEl) costEl.textContent = `${item.cost} 💎`;
             if (timerEl) timerEl.hidden = true;
         } else {
             if (costEl) costEl.textContent = `${item.cost} 💎`;
@@ -439,7 +447,8 @@ function updateActiveBoostsHUD() {
         `;
         badge.innerHTML = `<i class="${item.icon}" style="color:#4CAF50;"></i> ${secs}с`;
         container.appendChild(badge);
-    });}
+    });
+}
 
 // === УВЕДОМЛЕНИЯ ===
 // ✅ ИСПРАВЛЕНО: восстановлен обрезанный setTimeout
@@ -488,7 +497,8 @@ window.shopSystem = {
     getDamageMultiplier: () => (activeBoosts.powerSurge?.active) ? 3 : 1,
     getCritChanceMultiplier: () => 1,
     getCritMultMultiplier: () => 1,
-    getComboMultiplier: () => 1,    getBlockHealthMultiplier: () => 1,
+    getComboMultiplier: () => 1,
+    getBlockHealthMultiplier: () => 1,
     getLuckMultiplier: () => (activeBoosts.luckyCharm?.active) ? 1.5 : 1,
     getAutoClickMultiplier: () => (activeBoosts.autoClicker?.active) ? 2 : 1,
     isInvincible: () => !!(activeBoosts.invincible?.active),
