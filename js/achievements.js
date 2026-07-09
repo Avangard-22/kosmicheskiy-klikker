@@ -1,4 +1,4 @@
-// js/achievements.js (v2.1) — Ready Gate + защита от двойной инициализации
+// js/achievements.js (v2.0) — Генератор + фиксы
 (function() {
 'use strict';
 
@@ -47,7 +47,8 @@ function jit(seed, pct) {
 function planetScale(idx) { return Math.pow(1.62, idx); }
 
 function planetLevels(planet, idx) {
-    const info = PLANET_INFO[planet];    const pre  = PLANET_PREFIX[planet];
+    const info = PLANET_INFO[planet];
+    const pre  = PLANET_PREFIX[planet];
     const s    = planetScale(idx);
     const seed = planet + ':';
     const L = [];
@@ -97,6 +98,7 @@ function planetLevels(planet, idx) {
             name: (RARE_NAMES[i] || RARE_NAMES[RARE_NAMES.length-1]) + ' ' + info.n[3]
         });
     });
+
     // 6) Финальный special
     const lastBlocks = L.filter(x => x.metric === 'blocks').pop();
     L.push({
@@ -145,7 +147,8 @@ const GLOBAL_DEFS = [
     { id:'critMaster',        em:'🎯', ic:'fas fa-crosshairs',    desc:'Критических ударов',
       targets:[1000, 5000, 25000, 100000, 500000],
       rewards:[1000, 6000, 35000, 150000, 600000],
-      names:['1K критов','5K критов','25K критов','100K критов','Мастер точности ⚡'] },    { id:'upgradeEnthusiast', em:'🔧', ic:'fas fa-chart-line',    desc:'Куплено улучшений',
+      names:['1K критов','5K критов','25K критов','100K критов','Мастер точности ⚡'] },
+    { id:'upgradeEnthusiast', em:'🔧', ic:'fas fa-chart-line',    desc:'Куплено улучшений',
       targets:[10, 30, 100, 250, 600, 1500],
       rewards:[500, 2500, 10000, 35000, 100000, 350000],
       names:['10 улучшений','30 улучшений','100 улучшений','250 улучшений','600 улучшений','Архитектор силы 🔧'] },
@@ -194,7 +197,8 @@ var key;
 for (key in planetAchievements) {
     if (planetAchievements.hasOwnProperty(key)) achievements[key] = planetAchievements[key];
 }
-for (key in globalAchievements) {    if (globalAchievements.hasOwnProperty(key)) achievements[key] = globalAchievements[key];
+for (key in globalAchievements) {
+    if (globalAchievements.hasOwnProperty(key)) achievements[key] = globalAchievements[key];
 }
 
 var achievementsPanelVisible = false;
@@ -204,9 +208,6 @@ var currentView = 'grid';
 var currentDetailCategory = null;
 var currentTab = 'planets';
 var saveDebounceTimer = null;
-
-// ✅ НОВОЕ: Флаг защиты от двойной инициализации
-let isInitialized = false;
 
 var STAGES = {
     0: { name: 'Заблокировано', cls: 'stage-locked', icon: '🔒' },
@@ -244,6 +245,7 @@ function calculateStage(catId) {
     else if (pct >= 50) stage = 3;
     else if (pct >= 25) stage = 2;
     else if (pct > 0) stage = 1;
+
     return { stage: stage, unlocked: unlocked, total: total, pct: pct };
 }
 
@@ -292,7 +294,8 @@ function injectStyles() {
     css += '.ach-detail-desc{font-size:0.85em;color:#aaa;margin-bottom:8px}';
     css += '.ach-detail-stats{font-size:0.9em;color:#4FC3F7;font-family:Orbitron,monospace}';
     css += '.ach-back-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:Orbitron,sans-serif;font-size:0.85em;margin-bottom:10px;transition:all 0.2s}';
-    css += '.ach-back-btn:hover{background:rgba(255,255,255,0.2)}';    css += '.ach-levels-path{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}';
+    css += '.ach-back-btn:hover{background:rgba(255,255,255,0.2)}';
+    css += '.ach-levels-path{display:flex;flex-wrap:wrap;gap:8px;padding:10px 0}';
     css += '.ach-level-node{flex:1;min-width:70px;padding:10px 6px;border-radius:10px;text-align:center;position:relative;transition:all 0.2s}';
     css += '.ach-level-node.unlocked{background:linear-gradient(135deg,rgba(76,175,80,0.2),rgba(139,195,74,0.2));border:2px solid #4CAF50}';
     css += '.ach-level-node.current{background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,140,0,0.2));border:2px solid #FFD700;box-shadow:0 0 12px rgba(255,215,0,0.4)}';
@@ -315,20 +318,13 @@ function injectStyles() {
 }
 
 function init() {
-    // ✅ Защита от повторной инициализации
-    if (isInitialized) {
-        console.warn('⚠️ [Achievements] init() вызван повторно, пропускаем');
-        return;
-    }
-    isInitialized = true;
-    
     injectStyles();
     calculateTotalAchievements();
     createAchievementsPanel();
     setupEventHandlers();
     checkSavedAchievements();
     updateAchievementsDisplay();
-    console.log('🏆 Achievements v2.1 initialized. Total:', totalAchievements);
+    console.log('🏆 Achievements v2.0 initialized. Total:', totalAchievements);
 }
 
 function calculateTotalAchievements() {
@@ -341,7 +337,8 @@ function calculateTotalAchievements() {
 }
 
 function createAchievementsPanel() {
-    var panel = document.getElementById('achievementsPanel');    if (!panel) return;
+    var panel = document.getElementById('achievementsPanel');
+    if (!panel) return;
     panel.innerHTML = '';
 
     var header = document.createElement('div');
@@ -390,7 +387,8 @@ function getFilteredCategories() {
 
 function renderGridView() {
     currentView = 'grid';
-    var content = document.getElementById('achContent');    if (!content) return;
+    var content = document.getElementById('achContent');
+    if (!content) return;
     content.innerHTML = '';
     var grid = document.createElement('div');
     grid.className = 'ach-grid-container';
@@ -439,7 +437,8 @@ function showCategoryDetail(catId) {
     var content = document.getElementById('achContent');
     if (!content) return;
     var cat = achievements[catId];
-    var gs = window.gameState && window.gameState.achievements ? window.gameState.achievements : {};    var catState = gs[catId] || { progress: 0, levels: {} };
+    var gs = window.gameState && window.gameState.achievements ? window.gameState.achievements : {};
+    var catState = gs[catId] || { progress: 0, levels: {} };
     var info = calculateStage(catId);
     var stageInfo = STAGES[info.stage];
 
@@ -488,7 +487,8 @@ function showCategoryDetail(catId) {
 
 function updateCurrentProgressDisplay(catId) {
     var cat = achievements[catId];
-    var gs = window.gameState && window.gameState.achievements ? window.gameState.achievements : {};    var catState = gs[catId] || { progress: 0, levels: {} };
+    var gs = window.gameState && window.gameState.achievements ? window.gameState.achievements : {};
+    var catState = gs[catId] || { progress: 0, levels: {} };
     var currentLevel = null;
     var prevTarget = 0;
     for (var i = 0; i < cat.levels.length; i++) {
@@ -538,6 +538,7 @@ function toggleAchievementsPanel() {
     if (achievementsPanelVisible) hideAchievementsPanel();
     else showAchievementsPanel();
 }
+
 function showAchievementsPanel() {
     // ✅ Обновляем время в игре при открытии панели
     updateTimePlayed();
@@ -586,7 +587,8 @@ function updateProgress(categoryId, value, metric) {
 
     for (var i = 0; i < catData.levels.length; i++) {
         var level = catData.levels[i];
-        var state = catState.levels[level.id];        if (!state || state.unlocked) continue;
+        var state = catState.levels[level.id];
+        if (!state || state.unlocked) continue;
 
         if (level.metric && (!metric || level.metric !== metric)) continue;
 
@@ -635,6 +637,7 @@ function showAchievementNotification(catId, levelId) {
     var info = calculateStage(catId);
     var stageInfo = STAGES[info.stage];
     var stageUpMsg = info.stage > 0 ? '<div style="font-size:1em;color:#fff;margin-top:5px">' + stageInfo.icon + ' Стадия: ' + stageInfo.name + '</div>' : '';
+
     var notif = document.createElement('div');
     notif.style.cssText = 'position:fixed;top:20%;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(255,215,0,0.95),rgba(255,140,0,0.95));color:#000;padding:15px 25px;border-radius:15px;z-index:2000;text-align:center;font-family:Orbitron,sans-serif;font-weight:bold;box-shadow:0 5px 25px rgba(255,215,0,0.5);animation:achSlideDown 0.5s ease-out;max-width:350px;width:90%;border:3px solid #fff';
     notif.innerHTML = '<div style="font-size:2em;margin-bottom:5px">' + catData.emoji + '</div><div style="font-size:1.4em;margin-bottom:5px">🏆 ДОСТИЖЕНИЕ!</div><div style="font-size:1.1em;margin-bottom:8px;color:#fff">' + level.name + '</div><div style="font-size:0.85em;margin-bottom:10px;color:#eee">' + catData.description + '</div><div style="font-size:1em;color:#FFD700">💎 +' + level.reward.toLocaleString() + '</div>' + stageUpMsg;
@@ -684,7 +687,8 @@ function updateAchievementsDisplay() {
 
     if (currentView === 'grid') {
         var filtered = getFilteredCategories();
-        for (var i = 0; i < filtered.length; i++) {            var catId = filtered[i].id;
+        for (var i = 0; i < filtered.length; i++) {
+            var catId = filtered[i].id;
             var card = document.querySelector('.ach-icon-card[data-cat-id="' + catId + '"]');
             if (!card) continue;
             var info = calculateStage(catId);
@@ -733,6 +737,7 @@ function checkSavedAchievements() {
     }
 
     var gm = window.gameMetrics || {};
+
     // ✅ Гарантируем planetStats
     if (!gm.planetStats) gm.planetStats = {};
 
@@ -758,10 +763,10 @@ function checkSavedAchievements() {
     syncGlobal('upgradeEnthusiast', gm.upgradesBought);
     syncGlobal('helperCommander', gm.helpersBought);
     syncGlobal('boosterUser', gm.boostersUsed);
-    // Считаем общее время: сохранённое + текущая сессия
-    const sessionTime = Math.floor((Date.now() - (gm.startTime || Date.now())) / 1000);
-    const totalTime = (gm.totalTimePlayed || 0) + sessionTime;
-    syncGlobal('timeInvestor', totalTime);
+   // Считаем общее время: сохранённое + текущая сессия
+const sessionTime = Math.floor((Date.now() - (gm.startTime || Date.now())) / 1000);
+const totalTime = (gm.totalTimePlayed || 0) + sessionTime;
+syncGlobal('timeInvestor', totalTime);
     syncGlobal('rareHunter', gm.rareBlocksDestroyed);
     syncGlobal('clickMaster', gm.totalClicks);
 
@@ -782,7 +787,8 @@ function checkSavedAchievements() {
             var levels = achievements[p].levels;
             for (var i = 0; i < levels.length; i++) {
                 var st = catState.levels[levels[i].id];
-                if (!st) continue;                var metric = levels[i].metric || 'blocks';
+                if (!st) continue;
+                var metric = levels[i].metric || 'blocks';
                 var val = stats[metric] || 0;
                 if (!st.unlocked && val >= levels[i].target) {
                     st.unlocked = true;
@@ -801,7 +807,7 @@ window.achievementsSystem = {
     updateProgress: updateProgress,
     unlockAchievement: unlockAchievement,
     updateAchievementsDisplay: updateAchievementsDisplay,
-    updateTimePlayed: updateTimePlayed,
+    updateTimePlayed: updateTimePlayed,  // ← ДОБАВИТЬ
     getUnlockedCount: function() { return unlockedAchievements; },
     getTotalCount: function() { return totalAchievements; },
 
@@ -831,7 +837,8 @@ window.achievementsSystem = {
             updateProgress(planet, combo, 'combo');
         }
     },
-    incrementPlanetRareBlocks: function(planet, c) {        if (!c) c = 1;
+    incrementPlanetRareBlocks: function(planet, c) {
+        if (!c) c = 1;
         var gm = window.gameMetrics;
         if (!gm || !gm.planetStats) return;
         if (!gm.planetStats[planet]) gm.planetStats[planet] = { blocks: 0, crits: 0, combo: 0, rare: 0 };
@@ -880,7 +887,8 @@ window.achievementsSystem = {
     incrementUpgrades: function(c) {
         if (!c) c = 1;
         var gm = window.gameMetrics;
-        if (!gm) gm = window.gameMetrics = {};        gm.upgradesBought = (gm.upgradesBought || 0) + c;
+        if (!gm) gm = window.gameMetrics = {};
+        gm.upgradesBought = (gm.upgradesBought || 0) + c;
         updateProgress('upgradeEnthusiast', gm.upgradesBought);
     },
     incrementHelpers: function(c) {
@@ -912,7 +920,6 @@ window.achievementsSystem = {
         updateProgress('clickMaster', gm.totalClicks);
     }
 };
-
 /**
  * Обновляет время в игре (вызывается при сохранении и открытии панели)
  */
@@ -929,7 +936,8 @@ function updateTimePlayed() {
         
         // Проверяем разблокировки
         var levels = achievements.timeInvestor.levels;
-        for (var i = 0; i < levels.length; i++) {            var st = catState.levels[levels[i].id];
+        for (var i = 0; i < levels.length; i++) {
+            var st = catState.levels[levels[i].id];
             if (st && !st.unlocked && totalTime >= levels[i].target) {
                 st.unlocked = true;
                 st.progress = levels[i].target;
@@ -938,46 +946,21 @@ function updateTimePlayed() {
     }
 }
 
-// ==========================================
-// 🚀 АВТОЗАПУСК (Ready Gate)
-// ==========================================
-
-/**
- * Безопасная инициализация — проверяет наличие DOM-элементов
- * и вызывает init() только один раз
- */
 function safeInit() {
-    // ✅ Защита от повторного вызова
-    if (isInitialized) return;
-    
-    // Ждём появления кнопки достижений в DOM
     if (!document.getElementById('achievementsBtn')) {
-        console.log('[Achievements] Кнопка achievementsBtn не найдена, ждём DOMContentLoaded');
-        document.addEventListener('DOMContentLoaded', safeInit, { once: true });
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
         return;
     }
-    
-    init();
-    
-    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
-    if (window.EventBus) {
-        window.EventBus.moduleReady('achievements');
+    if (!window.gameState || !window.GAME_CORE) {
+        setTimeout(safeInit, 200);
+        return;
     }
+    init();
 }
 
-// ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
-if (window.EventBus) {
-    window.EventBus.once('game:allReady', () => {
-        console.log('[Achievements] game:allReady получен, запускаем safeInit');
-        safeInit();
-    });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
 } else {
-    // 🆘 FALLBACK: если EventBus не загрузился (критическая ошибка, но не даём модулю упасть)
-    console.warn('⚠️ [Achievements] EventBus не найден! Используем fallback инициализацию');
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100));
-    } else {
-        setTimeout(safeInit, 100);
-    }}
-
+    setTimeout(safeInit, 100);
+}
 })();

@@ -1,9 +1,10 @@
-// js/music-system.js (v2.2 — Ready Gate + pause/resume API)
+// js/music-system.js (v2.1 — реальные названия + бегущая строка)
 (function() {
 'use strict';
 
-let isInitialized = false;
-
+// ==========================================
+// 📋 МАППИНГ ЛОКАЦИЙ НА МАССИВЫ ТРЕКОВ
+// ==========================================
 const PLANET_TRACKS = {
     mercury: [
         'audio/mercury/Copper_Noon.mp3',
@@ -52,11 +53,17 @@ const PLANET_TRACKS = {
     ]
 };
 
+// ==========================================
+// 🔧 КОНФИГУРАЦИЯ
+// ==========================================
 const MUSIC_CONFIG = {
     volume: 0.4,
     fadeDuration: 1.5
 };
 
+// ==========================================
+//  СОСТОЯНИЕ
+// ==========================================
 let audioContext = null;
 let currentBuffer = null;
 let currentSource = null;
@@ -65,56 +72,81 @@ let currentTrackIndex = -1;
 let currentTrackName = '';
 let isMuted = false;
 let isMusicStarted = false;
-let isPausedByGame = false; // ✅ НОВОЕ: пауза от game-core
 let gainNode = null;
 const bufferCache = {};
 
+// ==========================================
+// 🎲 ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ РАНДОМНОГО ТРЕКА
+// ==========================================
 function getRandomTrack(planet) {
     const tracks = PLANET_TRACKS[planet];
     if (!tracks || tracks.length === 0) {
         console.warn(`⚠️ [MUSIC] Нет треков для планеты: ${planet}`);
         return null;
     }
+    
+    // Выбираем случайный трек, отличный от текущего
     let randomIndex;
     do {
         randomIndex = Math.floor(Math.random() * tracks.length);
-    } while (tracks.length > 1 && randomIndex === currentTrackIndex);
+    } while (tracks.length > 1 && randomIndex === currentTrackIndex && tracks.length > 1);
+    
     currentTrackIndex = randomIndex;
     return tracks[randomIndex];
 }
 
+// ==========================================
+// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
+// ==========================================
 function extractTrackName(trackUrl) {
+    // Извлекаем имя файла из пути
     const filename = trackUrl.split('/').pop();
+    // Убираем расширение .mp3
     const nameWithoutExt = filename.replace('.mp3', '');
-    return nameWithoutExt.replace(/_/g, ' ');
+    // Заменяем underscores на пробелы
+    const readableName = nameWithoutExt.replace(/_/g, ' ');
+    return readableName;
 }
 
+// ==========================================
+// 🎵 UI: БЕГУЩАЯ СТРОКА
+// ==========================================
 function createTrackDisplay() {
+    // Удаляем старый элемент если есть
     const existing = document.getElementById('trackDisplay');
     if (existing) existing.remove();
     
+    // Создаём контейнер
     const container = document.createElement('div');
     container.id = 'trackDisplay';
     container.style.cssText = `
-        position: fixed; bottom: 10px; left: 50%;
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
         transform: translateX(-50%);
-        width: min(90%, 400px); height: 30px;
+        width: min(90%, 400px);
+        height: 30px;
         background: rgba(0, 0, 0, 0.6);
         border-radius: 15px;
-        display: flex; align-items: center; justify-content: center;
-        z-index: 50; overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        overflow: hidden;
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         font-family: 'Orbitron', sans-serif;
     `;
     
+    // Создаём текст с анимацией
     const text = document.createElement('div');
     text.id = 'trackName';
     text.style.cssText = `
         white-space: nowrap;
         color: #FFD700;
-        font-size: 0.8em; font-weight: bold;
+        font-size: 0.8em;
+        font-weight: bold;
         text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
         animation: marquee 15s linear infinite;
         padding: 0 20px;
@@ -124,6 +156,7 @@ function createTrackDisplay() {
     container.appendChild(text);
     document.body.appendChild(container);
     
+    // Добавляем CSS анимацию если ещё не добавлена
     if (!document.getElementById('marqueeStyle')) {
         const style = document.createElement('style');
         style.id = 'marqueeStyle';
@@ -135,33 +168,42 @@ function createTrackDisplay() {
         `;
         document.head.appendChild(style);
     }
+    
     console.log('[MUSIC] Track display created');
 }
 
 function updateTrackDisplay(trackUrl) {
     const trackName = extractTrackName(trackUrl);
     currentTrackName = trackName;
+    
     const textElement = document.getElementById('trackName');
     if (textElement) {
         textElement.textContent = `🎵 ${trackName}`;
+        // Перезапускаем анимацию
         textElement.style.animation = 'none';
-        void textElement.offsetWidth;
+        void textElement.offsetWidth; // Force reflow
         textElement.style.animation = 'marquee 15s linear infinite';
     }
 }
 
+// ==========================================
+// 🔊 AUDIO CONTEXT INIT
+// ==========================================
 function initAudioContext() {
     if (audioContext) return audioContext;
+    
     try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) {
             console.warn('[MUSIC] Web Audio API not supported');
             return null;
         }
+        
         audioContext = new AudioCtx();
         gainNode = audioContext.createGain();
         gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
         gainNode.connect(audioContext.destination);
+        
         console.log('[MUSIC] AudioContext initialized');
         return audioContext;
     } catch (e) {
@@ -170,19 +212,29 @@ function initAudioContext() {
     }
 }
 
+// ==========================================
+// 📥 LOAD AUDIO BUFFER
+// ==========================================
 async function loadAudioBuffer(trackUrl) {
     if (bufferCache[trackUrl]) {
+        console.log(`[MUSIC] Using cached: ${trackUrl}`);
         return bufferCache[trackUrl];
     }
+    
     const ctx = initAudioContext();
     if (!ctx) return null;
+    
     try {
+        console.log('[MUSIC] Loading:', trackUrl);
         const response = await fetch(trackUrl);
         if (!response.ok) throw new Error('HTTP ' + response.status);
+        
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        
         bufferCache[trackUrl] = audioBuffer;
         console.log(`[MUSIC] Loaded: ${trackUrl} (${audioBuffer.duration.toFixed(1)}s)`);
+        
         return audioBuffer;
     } catch (e) {
         console.error('[MUSIC] Failed to load:', trackUrl, e);
@@ -190,33 +242,46 @@ async function loadAudioBuffer(trackUrl) {
     }
 }
 
+// ==========================================
+// 🔄 SEAMLESS LOOPING
+// ==========================================
 function startSeamlessLoop(buffer) {
     if (!audioContext || !buffer) return;
+    
     stopCurrentSource();
     currentBuffer = buffer;
     const duration = buffer.duration;
+    
     scheduleLoop(buffer, audioContext.currentTime, duration);
 }
 
 function scheduleLoop(buffer, startTime, duration) {
     if (!audioContext || !buffer || currentBuffer !== buffer) return;
+    
     try {
         const source = audioContext.createBufferSource();
         source.buffer = buffer;
         source.loop = false;
         source.connect(gainNode);
         source.start(startTime);
+        
         source.onended = () => {
-            if (currentSource === source) currentSource = null;
+            if (currentSource === source) {
+                currentSource = null;
+            }
         };
+        
         currentSource = source;
+        
         const nextStartTime = startTime + duration;
         const delay = (nextStartTime - audioContext.currentTime) * 1000;
+        
         setTimeout(() => {
             if (currentBuffer === buffer) {
                 scheduleLoop(buffer, nextStartTime, duration);
             }
         }, Math.max(0, delay - 200));
+        
     } catch (e) {
         console.warn('[MUSIC] scheduleLoop error:', e);
     }
@@ -232,9 +297,14 @@ function stopCurrentSource() {
     }
 }
 
+// ==========================================
+// 🎚️ FADE IN / FADE OUT
+// ==========================================
 function fadeIn(duration) {
     duration = duration || MUSIC_CONFIG.fadeDuration;
+    
     if (!gainNode || !audioContext) return;
+    
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
@@ -243,29 +313,45 @@ function fadeIn(duration) {
 
 function fadeOut(duration, callback) {
     duration = duration || MUSIC_CONFIG.fadeDuration;
+    
     if (!gainNode || !audioContext) {
         if (callback) callback();
         return;
     }
+    
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
     gainNode.gain.linearRampToValueAtTime(0, now + duration);
-    if (callback) setTimeout(callback, duration * 1000);
+    
+    if (callback) {
+        setTimeout(callback, duration * 1000);
+    }
 }
 
+// ==========================================
+// 🎵 PLAY PLANET MUSIC (с бегущей строкой)
+// ==========================================
 async function playPlanetMusic(planet) {
     if (!PLANET_TRACKS[planet]) {
         console.warn('[MUSIC] Unknown planet:', planet);
         return;
     }
+    
+    // Получаем случайный трек для планеты
     const trackUrl = getRandomTrack(planet);
     if (!trackUrl) return;
     
+    // Если уже играет этот трек — не перезапускаем
     const currentTrack = Object.keys(bufferCache).find(key => bufferCache[key] === currentBuffer);
-    if (currentTrack === trackUrl && currentSource) return;
+    if (currentTrack === trackUrl && currentSource) {
+        console.log('[MUSIC] Already playing:', trackUrl);
+        return;
+    }
     
     currentPlanet = planet;
+    
+    // ✅ Обновляем бегущую строку
     updateTrackDisplay(trackUrl);
     
     const buffer = await loadAudioBuffer(trackUrl);
@@ -280,23 +366,38 @@ async function playPlanetMusic(planet) {
         startSeamlessLoop(buffer);
         fadeIn(MUSIC_CONFIG.fadeDuration);
     }
+    
     console.log(`🎵 [MUSIC] Playing: ${trackUrl} (${planet})`);
 }
 
+// ==========================================
+// 🔇 MUTE / UNMUTE
+// ==========================================
 function toggleMute() {
     isMuted = !isMuted;
-    if (window.gameState) window.gameState.musicMuted = isMuted;
-    try { localStorage.setItem('cosmicMusicMuted', isMuted.toString()); } catch (e) {}
+    
+    if (window.gameState) {
+        window.gameState.musicMuted = isMuted;
+    }
+    
+    try {
+        localStorage.setItem('cosmicMusicMuted', isMuted.toString());
+    } catch (e) {}
+    
     if (gainNode && audioContext) {
         const now = audioContext.currentTime;
         gainNode.gain.cancelScheduledValues(now);
         gainNode.gain.setValueAtTime(gainNode.gain.value, now);
         gainNode.gain.linearRampToValueAtTime(isMuted ? 0 : MUSIC_CONFIG.volume, now + 0.3);
     }
+    
     updateMuteButton();
     console.log('[MUSIC] Mute:', isMuted);
 }
 
+// ==========================================
+// 🎛️ UI BUTTON
+// ==========================================
 function createMuteButton() {
     const existing = document.getElementById('musicMuteBtn');
     if (existing) existing.remove();
@@ -311,6 +412,7 @@ function createMuteButton() {
         e.stopPropagation();
         toggleMute();
     });
+    
     btn.addEventListener('touchstart', function(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -329,32 +431,11 @@ function updateMuteButton() {
     }
 }
 
-// ✅ НОВОЕ: API паузы/возобновления для game-core
-function pauseMusic() {
-    if (isPausedByGame || !isMusicStarted) return;
-    isPausedByGame = true;
-    if (audioContext && audioContext.state === 'running') {
-        audioContext.suspend().catch(() => {});
-    }
-    console.log('[MUSIC] ⏸️ Paused by game');
-}
-
-function resumeMusic() {
-    if (!isPausedByGame) return;
-    isPausedByGame = false;
-    if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().catch(() => {});
-    }
-    console.log('[MUSIC] ▶️ Resumed by game');
-}
-
+// ==========================================
+// 🚀 INIT
+// ==========================================
 function init() {
-    if (isInitialized) {
-        console.warn('⚠️ [Music] init() вызван повторно, пропускаем');
-        return;
-    }
-    isInitialized = true;
-    
+    // Загружаем сохранённое состояние mute
     try {
         const savedMute = localStorage.getItem('cosmicMusicMuted');
         isMuted = savedMute === 'true';
@@ -362,6 +443,7 @@ function init() {
         isMuted = false;
     }
     
+    // Подписываемся на смену планеты
     if (window.EventBus) {
         window.EventBus.on('game:planetChanged', function(planet) {
             if (isMusicStarted) {
@@ -371,17 +453,21 @@ function init() {
     }
     
     createMuteButton();
-    createTrackDisplay();
+    createTrackDisplay(); // ✅ Создаём бегущую строку
     
+    // Запускаем музыку при первом взаимодействии
     const startOnFirstInteraction = async function() {
         if (isMusicStarted) return;
+        
         if (window.gameState && window.gameState.currentLocation) {
             const ctx = initAudioContext();
             if (ctx && ctx.state === 'suspended') {
                 try { await ctx.resume(); } catch (e) {}
             }
+            
             await playPlanetMusic(window.gameState.currentLocation);
             isMusicStarted = true;
+            
             console.log('[MUSIC] Started for planet:', window.gameState.currentLocation);
         }
     };
@@ -390,16 +476,17 @@ function init() {
     document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
     document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('[MUSIC] Music System v2.2 initialized (Ready Gate)');
+    console.log('[MUSIC] Music System v2.1 initialized (REAL NAMES + MARQUEE)');
     console.log('📋 Available planets:', Object.keys(PLANET_TRACKS));
 }
 
+// ==========================================
+// 🌐 PUBLIC API
+// ==========================================
 window.MusicSystem = {
     init: init,
     playPlanetMusic: playPlanetMusic,
     toggleMute: toggleMute,
-    pause: pauseMusic,       // ✅ НОВОЕ
-    resume: resumeMusic,     // ✅ НОВОЕ
     isMuted: function() { return isMuted; },
     getCurrentPlanet: function() { return currentPlanet; },
     getCurrentTrack: function() {
@@ -409,33 +496,16 @@ window.MusicSystem = {
     getCurrentTrackName: function() { return currentTrackName; }
 };
 
+// Экспортируем для внешнего использования
 window.PLANET_TRACKS = PLANET_TRACKS;
 window.getRandomTrack = getRandomTrack;
 window.extractTrackName = extractTrackName;
 
-// ==========================================
-// 🚀 АВТОЗАПУСК (Ready Gate)
-// ==========================================
-function safeInit() {
-    if (isInitialized) return;
-    init();
-    if (window.EventBus) {
-        window.EventBus.moduleReady('music');
-    }
-}
-
-if (window.EventBus) {
-    window.EventBus.once('game:allReady', () => {
-        console.log('[Music] game:allReady получен, запускаем safeInit');
-        safeInit();
-    });
+// Auto-start
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(init, 500); });
 } else {
-    console.warn('⚠️ [Music] EventBus не найден! Fallback');
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 500), { once: true });
-    } else {
-        setTimeout(safeInit, 500);
-    }
+    setTimeout(init, 500);
 }
 
 })();

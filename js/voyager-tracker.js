@@ -1,25 +1,25 @@
-// js/voyager-tracker.js (v1.1 — Ready Gate)
+// js/voyager-tracker.js
 (function() {
     'use strict';
 
-    let isInitialized = false;
-
     const VOYAGER_DATA = {
         voyager1: {
-            name: 'Вояджер-1', label: 'V1',
+            name: 'Вояджер-1',
+            label: 'V1',
             launchDate: new Date('1977-09-05'),
             speedAUperYear: 3.6,
             color: '#4FC3F7',
             glowColor: 'rgba(79, 195, 247, 0.6)',
-            position: { left: '60%', top: '48%' }
+            position: { left: '60%', top: '48%' } // Слева от центральной зоны
         },
         voyager2: {
-            name: 'Вояджер-2', label: 'V2',
+            name: 'Вояджер-2',
+            label: 'V2',
             launchDate: new Date('1977-08-20'),
             speedAUperYear: 3.25,
             color: '#81C784',
             glowColor: 'rgba(129, 199, 132, 0.6)',
-            position: { right: '60%', top: '52%' }
+            position: { right: '60%', top: '52%' } // Справа от центральной зоны
         }
     };
 
@@ -42,6 +42,7 @@
         const style = document.createElement('style');
         style.id = 'voyager-tracker-styles';
         style.textContent = `
+            /* HUD элементы */
             .voyager-hud-container {
                 margin-top: 8px;
                 padding-top: 6px;
@@ -55,21 +56,21 @@
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
-            .voyager-hud-item {
-                display: flex;
-                align-items: center;
-                gap: 4px;
-                font-size: 0.65em;
-                margin-bottom: 3px;
-                padding: 4px 6px;
-                background: rgba(255, 255, 255, 0.03);
-                border-radius: 6px;
-                border-left: 3px solid currentColor;
-                cursor: pointer;
-                transition: all 0.2s;
-                user-select: none;
-                -webkit-user-select: none;
-            }
+         .voyager-hud-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.65em;
+    margin-bottom: 3px;
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border-left: 3px solid currentColor;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+}
             .voyager-hud-item:hover,
             .voyager-hud-item.active {
                 background: rgba(255, 255, 255, 0.08);
@@ -82,6 +83,8 @@
             .voyager-hud-label { flex: 1; font-weight: bold; }
             .voyager-hud-distance { font-weight: bold; font-family: 'Orbitron', monospace; }
             .voyager-hud-unit { opacity: 0.7; font-size: 0.9em; }
+
+            /* Точки Вояджеров */
             .voyager-dot-container {
                 position: fixed;
                 z-index: 10;
@@ -127,6 +130,7 @@
             .voyager-dot.highlight .voyager-dot-ring {
                 animation: voyagerRingExpand 0.8s ease-out forwards;
             }
+
             @keyframes voyagerPulse {
                 0%, 100% { 
                     transform: scale(1);
@@ -171,6 +175,8 @@
                     opacity: 0;
                 }
             }
+
+            /* Трассирующий луч */
             #voyager-tracer-svg {
                 position: fixed;
                 top: 0;
@@ -195,6 +201,8 @@
             @keyframes tracerDash {
                 to { stroke-dashoffset: -24; }
             }
+
+            /* Мобильная адаптация */
             @media (max-width: 768px) {
                 .voyager-dot {
                     width: 20px;
@@ -234,13 +242,14 @@
             item.className = 'voyager-hud-item';
             item.id = `voyager-hud-${key}`;
             item.style.color = voyager.color;
-            item.innerHTML = `
-                <span class="voyager-hud-emoji">🛸</span>
-                <span class="voyager-hud-label">${voyager.label}: </span>
-                <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
-                <span class="voyager-hud-unit">AU</span>
-            `;
+    item.innerHTML = `
+    <span class="voyager-hud-emoji">🛸</span>
+    <span class="voyager-hud-label">${voyager.label}: </span>
+    <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
+    <span class="voyager-hud-unit">AU</span>
+`;
 
+            // Обработчики для трассировки
             item.addEventListener('mouseenter', () => showTracer(key));
             item.addEventListener('mouseleave', () => hideTracer(key));
             item.addEventListener('touchstart', (e) => {
@@ -260,23 +269,29 @@
     }
 
     function createDots() {
+        // Удаляем старые точки если есть
         document.querySelectorAll('.voyager-dot-container').forEach(el => el.remove());
 
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
+
             const container = document.createElement('div');
             container.className = 'voyager-dot-container';
             container.id = `voyager-dot-${key}`;
             container.style.color = voyager.color;
+
+            // Применяем позицию
             Object.keys(voyager.position).forEach(prop => {
                 container.style[prop] = voyager.position[prop];
             });
+
             container.innerHTML = `
                 <div class="voyager-dot">
                     <div class="voyager-dot-ring"></div>
                     <div class="voyager-dot-label">${voyager.label}</div>
                 </div>
             `;
+
             document.body.appendChild(container);
         });
     }
@@ -306,6 +321,7 @@
 
         document.body.appendChild(svg);
         
+        // Обновляем viewBox при ресайзе
         window.addEventListener('resize', () => {
             svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
         });
@@ -339,7 +355,9 @@
         const line = document.getElementById(`tracer-line-${voyagerKey}`);
         const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
         
-        if (line) line.classList.remove('visible');
+        if (line) {
+            line.classList.remove('visible');
+        }
         if (dotEl) {
             setTimeout(() => {
                 dotEl.classList.remove('highlight');
@@ -351,6 +369,7 @@
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
             const distance = calculateCurrentDistance(voyager);
+            
             const distanceEl = document.getElementById(`voyager-distance-${key}`);
             if (distanceEl) {
                 distanceEl.textContent = formatDistance(distance);
@@ -359,21 +378,20 @@
     }
 
     function init() {
-        if (isInitialized) {
-            console.warn('⚠️ [Voyager] init() вызван повторно, пропускаем');
-            return;
-        }
-        isInitialized = true;
-
         injectStyles();
         createHUD();
         createDots();
         createTracerSVG();
         
-        if (updateInterval) clearInterval(updateInterval);
         updateInterval = setInterval(updateDistances, 10000);
         
-        console.log('🛰️ Voyager Tracker v1.1 initialized (Ready Gate)');
+        console.log('🛰️ Voyager Tracker initialized');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 
     window.voyagerTracker = {
@@ -384,30 +402,4 @@
             return voyager ? calculateCurrentDistance(voyager) : 0;
         }
     };
-
-    // ==========================================
-    // 🚀 АВТОЗАПУСК (Ready Gate)
-    // ==========================================
-    function safeInit() {
-        if (isInitialized) return;
-        init();
-        if (window.EventBus) {
-            window.EventBus.moduleReady('voyager');
-        }
-    }
-
-    if (window.EventBus) {
-        window.EventBus.once('game:allReady', () => {
-            console.log('[Voyager] game:allReady получен, запускаем safeInit');
-            safeInit();
-        });
-    } else {
-        console.warn('⚠️ [Voyager] EventBus не найден! Fallback');
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100), { once: true });
-        } else {
-            setTimeout(safeInit, 100);
-        }
-    }
-
 })();

@@ -428,24 +428,20 @@ function startAutoSave() {
 // ============================================
 // ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ
 // ============================================
-// В самом конце save-system.js, замените функцию init:
 function init() {
     window.gameState = deepMerge(DEFAULT_GAME_STATE, window.gameState || {});
     window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, window.gameMetrics || {});
     
+    // Дополнительная валидация на старте сессии
     reconstructMetricsFromAchievements();
-    startAutoSave();
     
+    startAutoSave();
+
     const forceSave = () => { if (window.gameState?.gameActive) window.flushCloudSave(); };
     window.addEventListener('beforeunload', forceSave);
     document.addEventListener('visibilitychange', () => { if (document.hidden) forceSave(); });
-    
-    console.log('💾 Save System v3.1 готова.');
-    
-    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
-    if (window.EventBus) {
-        window.EventBus.moduleReady('save');
-    }
+
+    console.log('💾 Автоматическая Save System v3.1 готова. Метрики под защитой.');
 }
 
 if (document.readyState === 'loading') {
@@ -453,5 +449,5 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
-}) 
- ();
+
+})();
