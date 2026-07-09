@@ -1,6 +1,9 @@
-// js/voyager-tracker.js
+// js/voyager-tracker.js (v1.1 — Ready Gate + защита от двойной инициализации)
 (function() {
     'use strict';
+
+    // ✅ Флаг защиты от двойной инициализации
+    let isInitialized = false;
 
     const VOYAGER_DATA = {
         voyager1: {
@@ -10,7 +13,7 @@
             speedAUperYear: 3.6,
             color: '#4FC3F7',
             glowColor: 'rgba(79, 195, 247, 0.6)',
-            position: { left: '60%', top: '48%' } // Слева от центральной зоны
+            position: { left: '60%', top: '48%' }
         },
         voyager2: {
             name: 'Вояджер-2',
@@ -19,7 +22,7 @@
             speedAUperYear: 3.25,
             color: '#81C784',
             glowColor: 'rgba(129, 199, 132, 0.6)',
-            position: { right: '60%', top: '52%' } // Справа от центральной зоны
+            position: { right: '60%', top: '52%' }
         }
     };
 
@@ -42,11 +45,9 @@
         const style = document.createElement('style');
         style.id = 'voyager-tracker-styles';
         style.textContent = `
-            /* HUD элементы */
             .voyager-hud-container {
                 margin-top: 8px;
-                padding-top: 6px;
-                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 6px;                border-top: 1px solid rgba(255, 255, 255, 0.1);
             }
             .voyager-hud-title {
                 font-size: 0.6em;
@@ -56,21 +57,21 @@
                 text-transform: uppercase;
                 letter-spacing: 1px;
             }
-         .voyager-hud-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.65em;
-    margin-bottom: 3px;
-    padding: 4px 6px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 6px;
-    border-left: 3px solid currentColor;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-    -webkit-user-select: none;
-}
+            .voyager-hud-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 0.65em;
+                margin-bottom: 3px;
+                padding: 4px 6px;
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 6px;
+                border-left: 3px solid currentColor;
+                cursor: pointer;
+                transition: all 0.2s;
+                user-select: none;
+                -webkit-user-select: none;
+            }
             .voyager-hud-item:hover,
             .voyager-hud-item.active {
                 background: rgba(255, 255, 255, 0.08);
@@ -84,7 +85,6 @@
             .voyager-hud-distance { font-weight: bold; font-family: 'Orbitron', monospace; }
             .voyager-hud-unit { opacity: 0.7; font-size: 0.9em; }
 
-            /* Точки Вояджеров */
             .voyager-dot-container {
                 position: fixed;
                 z-index: 10;
@@ -96,8 +96,7 @@
                 height: 18px;
                 border-radius: 50%;
                 background: currentColor;
-                box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;
-                animation: voyagerPulse 2.5s ease-in-out infinite;
+                box-shadow: 0 0 15px currentColor, 0 0 30px currentColor;                animation: voyagerPulse 2.5s ease-in-out infinite;
             }
             .voyager-dot-ring {
                 position: absolute;
@@ -146,8 +145,7 @@
                     transform: translate(-50%, -50%) scale(1);
                     opacity: 0.4;
                 }
-                50% { 
-                    transform: translate(-50%, -50%) scale(1.3);
+                50% {                     transform: translate(-50%, -50%) scale(1.3);
                     opacity: 0.1;
                 }
             }
@@ -176,7 +174,6 @@
                 }
             }
 
-            /* Трассирующий луч */
             #voyager-tracer-svg {
                 position: fixed;
                 top: 0;
@@ -197,12 +194,10 @@
             .tracer-line.visible {
                 opacity: 0.9;
                 animation: tracerDash 1s linear infinite;
-            }
-            @keyframes tracerDash {
+            }            @keyframes tracerDash {
                 to { stroke-dashoffset: -24; }
             }
 
-            /* Мобильная адаптация */
             @media (max-width: 768px) {
                 .voyager-dot {
                     width: 20px;
@@ -242,14 +237,12 @@
             item.className = 'voyager-hud-item';
             item.id = `voyager-hud-${key}`;
             item.style.color = voyager.color;
-    item.innerHTML = `
-    <span class="voyager-hud-emoji">🛸</span>
-    <span class="voyager-hud-label">${voyager.label}: </span>
-    <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
-    <span class="voyager-hud-unit">AU</span>
-`;
-
-            // Обработчики для трассировки
+            item.innerHTML = `
+                <span class="voyager-hud-emoji">🛸</span>
+                <span class="voyager-hud-label">${voyager.label}: </span>
+                <span class="voyager-hud-distance" id="voyager-distance-${key}">${formatDistance(distance)}</span>
+                <span class="voyager-hud-unit">AU</span>
+            `;
             item.addEventListener('mouseenter', () => showTracer(key));
             item.addEventListener('mouseleave', () => hideTracer(key));
             item.addEventListener('touchstart', (e) => {
@@ -269,7 +262,6 @@
     }
 
     function createDots() {
-        // Удаляем старые точки если есть
         document.querySelectorAll('.voyager-dot-container').forEach(el => el.remove());
 
         Object.keys(VOYAGER_DATA).forEach(key => {
@@ -280,7 +272,6 @@
             container.id = `voyager-dot-${key}`;
             container.style.color = voyager.color;
 
-            // Применяем позицию
             Object.keys(voyager.position).forEach(prop => {
                 container.style[prop] = voyager.position[prop];
             });
@@ -301,8 +292,7 @@
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.id = 'voyager-tracer-svg';
-        svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);        svg.setAttribute('preserveAspectRatio', 'none');
 
         Object.keys(VOYAGER_DATA).forEach(key => {
             const voyager = VOYAGER_DATA[key];
@@ -321,7 +311,6 @@
 
         document.body.appendChild(svg);
         
-        // Обновляем viewBox при ресайзе
         window.addEventListener('resize', () => {
             svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
         });
@@ -352,8 +341,7 @@
     }
 
     function hideTracer(voyagerKey) {
-        const line = document.getElementById(`tracer-line-${voyagerKey}`);
-        const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
+        const line = document.getElementById(`tracer-line-${voyagerKey}`);        const dotEl = document.getElementById(`voyager-dot-${voyagerKey}`);
         
         if (line) {
             line.classList.remove('visible');
@@ -378,20 +366,23 @@
     }
 
     function init() {
+        // ✅ Защита от повторной инициализации
+        if (isInitialized) {
+            console.warn('⚠️ [Voyager] init() вызван повторно, пропускаем');
+            return;
+        }
+        isInitialized = true;
+
         injectStyles();
         createHUD();
         createDots();
         createTracerSVG();
         
+        // Защита от утечки интервала при повторном вызове
+        if (updateInterval) clearInterval(updateInterval);
         updateInterval = setInterval(updateDistances, 10000);
         
-        console.log('🛰️ Voyager Tracker initialized');
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
+        console.log('🛰️ Voyager Tracker v1.1 initialized (Ready Gate)');
     }
 
     window.voyagerTracker = {
@@ -399,25 +390,39 @@
         hideTracer,
         getDistance: (key) => {
             const voyager = VOYAGER_DATA[key];
-            return voyager ? calculateCurrentDistance(voyager) : 0;
-        }
+            return voyager ? calculateCurrentDistance(voyager) : 0;        }
     };
-    // ✅ УБРАН setTimeout — используем Ready Gate
-function safeInit() {
-    init();
-    
-    if (window.EventBus) {
-        window.EventBus.moduleReady('voyager');
-    }
-}
 
-if (window.EventBus) {
-    window.EventBus.once('game:allReady', safeInit);
-} else {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', safeInit);
-    } else {
-        safeInit();
+    // ==========================================
+    // 🚀 АВТОЗАПУСК (Ready Gate)
+    // ==========================================
+
+    function safeInit() {
+        // ✅ Защита от повторного вызова
+        if (isInitialized) return;
+        
+        init();
+        
+        // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
+        if (window.EventBus) {
+            window.EventBus.moduleReady('voyager');
+        }
     }
-}
+
+    // ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
+    if (window.EventBus) {
+        window.EventBus.once('game:allReady', () => {
+            console.log('[Voyager] game:allReady получен, запускаем safeInit');
+            safeInit();
+        });
+    } else {
+        // 🆘 FALLBACK: если EventBus не загрузился
+        console.warn('⚠️ [Voyager] EventBus не найден! Используем fallback инициализацию');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 100), { once: true });
+        } else {
+            setTimeout(safeInit, 100);
+        }
+    }
+
 })();
