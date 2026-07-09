@@ -248,8 +248,7 @@ block.addEventListener('click', () => {
                 window.achievementsSystem.incrementPlanetRareBlocks(currentPlanet, 1);
             }
             if (window.gameState.comboCount > (window.gameMetrics.maxCombo || 0)) {
-                window.gameMetrics.maxCombo = window.gameState.comboCount;
-                window.achievementsSystem.updateCombo(window.gameState.comboCount);
+               window.achievementsSystem.updateCombo(window.gameState.comboCount);
                 window.achievementsSystem.updatePlanetCombo(currentPlanet, window.gameState.comboCount);
             }
         }
