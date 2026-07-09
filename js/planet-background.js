@@ -878,11 +878,24 @@
     };
 
     // Автоинициализация
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 200));
-    } else {
-        setTimeout(init, 200);
+    // ✅ УБРАН setTimeout — используем Ready Gate
+function safeInit() {
+    init();
+    
+    if (window.EventBus) {
+        window.EventBus.moduleReady('background');
     }
+}
+
+if (window.EventBus) {
+    window.EventBus.once('game:allReady', safeInit);
+} else {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 200));
+    } else {
+        setTimeout(safeInit, 200);
+    }
+}
 
     window.addEventListener('beforeunload', () => stop());
 })();
