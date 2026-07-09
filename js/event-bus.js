@@ -1,65 +1,41 @@
-// js/event-bus.js
+// js/event-bus.js (v1.1 — Ready Gate)
 (function() {
     'use strict';
 
     const listeners = {};
+    
+    // ✅ READY GATE: Отслеживание готовности модулей
+    const REQUIRED_MODULES = ['save', 'core', 'achievements', 'shop', 'dailyBonus', 'music', 'background', 'voyager'];
+    const readyModules = new Set();
+    let allReadyFired = false;
 
     window.EventBus = {
-        /**
-         * Подписаться на событие
-         * @param {string} event - Имя события (например, 'block:destroyed')
-         * @param {Function} callback - Функция-обработчик
-         */
         on: function(event, callback) {
             if (typeof callback !== 'function') {
                 console.warn(`[EventBus] Попытка подписаться на "${event}" не функцией`);
                 return;
             }
-            if (!listeners[event]) {
-                listeners[event] = [];
-            }
+            if (!listeners[event]) listeners[event] = [];
             listeners[event].push(callback);
         },
 
-        /**
-         * Отписаться от события
-         * @param {string} event - Имя события
-         * @param {Function} callback - Та же функция, что была передана в on()
-         */
         off: function(event, callback) {
             if (!listeners[event]) return;
             listeners[event] = listeners[event].filter(cb => cb !== callback);
         },
 
-        /**
-         * Опубликовать событие
-         * @param {string} event - Имя события
-         * @param {*} data - Данные, передаваемые подписчикам
-         */
         emit: function(event, data) {
             if (!listeners[event]) return;
-            
-            // Создаём копию массива, чтобы избежать проблем при изменении 
-            // списка подписчиков внутри обработчика
             const handlers = [...listeners[event]];
-            
             handlers.forEach(cb => {
-                try {
-                    cb(data);
-                } catch (e) {
-                    console.error(`[EventBus] Ошибка в обработчике события "${event}":`, e);
+                try { cb(data); } catch (e) {
+                    console.error(`[EventBus] Ошибка в обработчике "${event}":`, e);
                 }
             });
         },
 
-        /**
-         * Подписаться один раз (автоматически отписывается после первого вызова)
-         * @param {string} event - Имя события
-         * @param {Function} callback - Функция-обработчик
-         */
         once: function(event, callback) {
             if (typeof callback !== 'function') return;
-            
             const wrapper = (data) => {
                 this.off(event, wrapper);
                 callback(data);
@@ -67,28 +43,32 @@
             this.on(event, wrapper);
         },
 
-        /**
-         * Удалить всех подписчиков конкретного события
-         * @param {string} event - Имя события
-         */
         clear: function(event) {
-            if (event) {
-                delete listeners[event];
-            } else {
-                // Если событие не указано — очищаем всё
-                Object.keys(listeners).forEach(key => delete listeners[key]);
-            }
+            if (event) delete listeners[event];
+            else Object.keys(listeners).forEach(key => delete listeners[key]);
+        },
+
+        listenerCount: function(event) {
+            return listeners[event] ? listeners[event].length : 0;
         },
 
         /**
-         * Получить количество подписчиков на событие (для отладки)
-         * @param {string} event - Имя события
-         * @returns {number}
+         * ✅ НОВОЕ: Регистрация готовности модуля
+         * Когда все обязательные модули зарегистрировались, эмитится game:allReady
          */
-        listenerCount: function(event) {
-            return listeners[event] ? listeners[event].length : 0;
+        moduleReady: function(moduleName) {
+            if (allReadyFired) return; // Уже запущено
+            
+            readyModules.add(moduleName);
+            console.log(`✅ [READY] ${moduleName} готов (${readyModules.size}/${REQUIRED_MODULES.length})`);
+            
+            if (readyModules.size >= REQUIRED_MODULES.length) {
+                allReadyFired = true;
+                console.log('🚀 [READY] ВСЕ МОДУЛИ ГОТОВЫ! Запуск игры...');
+                this.emit('game:allReady');
+            }
         }
     };
 
-    console.log('✅ EventBus initialized');
+    console.log('✅ EventBus v1.1 initialized (Ready Gate active)');
 })();
