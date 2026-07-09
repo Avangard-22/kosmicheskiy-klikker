@@ -467,13 +467,6 @@ function showNotification(text, color) {
     `;
     document.body.appendChild(notif);
 
-    setTimeout(() => {
-        notif.style.transition = 'opacity 0.3s';
-        notif.style.opacity = '0';
-        setTimeout(() => { if (notif.parentNode) notif.parentNode.removeChild(notif); }, 300);
-    }, 2000);
-}
-
 // === ПУБЛИЧНЫЙ API ===
 window.shopSystem = {
     init: init,
@@ -499,9 +492,22 @@ window.shopSystem = {
     hasAutoClick: () => !!(activeBoosts.autoClicker?.active)
 };
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 400));
+// ✅ УБРАН setTimeout — используем Ready Gate
+function safeInit() {
+    init();
+    
+    if (window.EventBus) {
+        window.EventBus.moduleReady('shop');
+    }
+}
+
+if (window.EventBus) {
+    window.EventBus.once('game:allReady', safeInit);
 } else {
-    setTimeout(init, 400);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 400));
+    } else {
+        setTimeout(safeInit, 400);
+    }
 }
 })();
