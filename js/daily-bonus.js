@@ -1,6 +1,10 @@
-// js/daily-bonus.js
+// js/daily-bonus.js (v2.1 — Ready Gate + защита от двойной инициализации)
 (function() {
 'use strict';
+
+// ✅ Флаг защиты от двойной инициализации
+let isInitialized = false;
+let updateTimerId = null;
 
 // ==========================================
 // 🎁 КОНФИГУРАЦИЯ НАГРАД
@@ -28,74 +32,44 @@ const REWARD_CONFIG = {
 // ==========================================
 // 🔐 ДЕТЕРМИНИРОВАННЫЙ RANDOM (seed-based)
 // ==========================================
-/**
- * Простой seeded random — награда на день X всегда одинаковая
- * Это защищает от "перезагрузки страницы"
- */
 function seededRandom(seed) {
     let x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
 }
 
-/**
- * Вычисляет силу игрока (прогрессия)
- */
 function getPlayerProgressMultiplier() {
     if (!window.gameState) return 1;
-    
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     const currentIdx = planetOrder.indexOf(window.gameState.currentLocation);
-    
-    // +15% за каждую открытую планету
-    return 1 + (Math.max(0, currentIdx) * 0.15);}
+    return 1 + (Math.max(0, currentIdx) * 0.15);
+}
 
 // ==========================================
 // 🎲 ГЕНЕРАТОР НАГРАД
 // ==========================================
-function generateReward(dayNumber) {
-    // 1. Фиксированные "золотые" дни
-    if (REWARD_CONFIG.milestoneRewards[dayNumber]) {
+function generateReward(dayNumber) {    if (REWARD_CONFIG.milestoneRewards[dayNumber]) {
         return REWARD_CONFIG.milestoneRewards[dayNumber];
     }
     
-    // 2. Детерминированный random на основе дня
-    const seed = dayNumber * 9973; // простое число для лучшего распределения
+    const seed = dayNumber * 9973;
     const rand = seededRandom(seed);
-    
-    // 3. Масштабирование с прогрессом игрока
     const progressMult = getPlayerProgressMultiplier();
-    const dayMult = 1 + (dayNumber * 0.03); // +3% за каждый день
+    const dayMult = 1 + (dayNumber * 0.03);
     
-    // 4. Выбор типа награды (веса: 60% кристаллы, 25% бустер, 15% апгрейд)
     if (rand < 0.60) {
-        // Кристаллы
         const amount = Math.floor(REWARD_CONFIG.baseCrystals * progressMult * dayMult);
-        return {
-            type: 'crystals',
-            amount: amount,
-            name: `${amount} 💎`
-        };
+        return { type: 'crystals', amount: amount, name: `${amount} 💎` };
     } else if (rand < 0.85) {
-        // Бустер (выбираем детерминированно)
         const boosterIdx = Math.floor(seededRandom(seed + 1) * REWARD_CONFIG.boosterPool.length);
         const boostId = REWARD_CONFIG.boosterPool[boosterIdx];
-        return {
-            type: 'boost',
-            boost: boostId,
-            name: `⚡ ${getBoostName(boostId)}`
-        };
+        return { type: 'boost', boost: boostId, name: `⚡ ${getBoostName(boostId)}` };
     } else {
-        // Апгрейд
         const upgradeIdx = Math.floor(seededRandom(seed + 2) * REWARD_CONFIG.upgradePool.length);
         const upg = REWARD_CONFIG.upgradePool[upgradeIdx];
-        return {
-            type: 'upgrade',
-            upgrade: upg.upgrade,
-            levels: upg.levels,
-            name: `🚀 ${upg.name}`
-        };
+        return { type: 'upgrade', upgrade: upg.upgrade, levels: upg.levels, name: `🚀 ${upg.name}` };
     }
 }
+
 function getBoostName(boostId) {
     const names = {
         timeWarp: 'Искажение времени',
@@ -106,7 +80,7 @@ function getBoostName(boostId) {
 }
 
 // ==========================================
-// 📅 ISO-ДАТЫ (защита от тайм-тревела)
+// 📅 ISO-ДАТЫ
 // ==========================================
 const getToday = () => new Date().toISOString().split('T')[0];
 
@@ -116,36 +90,32 @@ const getToday = () => new Date().toISOString().split('T')[0];
 function claimDailyBonus() {
     if (!window.gameState) return;
     
-    // Инициализация
     if (!window.gameState.dailyBonus) {
         window.gameState.dailyBonus = {
             lastClaimDate: null,
             totalClaimed: 0,
             streak: 0,
             lastClaimTimestamp: 0
-        };
-    }
+        };    }
     
     const today = getToday();
     const data = window.gameState.dailyBonus;
     
-    // Проверка: уже получено сегодня
     if (data.lastClaimDate === today) {
         showSmallNotification('⏰ Уже получено сегодня!', '#ff9800');
         return;
     }
     
-    // Проверка: минимальный интервал 24 часа (защита от читеров)
     const now = Date.now();
     if (data.lastClaimTimestamp > 0) {
         const hoursSinceLastClaim = (now - data.lastClaimTimestamp) / (1000 * 60 * 60);
-        if (hoursSinceLastClaim < 23) { // 23 часа — небольшой допуск
+        if (hoursSinceLastClaim < 23) {
             const hoursLeft = Math.ceil(24 - hoursSinceLastClaim);
             showSmallNotification(`⏰ Подождите ещё ${hoursLeft} ч.`, '#ff9800');
             return;
         }
     }
-        // Обновляем streak (серия дней подряд)
+    
     if (data.lastClaimDate) {
         const lastDate = new Date(data.lastClaimDate + 'T00:00:00Z');
         const todayDate = new Date(today + 'T00:00:00Z');
@@ -154,38 +124,28 @@ function claimDailyBonus() {
         if (daysDiff === 1) {
             data.streak = (data.streak || 0) + 1;
         } else if (daysDiff > 1) {
-            data.streak = 1; // Серия прервана
+            data.streak = 1;
         }
     } else {
         data.streak = 1;
     }
     
-    // Генерируем награду (детерминированно!)
     const dayNumber = data.totalClaimed + 1;
     const reward = generateReward(dayNumber);
     
-    // Блокируем синхронизацию
     if (typeof window.lockSync === 'function') window.lockSync();
     
     try {
-        // Применяем награду
         applyReward(reward);
-        
-        // Обновляем данные
         data.lastClaimDate = today;
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
         
-        // Сохраняем
         if (typeof window.saveGame === 'function') window.saveGame();
-        
-        // Уведомления
         showRewardNotification(reward, dayNumber);
         
-        // Звук и вибрация
         const sound = document.getElementById('upgradeSound');
-        if (sound) {
-            sound.currentTime = 0;
+        if (sound) {            sound.currentTime = 0;
             sound.play().catch(() => {});
         }
         if (window.telegramHaptic?.success) {
@@ -194,7 +154,8 @@ function claimDailyBonus() {
             navigator.vibrate([100, 50, 100]);
         }
         
-        console.log(`🎁 День ${dayNumber}: ${reward.name}`);    } finally {
+        console.log(`🎁 День ${dayNumber}: ${reward.name}`);
+    } finally {
         setTimeout(() => {
             if (typeof window.unlockSync === 'function') window.unlockSync();
         }, 300);
@@ -233,8 +194,7 @@ function applyReward(reward) {
             } else if (reward.upgrade === 'critMultiplier') {
                 window.gameState.critMultiplierUpgradeLevel += reward.levels;
                 window.gameState.critMultiplier = 2.0 + window.gameState.critMultiplierUpgradeLevel * 0.2;
-            } else if (reward.upgrade === 'helperDamage') {
-                window.gameState.helperUpgradeLevel += reward.levels;
+            } else if (reward.upgrade === 'helperDamage') {                window.gameState.helperUpgradeLevel += reward.levels;
             }
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
@@ -242,8 +202,10 @@ function applyReward(reward) {
             break;
     }
     
-    if (window.UI?.updateHUD) window.UI.updateHUD();
-    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();}
+    // ✅ ИСПРАВЛЕНО: было window.UI, должно быть window.GAME_UI
+    if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+    if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+}
 
 // ==========================================
 // 🎨 UI
@@ -280,13 +242,14 @@ function createBonusIcon() {
     
     document.body.appendChild(icon);
     
-    // Запускаем таймер
-    setInterval(updateIconDisplay, 1000);
+    // ✅ ИСПРАВЛЕНО: сохраняем ID интервала для возможной очистки
+    if (updateTimerId) clearInterval(updateTimerId);    updateTimerId = setInterval(updateIconDisplay, 1000);
 }
 
 function updateIconDisplay() {
     const data = window.gameState?.dailyBonus;
     if (!data) return;
+    
     const dayEl = document.getElementById('dailyBonusDay');
     const timerEl = document.getElementById('dailyBonusTimer');
     const icon = document.getElementById('dailyBonusIcon');
@@ -296,7 +259,6 @@ function updateIconDisplay() {
     const dayNumber = (data.totalClaimed || 0) + 1;
     const now = Date.now();
 
-    // ✅ ДВОЙНАЯ ПРОВЕРКА: дата + timestamp
     const dateChanged = data.lastClaimDate !== today;
     const timePassed = data.lastClaimTimestamp > 0 
         ? (now - data.lastClaimTimestamp) / (1000 * 60 * 60) >= 23 
@@ -311,30 +273,26 @@ function updateIconDisplay() {
         timerEl.style.color = '#4CAF50';
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
-    } else if (data.currentDay > 30) {
+    } else if ((data.totalClaimed || 0) >= 30) {
         timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         icon.style.borderColor = '#FFD700';
         icon.style.animation = 'none';
     } else {
-        // ✅ Показываем точный таймер: часы и минуты
         if (data.lastClaimTimestamp > 0) {
-            const minInterval = 23 * 60 * 60 * 1000; // 23 часа в миллисекундах
+            const minInterval = 23 * 60 * 60 * 1000;
             const timeSinceLastClaim = now - data.lastClaimTimestamp;
             const timeLeft = Math.max(0, minInterval - timeSinceLastClaim);
             
-            // Вычисляем часы и минуты
             const totalMinutesLeft = Math.floor(timeLeft / (1000 * 60));
             const hoursLeft = Math.floor(totalMinutesLeft / 60);
             const minutesLeft = totalMinutesLeft % 60;
             
-            // ✅ Формат: "12ч 34м" или "45м" (если часов 0)
             let timerText;
             if (hoursLeft > 0) {
                 timerText = `${hoursLeft}ч ${String(minutesLeft).padStart(2, '0')}м`;
             } else {
-                timerText = `${minutesLeft}м`;
-            }
+                timerText = `${minutesLeft}м`;            }
             
             timerEl.textContent = timerText;
         } else {
@@ -367,7 +325,8 @@ function showSmallNotification(text, color) {
     document.body.appendChild(notif);
     setTimeout(() => { notif.style.opacity = '1'; }, 10);
     setTimeout(() => {
-        notif.style.opacity = '0';        setTimeout(() => notif.parentNode?.removeChild(notif), 300);
+        notif.style.opacity = '0';
+        setTimeout(() => notif.parentNode?.removeChild(notif), 300);
     }, 1500);
 }
 
@@ -382,8 +341,7 @@ function showRewardNotification(reward, dayNumber) {
         text-align: center;
         font-family: 'Orbitron', sans-serif;
         font-weight: bold;
-        box-shadow: 0 6px 30px rgba(255,215,0,0.6);
-        border: 3px solid #fff;
+        box-shadow: 0 6px 30px rgba(255,215,0,0.6);        border: 3px solid #fff;
         opacity: 0; transition: opacity 0.3s;
         pointer-events: none; max-width: 280px;
     `;
@@ -416,31 +374,47 @@ document.head.appendChild(style);
 // ==========================================
 window.dailyBonusSystem = {
     claimDailyBonus,
-    generateReward, // для отладки    getToday
+    generateReward,
+    getToday
 };
 
-// ✅ УБРАН setTimeout — используем Ready Gate
 function init() {
-    if (!window.gameState) {
-        console.warn('[DailyBonus] gameState not ready, waiting for game:allReady');
+    // ✅ Защита от повторной инициализации
+    if (isInitialized) {
+        console.warn('⚠️ [DailyBonus] init() вызван повторно, пропускаем');
         return;
     }
-    createBonusIcon();
-    updateIconDisplay();
-    console.log('✅ Daily bonus system initialized');
     
+    if (!window.gameState) {
+        console.warn('[DailyBonus] gameState not ready');
+        return;
+    }
+    
+    isInitialized = true;    createBonusIcon();
+    updateIconDisplay();
+    console.log('✅ Daily bonus system v2.1 initialized');
+    
+    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
     if (window.EventBus) {
         window.EventBus.moduleReady('dailyBonus');
     }
 }
 
-// ✅ Подписка на Ready Gate
+// ==========================================
+// 🚀 АВТОЗАПУСК (Ready Gate)
+// ==========================================
+
+// ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
 if (window.EventBus) {
-    window.EventBus.once('game:allReady', init);
+    window.EventBus.once('game:allReady', () => {
+        console.log('[DailyBonus] game:allReady получен, запускаем init');
+        init();
+    });
 } else {
-    // Fallback
+    // 🆘 FALLBACK: если EventBus не загрузился
+    console.warn('⚠️ [DailyBonus] EventBus не найден! Используем fallback инициализацию');
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1000));
+        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1000), { once: true });
     } else {
         setTimeout(init, 1000);
     }
