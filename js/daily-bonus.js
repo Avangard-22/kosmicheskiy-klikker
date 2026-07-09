@@ -419,20 +419,31 @@ window.dailyBonusSystem = {
     generateReward, // для отладки    getToday
 };
 
+// ✅ УБРАН setTimeout — используем Ready Gate
 function init() {
-    if (window.gameState) {
-        createBonusIcon();
-        updateIconDisplay();
-        console.log('✅ Daily bonus system initialized (procedural)');
-    } else {
-        setTimeout(init, 500);
+    if (!window.gameState) {
+        console.warn('[DailyBonus] gameState not ready, waiting for game:allReady');
+        return;
+    }
+    createBonusIcon();
+    updateIconDisplay();
+    console.log('✅ Daily bonus system initialized');
+    
+    if (window.EventBus) {
+        window.EventBus.moduleReady('dailyBonus');
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1000));
+// ✅ Подписка на Ready Gate
+if (window.EventBus) {
+    window.EventBus.once('game:allReady', init);
 } else {
-    setTimeout(init, 1000);
+    // Fallback
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(init, 1000));
+    } else {
+        setTimeout(init, 1000);
+    }
 }
 
 })();
