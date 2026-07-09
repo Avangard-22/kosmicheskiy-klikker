@@ -760,15 +760,25 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        window.GAME_CORE.initEventHandlers();
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);
-        if (window.updateLanguageFlag) window.updateLanguageFlag();
-        if (window.updateContinueButton) window.updateContinueButton();
-        
-        if (window.EventBus) {
-            window.EventBus.emit('core:ready');
-        }
-    });
-})();
+    window.GAME_CORE.initEventHandlers();
+    UI.updateHUD();
+    UI.updateUpgradeButtons();
+    
+    if (window.updateLanguageFlag) window.updateLanguageFlag();
+    if (window.updateContinueButton) window.updateContinueButton();
+    
+    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ CORE
+    if (window.EventBus) {
+        window.EventBus.moduleReady('core');
+    }
+    
+    // ✅ Подписка на полную готовность всех систем
+    if (window.EventBus) {
+        window.EventBus.once('game:allReady', () => {
+            console.log('🎮 [CORE] Все системы готовы. Применяем локацию...');
+            if (window.gameState?.currentLocation) {
+                window.GAME_CORE.setLocation(window.gameState.currentLocation);
+            }
+        });
+    }
+});
