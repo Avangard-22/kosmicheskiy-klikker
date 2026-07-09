@@ -143,34 +143,26 @@
     <!-- ========================================== -->
     <!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
     <!-- ========================================== -->
-<!-- 0. Шина событий -->
+<!-- 1. EventBus — ПЕРВЫМ! -->
 <script src="js/event-bus.js"></script>
-
-<!-- 1. Базовые системы -->
+<!-- 2. Конфигурация -->
+<script src="js/game-config.js"></script>
 <script src="js/translations.js"></script>
-<script src="js/telegram-integration.js?v=13"></script>
-
-<!-- 2. Данные и сохранение -->
-<script src="js/save-system.js?v=17"></script>
-<script src="js/game-config.js?v=8"></script>
-
-<!-- 3. UI и механики -->
-<script src="js/game-ui.js"></script>
+<!-- 3. Save System — ДО Core! -->
+<script src="js/save-system.js"></script>
+<!-- 4. Ядро -->
 <script src="js/combat-system.js"></script>
+<script src="js/game-core.js"></script>
 <script src="js/game-features.js"></script>
-<script src="js/planet-background.js"></script>
-<script src="js/shop.js"></script>
-
-<!-- 4. Ядро игры -->
-<script src="js/game-core.js?v=27"></script>
-
-<!-- ✅ НОВОЕ: Музыкальная система -->
-<script src="js/music-system.js?v=10"></script>
-
-<!-- 5. Дополнительные системы -->
+<script src="js/game-ui.js"></script>
+<!-- 5. Системы (порядок не важен, т.к. Ready Gate) -->
 <script src="js/achievements.js"></script>
-<script src="js/daily-bonus.js?v=28"></script>
+<script src="js/shop.js"></script>
+<script src="js/daily-bonus.js"></script>
+<script src="js/music-system.js"></script>
+<script src="js/planet-background.js"></script>
 <script src="js/voyager-tracker.js"></script>
- 
+<script src="js/telegram-integration.js"></script>
+    
 </body>
 </html>
