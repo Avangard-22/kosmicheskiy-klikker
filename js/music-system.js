@@ -1,6 +1,9 @@
-// js/music-system.js (v2.1 — реальные названия + бегущая строка)
+// js/music-system.js (v2.2 — Ready Gate + защита от двойной инициализации)
 (function() {
 'use strict';
+
+// ✅ Флаг защиты от двойной инициализации
+let isInitialized = false;
 
 // ==========================================
 // 📋 МАППИНГ ЛОКАЦИЙ НА МАССИВЫ ТРЕКОВ
@@ -44,8 +47,7 @@ const PLANET_TRACKS = {
     neptune: [
         'audio/neptune/Beneath_the_Azure_Cloud.mp3',
         'audio/neptune/Beneath_the_Frozen_Mantle.mp3',
-        'audio/neptune/Weight_of_the_Deep.mp3'
-    ],
+        'audio/neptune/Weight_of_the_Deep.mp3'    ],
     pluto: [
         'audio/pluto/Glass_Bells_at_the_Edge.mp3',
         'audio/pluto/The_Weight_of_Stillness.mp3',
@@ -85,7 +87,6 @@ function getRandomTrack(planet) {
         return null;
     }
     
-    // Выбираем случайный трек, отличный от текущего
     let randomIndex;
     do {
         randomIndex = Math.floor(Math.random() * tracks.length);
@@ -95,15 +96,11 @@ function getRandomTrack(planet) {
     return tracks[randomIndex];
 }
 
-// ==========================================
-// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
+// ==========================================// 📝 ИЗВЛЕЧЕНИЕ НАЗВАНИЯ ТРЕКА
 // ==========================================
 function extractTrackName(trackUrl) {
-    // Извлекаем имя файла из пути
     const filename = trackUrl.split('/').pop();
-    // Убираем расширение .mp3
     const nameWithoutExt = filename.replace('.mp3', '');
-    // Заменяем underscores на пробелы
     const readableName = nameWithoutExt.replace(/_/g, ' ');
     return readableName;
 }
@@ -112,11 +109,9 @@ function extractTrackName(trackUrl) {
 // 🎵 UI: БЕГУЩАЯ СТРОКА
 // ==========================================
 function createTrackDisplay() {
-    // Удаляем старый элемент если есть
     const existing = document.getElementById('trackDisplay');
     if (existing) existing.remove();
     
-    // Создаём контейнер
     const container = document.createElement('div');
     container.id = 'trackDisplay';
     container.style.cssText = `
@@ -139,7 +134,6 @@ function createTrackDisplay() {
         font-family: 'Orbitron', sans-serif;
     `;
     
-    // Создаём текст с анимацией
     const text = document.createElement('div');
     text.id = 'trackName';
     text.style.cssText = `
@@ -151,12 +145,10 @@ function createTrackDisplay() {
         animation: marquee 15s linear infinite;
         padding: 0 20px;
     `;
-    text.textContent = '🎵 Загрузка музыки...';
-    
+    text.textContent = '🎵 Загрузка музыки...';    
     container.appendChild(text);
     document.body.appendChild(container);
     
-    // Добавляем CSS анимацию если ещё не добавлена
     if (!document.getElementById('marqueeStyle')) {
         const style = document.createElement('style');
         style.id = 'marqueeStyle';
@@ -179,9 +171,8 @@ function updateTrackDisplay(trackUrl) {
     const textElement = document.getElementById('trackName');
     if (textElement) {
         textElement.textContent = `🎵 ${trackName}`;
-        // Перезапускаем анимацию
         textElement.style.animation = 'none';
-        void textElement.offsetWidth; // Force reflow
+        void textElement.offsetWidth;
         textElement.style.animation = 'marquee 15s linear infinite';
     }
 }
@@ -203,8 +194,7 @@ function initAudioContext() {
         gainNode = audioContext.createGain();
         gainNode.gain.value = isMuted ? 0 : MUSIC_CONFIG.volume;
         gainNode.connect(audioContext.destination);
-        
-        console.log('[MUSIC] AudioContext initialized');
+                console.log('[MUSIC] AudioContext initialized');
         return audioContext;
     } catch (e) {
         console.warn('[MUSIC] AudioContext creation error:', e);
@@ -254,7 +244,6 @@ function startSeamlessLoop(buffer) {
     
     scheduleLoop(buffer, audioContext.currentTime, duration);
 }
-
 function scheduleLoop(buffer, startTime, duration) {
     if (!audioContext || !buffer || currentBuffer !== buffer) return;
     
@@ -303,8 +292,7 @@ function stopCurrentSource() {
 function fadeIn(duration) {
     duration = duration || MUSIC_CONFIG.fadeDuration;
     
-    if (!gainNode || !audioContext) return;
-    
+    if (!gainNode || !audioContext) return;    
     const now = audioContext.currentTime;
     gainNode.gain.cancelScheduledValues(now);
     gainNode.gain.setValueAtTime(gainNode.gain.value, now);
@@ -330,7 +318,7 @@ function fadeOut(duration, callback) {
 }
 
 // ==========================================
-// 🎵 PLAY PLANET MUSIC (с бегущей строкой)
+// 🎵 PLAY PLANET MUSIC
 // ==========================================
 async function playPlanetMusic(planet) {
     if (!PLANET_TRACKS[planet]) {
@@ -338,11 +326,9 @@ async function playPlanetMusic(planet) {
         return;
     }
     
-    // Получаем случайный трек для планеты
     const trackUrl = getRandomTrack(planet);
     if (!trackUrl) return;
     
-    // Если уже играет этот трек — не перезапускаем
     const currentTrack = Object.keys(bufferCache).find(key => bufferCache[key] === currentBuffer);
     if (currentTrack === trackUrl && currentSource) {
         console.log('[MUSIC] Already playing:', trackUrl);
@@ -350,15 +336,12 @@ async function playPlanetMusic(planet) {
     }
     
     currentPlanet = planet;
-    
-    // ✅ Обновляем бегущую строку
     updateTrackDisplay(trackUrl);
     
     const buffer = await loadAudioBuffer(trackUrl);
     if (!buffer) return;
     
-    if (currentSource) {
-        fadeOut(MUSIC_CONFIG.fadeDuration, () => {
+    if (currentSource) {        fadeOut(MUSIC_CONFIG.fadeDuration, () => {
             startSeamlessLoop(buffer);
             fadeIn(MUSIC_CONFIG.fadeDuration);
         });
@@ -407,8 +390,7 @@ function createMuteButton() {
     btn.title = isMuted ? 'Enable music' : 'Disable music';
     btn.innerHTML = isMuted ? '🔇' : '🎵';
     btn.style.cssText = 'position:fixed;top:10px;right:60px;width:40px;height:40px;border:none;border-radius:8px;font-size:1.2em;cursor:pointer;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);color:white;transition:transform 0.1s,background 0.2s;';
-    
-    btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function(e) {
         e.stopPropagation();
         toggleMute();
     });
@@ -435,7 +417,13 @@ function updateMuteButton() {
 // 🚀 INIT
 // ==========================================
 function init() {
-    // Загружаем сохранённое состояние mute
+    // ✅ Защита от повторной инициализации
+    if (isInitialized) {
+        console.warn('⚠️ [Music] init() вызван повторно, пропускаем');
+        return;
+    }
+    isInitialized = true;
+    
     try {
         const savedMute = localStorage.getItem('cosmicMusicMuted');
         isMuted = savedMute === 'true';
@@ -443,7 +431,6 @@ function init() {
         isMuted = false;
     }
     
-    // Подписываемся на смену планеты
     if (window.EventBus) {
         window.EventBus.on('game:planetChanged', function(planet) {
             if (isMusicStarted) {
@@ -452,10 +439,8 @@ function init() {
         });
     }
     
-    createMuteButton();
-    createTrackDisplay(); // ✅ Создаём бегущую строку
+    createMuteButton();    createTrackDisplay();
     
-    // Запускаем музыку при первом взаимодействии
     const startOnFirstInteraction = async function() {
         if (isMusicStarted) return;
         
@@ -476,7 +461,7 @@ function init() {
     document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
     document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('[MUSIC] Music System v2.1 initialized (REAL NAMES + MARQUEE)');
+    console.log('[MUSIC] Music System v2.2 initialized (Ready Gate + protection)');
     console.log('📋 Available planets:', Object.keys(PLANET_TRACKS));
 }
 
@@ -496,29 +481,39 @@ window.MusicSystem = {
     getCurrentTrackName: function() { return currentTrackName; }
 };
 
-// Экспортируем для внешнего использования
 window.PLANET_TRACKS = PLANET_TRACKS;
 window.getRandomTrack = getRandomTrack;
 window.extractTrackName = extractTrackName;
 
-// Auto-start
-// ✅ УБРАН setTimeout — используем Ready Gate
+// ==========================================
+// 🚀 АВТОЗАПУСК (Ready Gate)
+// ==========================================
 function safeInit() {
+    // ✅ Защита от повторного вызова
+    if (isInitialized) return;
+    
     init();
     
+    // ✅ РЕГИСТРАЦИЯ ГОТОВНОСТИ
     if (window.EventBus) {
         window.EventBus.moduleReady('music');
     }
 }
 
+// ✅ ОСНОВНАЯ ЛОГИКА: используем Ready Gate если EventBus доступен
 if (window.EventBus) {
-    window.EventBus.once('game:allReady', safeInit);
+    window.EventBus.once('game:allReady', () => {
+        console.log('[Music] game:allReady получен, запускаем safeInit');
+        safeInit();
+    });
 } else {
+    // 🆘 FALLBACK: если EventBus не загрузился
+    console.warn('⚠️ [Music] EventBus не найден! Используем fallback инициализацию');
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 500));
+        document.addEventListener('DOMContentLoaded', () => setTimeout(safeInit, 500), { once: true });
     } else {
         setTimeout(safeInit, 500);
     }
-        }
+}
 
 })();
