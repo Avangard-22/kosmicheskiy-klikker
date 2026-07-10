@@ -67,6 +67,26 @@ let boostTimers = {};
 let shopPanelVisible = false;
 const _lastPurchase = {};
 
+// ЧТО: Состояние двухступенчатой покупки
+// КУДА: shop.js → глобальная переменная модуля
+// ЗАЧЕМ: Первое нажатие показывает "Ещё раз?", второе в течение 1.5с покупает.
+//        Защищает от случайных покупок без блокирующих confirm() диалогов.
+let pendingPurchase = null; // { boostId, timeout }
+
+function resetPendingPurchase() {
+    if (pendingPurchase) {
+        const card = document.getElementById(`shop-card-${pendingPurchase.boostId}`);
+        if (card) {
+            card.classList.remove('confirm-pending');
+            const item = shopConfig[pendingPurchase.boostId];
+            const costEl = card.querySelector('.shop-card-cost');
+            if (costEl && item) costEl.textContent = `${item.cost} 💎`;
+        }
+        clearTimeout(pendingPurchase.timeout);
+        pendingPurchase = null;
+    }
+}
+
 // === ИНИЦИАЛИЗАЦИЯ ===
 function init() {
     createShopUI();
@@ -163,94 +183,140 @@ function openShop() {
     }
 }
 
+// ЧТО: Добавлен сброс состояния подтверждения при закрытии
+// КУДА: shop.js → closeShop()
+// ЗАЧЕМ: Если пользователь открыл магазин, нажал на карточку (первое нажатие),
+//        а потом закрыл магазин — состояние "Ещё раз?" должно сброситься.
 function closeShop() {
     const panel = document.getElementById('shopPanel');
     if (!panel) return;
-
     panel.style.display = 'none';
     shopPanelVisible = false;
-
+    
+    // ✅ НОВОЕ: Сбрасываем состояние подтверждения
+    if (typeof resetPendingPurchase === 'function') {
+        resetPendingPurchase();
+    }
+    
     if (window.GAME_CORE && window.GAME_CORE.resumeGame) {
         window.GAME_CORE.resumeGame();
+    }
+    if (window.MusicSystem && typeof window.MusicSystem.resume === 'function') {
+        window.MusicSystem.resume();
     }
 }
 
 // === ПОКУПКА ===
+// ЧТО: Двухступенчатая покупка с подтверждением
+// КУДА: shop.js → purchaseItem()
+// ЗАЧЕМ: Защита от случайных покупок. Первое нажатие подсвечивает карточку
+//        и меняет текст на "Ещё раз?". Второе нажатие в течение 1.5с покупает.
+//        Если не нажал второй раз — состояние сбрасывается автоматически.
 function purchaseItem(boostId) {
     const item = shopConfig[boostId];
     if (!item || !window.gameState) return;
-
-    // Защита от дабл-тапа
+    
+    // Защита от дабл-тапа (быстрые двойные нажатия)
     const now = Date.now();
-    if (_lastPurchase[boostId] && (now - _lastPurchase[boostId]) < 400) return;
+    if (_lastPurchase[boostId] && (now - _lastPurchase[boostId]) < 300) return;
     _lastPurchase[boostId] = now;
-
+    
+    // Проверка: бонус уже активен
     if (activeBoosts[boostId] && activeBoosts[boostId].active) {
         showNotification('⚠️ Бонус уже активен!', '#ff9800');
+        resetPendingPurchase();
         return;
     }
-
+    
+    // Проверка: недостаточно кристаллов
     if (window.gameState.coins < item.cost) {
         showNotification('❌ Недостаточно кристаллов!', '#f44336');
-        // ✅ Анимация тряски карточки
         const errCard = document.getElementById(`shop-card-${boostId}`);
         if (errCard) {
             errCard.classList.add('shake');
             setTimeout(() => errCard.classList.remove('shake'), 500);
         }
+        resetPendingPurchase();
         return;
     }
+    
+    // ═══ ДВУХСТУПЕНЧАТОЕ ПОДТВЕРЖДЕНИЕ ═══
+    if (pendingPurchase && pendingPurchase.boostId === boostId) {
+        // ✅ ВТОРОЕ НАЖАТИЕ — совершаем покупку
+        clearTimeout(pendingPurchase.timeout);
+        pendingPurchase = null;
+        executePurchase(boostId);
+    } else {
+        // 🟡 ПЕРВОЕ НАЖАТИЕ — ждём подтверждения
+        resetPendingPurchase(); // Сбрасываем предыдущее состояние
+        
+        const card = document.getElementById(`shop-card-${boostId}`);
+        if (card) {
+            card.classList.add('confirm-pending');
+            const costEl = card.querySelector('.shop-card-cost');
+            if (costEl) costEl.textContent = '✅ Покупаем?';
+        }
+        
+        // Таймер сброса через 1.5 секунды
+        pendingPurchase = {
+            boostId: boostId,
+            timeout: setTimeout(() => {
+                resetPendingPurchase();
+            }, 1500)
+        };
+    }
+}
 
+// ЧТО: Фактическое выполнение покупки (выделено из purchaseItem)
+// КУДА: shop.js → executePurchase()
+// ЗАЧЕМ: Отдельная функция для чистоты кода. Вызывается только после подтверждения.
+function executePurchase(boostId) {
+    const item = shopConfig[boostId];
+    if (!item || !window.gameState) return;
+    
     window.gameState.coins -= item.cost;
-
     if (!window.gameState.shopItems) window.gameState.shopItems = {};
     window.gameState.shopItems[boostId] = {
         purchased: true,
         active: true,
         timeLeft: item.duration
     };
-
     activeBoosts[boostId] = { active: true, timeLeft: item.duration };
-
     startBoostTimer(boostId);
-
-     if (window.achievementsSystem) {
+    
+    if (window.achievementsSystem) {
         window.achievementsSystem.incrementBoosters(1);
     }
-
     if (window.EventBus) {
         window.EventBus.emit('shop:itemPurchased', { id: boostId, item: item });
     }
-
     if (boostId === 'autoClicker') {
         startAutoClicker();
     }
-
+    
     updateShopDisplay();
     updateActiveBoostsHUD();
+    
     if (window.GAME_UI) {
         window.GAME_UI.updateHUD();
         window.GAME_UI.updateUpgradeButtons();
     }
-
     if (window.GAME_CORE && window.GAME_CORE.playSound) {
         window.GAME_CORE.playSound('upgradeSound');
     }
     if (window.telegramHaptic) window.telegramHaptic.success();
     else if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
+    
     showNotification(`✅ ${item.name} активирован!`, '#4CAF50');
-
-    // ✅ Анимация успешной покупки
+    
     const succCard = document.getElementById(`shop-card-${boostId}`);
     if (succCard) {
         succCard.classList.add('bought');
         setTimeout(() => succCard.classList.remove('bought'), 800);
     }
-
+    
     if (typeof window.saveGame === 'function') window.saveGame();
 }
-
 // === ТАЙМЕРЫ БУСТОВ ===
 function startBoostTimers() {
     if (!window.gameState || !window.gameState.shopItems) return;
@@ -393,10 +459,13 @@ function updateShopDisplay() {
             card.classList.add('disabled');
             if (costEl) costEl.textContent = `${item.cost} 💎`;
             if (timerEl) timerEl.hidden = true;
-        } else {
-            if (costEl) costEl.textContent = `${item.cost} 💎`;
-            if (timerEl) timerEl.hidden = true;
+         } else {
+        // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения
+        if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
+            costEl.textContent = `${item.cost} 💎`;
         }
+        if (timerEl) timerEl.hidden = true;
+    }
     });
 
     // Баланс в шапке

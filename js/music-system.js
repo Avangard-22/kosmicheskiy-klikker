@@ -115,23 +115,67 @@ function extractTrackName(trackUrl) {
 // КУДА: music-system.js → createTrackDisplay()
 // ЗАЧЕМ: Централизация стилей. DOM-элементы создаются, но их стили
 //        теперь применяются из единого CSS-файла через селекторы #trackDisplay и #trackName.
+// ЧТО: Убран непрозрачный фон, уменьшена ширина, добавлены таймеры
+// КУДА: music-system.js → createTrackDisplay()
+// ЗАЧЕМ: На мобильных бегущая строка перекрывала магазин. Теперь прозрачная
+//        и уже. Таймеры показывают название каждые 2 мин и меняют трек каждые 10 мин.
 function createTrackDisplay() {
     // Удаляем старый элемент если есть
     const existing = document.getElementById('trackDisplay');
     if (existing) existing.remove();
     
-    // Создаём контейнер (стили применятся из CSS через #trackDisplay)
+    // Создаём контейнер (ПРОЗРАЧНЫЙ, узкий)
     const container = document.createElement('div');
     container.id = 'trackDisplay';
+    container.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(70%, 300px);
+        height: 30px;
+        background: transparent;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+        overflow: hidden;
+        border: none;
+        font-family: 'Orbitron', sans-serif;
+        pointer-events: none;
+    `;
     
-    // Создаём текст с анимацией (стили применятся из CSS через #trackName)
+    // Создаём текст с анимацией
     const text = document.createElement('div');
     text.id = 'trackName';
+    text.style.cssText = `
+        white-space: nowrap;
+        color: #FFD700;
+        font-size: 0.8em;
+        font-weight: bold;
+        text-shadow: 0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(255, 215, 0, 0.6);
+        animation: marquee 15s linear infinite;
+        padding: 0 20px;
+    `;
     text.textContent = '🎵 Загрузка музыки...';
     
     container.appendChild(text);
     document.body.appendChild(container);
-    console.log('[MUSIC] Track display created (styles from CSS)');
+    
+    // Добавляем CSS анимацию если ещё не добавлена
+    if (!document.getElementById('marqueeStyle')) {
+        const style = document.createElement('style');
+        style.id = 'marqueeStyle';
+        style.textContent = `
+            @keyframes marquee {
+                0% { transform: translateX(100%); }
+                100% { transform: translateX(-100%); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    console.log('[MUSIC] Track display created (transparent, narrow)');
 }
 
 function updateTrackDisplay(trackUrl) {
@@ -396,6 +440,13 @@ function updateMuteButton() {
 // ==========================================
 // 🚀 INIT
 // ==========================================
+// ЧТО: Добавлены таймеры для показа названия каждые 2 мин и смены трека каждые 10 мин
+// КУДА: music-system.js → init()
+// ЗАЧЕМ: Игрок должен периодически видеть название трека, но не постоянно.
+//        Смена трека каждые 10 мин создаёт разнообразие без ручного переключения.
+let trackDisplayTimer = null;
+let trackChangeTimer = null;
+
 function init() {
     // Загружаем сохранённое состояние mute
     try {
@@ -420,17 +471,18 @@ function init() {
     // Запускаем музыку при первом взаимодействии
     const startOnFirstInteraction = async function() {
         if (isMusicStarted) return;
-        
         if (window.gameState && window.gameState.currentLocation) {
             const ctx = initAudioContext();
             if (ctx && ctx.state === 'suspended') {
                 try { await ctx.resume(); } catch (e) {}
             }
-            
             await playPlanetMusic(window.gameState.currentLocation);
             isMusicStarted = true;
-            
             console.log('[MUSIC] Started for planet:', window.gameState.currentLocation);
+            
+            // ✅ НОВОЕ: Запускаем таймеры после первого запуска музыки
+            startTrackDisplayTimer();
+            startTrackChangeTimer();
         }
     };
     
@@ -438,8 +490,36 @@ function init() {
     document.addEventListener('touchstart', startOnFirstInteraction, { once: true });
     document.addEventListener('keydown', startOnFirstInteraction, { once: true });
     
-    console.log('[MUSIC] Music System v2.1 initialized (REAL NAMES + MARQUEE)');
+    console.log('[MUSIC] Music System v2.2 initialized (TRANSPARENT + TIMERS)');
     console.log('📋 Available planets:', Object.keys(PLANET_TRACKS));
+}
+
+// ✅ НОВОЕ: Таймер показа названия трека каждые 2 минуты
+function startTrackDisplayTimer() {
+    if (trackDisplayTimer) clearInterval(trackDisplayTimer);
+    trackDisplayTimer = setInterval(() => {
+        if (currentTrackName && currentPlanet) {
+            const textElement = document.getElementById('trackName');
+            if (textElement) {
+                // Перезапускаем анимацию
+                textElement.style.animation = 'none';
+                void textElement.offsetWidth; // Force reflow
+                textElement.style.animation = 'marquee 15s linear infinite';
+                console.log('[MUSIC] Track name displayed again:', currentTrackName);
+            }
+        }
+    }, 120000); // 2 минуты
+}
+
+// ✅ НОВОЕ: Таймер смены трека каждые 10 минут
+function startTrackChangeTimer() {
+    if (trackChangeTimer) clearInterval(trackChangeTimer);
+    trackChangeTimer = setInterval(() => {
+        if (currentPlanet && isMusicStarted) {
+            console.log('[MUSIC] Changing track after 10 minutes...');
+            playPlanetMusic(currentPlanet);
+        }
+    }, 600000); // 10 минут
 }
 
 // ==========================================

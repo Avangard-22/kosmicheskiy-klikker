@@ -1,4 +1,4 @@
-// js/save-system.js (v3.1 — Защита от рассинхронизации метрик)
+// js/save-system.js (v4.0 — ТОЛЬКО серверное сохранение)
 (function() {
 'use strict';
 
@@ -30,7 +30,6 @@ window.lockSync = function() {
 window.unlockSync = function() {
     isOperationLocked = false;
     console.log('🔓 [SAVE] Синхронизация разблокирована');
-    
     if (pendingOperations.length > 0) {
         console.log('📋 [SAVE] Выполняем ' + pendingOperations.length + ' отложенных операций');
         const ops = [...pendingOperations];
@@ -90,13 +89,11 @@ const DEFAULT_GAME_METRICS = {
 };
 
 // ============================================
-// УТИЛИТЫ АВТОМАТИЗАЦИИ И ЗАЩИТЫ
+// УТИЛИТЫ
 // ============================================
-
 function deepMerge(defaults, saved) {
     if (typeof saved !== 'object' || saved === null) return saved;
     if (Array.isArray(saved)) return [...saved];
-
     const result = Object.assign({}, defaults || {});
     for (const key in saved) {
         if (saved.hasOwnProperty(key)) {
@@ -110,85 +107,52 @@ function deepMerge(defaults, saved) {
     return result;
 }
 
-// Аварийное восстановление метрик на основе накопленного прогресса ачивок
 function reconstructMetricsFromAchievements() {
     if (!window.gameState) return;
     if (!window.gameMetrics) window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
-    
     const gm = window.gameMetrics;
     const ach = window.gameState.achievements || {};
     let healed = false;
-
-    console.log('⚙️ [SAVE-SYSTEM] Верификация корректности игровых метрик против достижений...');
-
-    // 1. Проверка общих кликов (clickMaster)
+    console.log('⚙️ [SAVE-SYSTEM] Верификация корректности игровых метрик...');
+    
     if (ach.clickMaster && typeof ach.clickMaster.progress === 'number') {
         if ((gm.totalClicks || 0) < ach.clickMaster.progress) {
             gm.totalClicks = ach.clickMaster.progress;
             healed = true;
         }
     }
-    // 2. Проверка времени в игре (timeInvestor)
+    
     if (ach.timeInvestor && typeof ach.timeInvestor.progress === 'number') {
         if ((gm.totalTimePlayed || 0) < ach.timeInvestor.progress) {
             gm.totalTimePlayed = ach.timeInvestor.progress;
             healed = true;
         }
     }
-    // 3. Проверка уничтоженных блоков (учитываем возможные вариации ключей ID ачивок)
-    const blockAch = ach.blockSmasher || ach.blockMaster || ach.stoneBreaker;
-    if (blockAch && typeof blockAch.progress === 'number') {
-        if ((gm.blocksDestroyed || 0) < blockAch.progress) {
-            gm.blocksDestroyed = blockAch.progress;
-            healed = true;
-        }
-    }
-    // 4. Проверка заработанного золота/кристаллов
-    const coinAch = ach.treasureHunter || ach.coinCollector;
-    if (coinAch && typeof coinAch.progress === 'number') {
-        if ((gm.totalCoinsEarned || 0) < coinAch.progress) {
-            gm.totalCoinsEarned = coinAch.progress;
-            healed = true;
-        }
-    }
-    // 5. Проверка максимального комбо
-    const comboAch = ach.comboKing || ach.comboMaster;
-    if (comboAch && typeof comboAch.progress === 'number') {
-        if ((gm.maxCombo || 0) < comboAch.progress) {
-            gm.maxCombo = comboAch.progress;
-            healed = true;
-        }
-    }
-
-    // Подсчет купленных апгрейдов на основе текущих уровней gameState
+    
     const currentUpgradesCount = 
         (window.gameState.clickUpgradeLevel || 0) + 
         (window.gameState.critChanceUpgradeLevel || 0) + 
         (window.gameState.critMultiplierUpgradeLevel || 0) + 
         (window.gameState.helperUpgradeLevel || 0);
-        
     if ((gm.upgradesBought || 0) < currentUpgradesCount) {
         gm.upgradesBought = currentUpgradesCount;
         healed = true;
     }
-
+    
     if (healed) {
-        console.warn('⚠️ [SAVE-SYSTEM] Обнаружен сбой или старая версия сохранения! Метрики успешно восстановлены:', gm);
+        console.warn('⚠️ [SAVE-SYSTEM] Метрики восстановлены:', gm);
     } else {
-        console.log('✅ [SAVE-SYSTEM] Проверка пройдена: метрики соответствуют прогрессу достижений.');
+        console.log('✅ [SAVE-SYSTEM] Метрики корректны.');
     }
 }
 
 function extractCloudData() {
     if (!window.gameState) return null;
-    
-    const planetOrder = window.GAME_CONFIG?.PLANET_ORDER || ['mercury'];
+    const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     const currentLevel = planetOrder.indexOf(window.gameState.currentLocation) + 1;
-    
     const username = (typeof window.getTelegramUsername === 'function') 
         ? window.getTelegramUsername()
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
-
     return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
@@ -196,23 +160,17 @@ function extractCloudData() {
         bobo_skin: window.gameState.boboSkin || 'default',
         username: username,
         timestamp: Date.now(),
-        
         full_game_state: JSON.parse(JSON.stringify(window.gameState)),
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {}))
     };
 }
 
-/**
- * Применяет загруженные из облака данные к глобальному состоянию
- * @param {Object} cloudData - Данные из облака
- * @param {GameState} [cloudData.full_game_state] - Полное состояние игры
- * @param {GameMetrics} [cloudData.full_game_metrics] - Полные метрики игры
- * @param {number} [cloudData.timestamp] - Timestamp сохранения
- */
+// ЧТО: Применение данных из облака к gameState
+// КУДА: save-system.js → applyCloudData()
+// ЗАЧЕМ: Восстанавливает состояние игры из облачного сохранения
 function applyCloudData(cloudData) {
     if (!cloudData) return;
     
-    // Восстановление GameState
     if (cloudData.full_game_state) {
         console.log('☁️ [LOAD] Накатываем gameState...');
         const currentGameActive = window.gameState?.gameActive || false;
@@ -225,13 +183,11 @@ function applyCloudData(cloudData) {
         window.gameState.comboCount = 0;
     }
     
-    // Восстановление метрик
     if (cloudData.full_game_metrics) {
         console.log('📊 [LOAD] Накатываем gameMetrics...');
         window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, cloudData.full_game_metrics);
     }
     
-    // КРИТИЧЕСКИЙ ФИКС: Запускаем принудительный щит ресинхронизации
     reconstructMetricsFromAchievements();
 }
 
@@ -239,26 +195,25 @@ function applyCloudData(cloudData) {
 // ПУБЛИЧНЫЙ API СОХРАНЕНИЯ
 // ============================================
 
+// ЧТО: Сохранение ТОЛЬКО в облако (без localStorage)
+// КУДА: save-system.js → window.saveGame()
+// ЗАЧЕМ: Игра работает через Telegram Bot. Локальное сохранение создавало
+//        конфликты. Только облако = единый источник правды.
 window.saveGame = function() {
     try {
         if (!window.gameState) return false;
-
+        
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
             saveBtn.classList.add('save-pending');
         }
-
-        // КРИТИЧЕСКИЙ ФИКС: Мгновенное дублирование сейва в LocalStorage как локальный буфер
-        const localSnapshot = extractCloudData();
-        if (localSnapshot) {
-            localStorage.setItem('cosmicClicker_localBackup', JSON.stringify(localSnapshot));
-        }
+        
+        // ❌ УБРАНО: localStorage (работаем только с облаком)
         
         if (isOperationLocked) {
             pendingOperations.push(() => debouncedCloudSave());
             return true;
         }
-
         debouncedCloudSave();
         return true;
     } catch (e) {
@@ -280,7 +235,6 @@ window.flushCloudSave = function() {
         clearTimeout(cloudSaveTimeout);
         cloudSaveTimeout = null;
     }
-
     if (window.telegramCloud?.saveProgressCritical) {
         const cloudData = extractCloudData();
         if (cloudData) window.telegramCloud.saveProgressCritical(cloudData);
@@ -289,24 +243,25 @@ window.flushCloudSave = function() {
     }
 };
 
+// ЧТО: Асинхронное сохранение в облако с проверкой _isNewGame
+// КУДА: save-system.js → cloudSaveAsync()
+// ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
+//        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
     
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
-
+    
     const gs = window.gameState;
-       // ЧТО: Проверка наличия реальных данных ИЛИ флага новой игры
-    // КУДА: save-system.js → cloudSaveAsync()
-    // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
-    //        пустой сейв в облако, чтобы перезатереть старый прогресс.
     const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury');
     const isNewGame = gs?._isNewGame === true;
+    
     if (!hasRealData && !isNewGame) {
         console.log('☁️ [SAVE] Пропуск: нет реальных данных и это не новая игра');
         return;
     }
-
+    
     isSyncing = true;
     try {
         const cloudData = extractCloudData();
@@ -316,7 +271,7 @@ async function cloudSaveAsync() {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
             } else {
-                showSaveIndicator('⚠️', 'Локально', '#ff9800');
+                showSaveIndicator('⚠️', 'Ошибка', '#ff9800');
             }
         }
     } catch (e) {
@@ -330,87 +285,32 @@ async function cloudSaveAsync() {
 // ЗАГРУЗКА И СБРОС
 // ============================================
 
-// ЧТО: Добавлена защита от затирания свежего локального прогресса старыми облачными данными
+// ЧТО: Загрузка ТОЛЬКО из облака (без localStorage fallback)
 // КУДА: save-system.js → window.loadGame()
-// ЗАЧЕМ: Если игрок играл оффлайн несколько дней, его локальный прогресс будет новее
-//        облачного. Без этой проверки облако перезатрёт свежий прогресс старым.
-//        Также добавлена валидация битых JSON и проверка на "пустоту" данных.
+// ЗАЧЕМ: Игра работает через Telegram Bot. Если облако недоступно или пустое —
+//        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
-    let loadedFromCloud = false;
-    let cloudData = null;
-    let cloudTimestamp = 0;
-    
-    // ── 1. Загрузка из облака ──
     try {
-        if (window.telegramCloud?.isAvailable) {
-            const result = await window.telegramCloud.loadProgress();
-            // ✅ Проверка: успех + наличие данных + валидность структуры
-            if (result?.success && result.data && result.data.full_game_state) {
-                cloudData = result.data;
-                cloudTimestamp = result.data.timestamp || 0;
-                console.log('☁️ [LOAD] Облачные данные получены. Timestamp:', cloudTimestamp);
-            } else {
-                console.log('☁️ [LOAD] Облако вернуло пустые/невалидные данные');
-            }
+        if (!window.telegramCloud?.isAvailable) {
+            console.warn('⚠️ [LOAD] Облако недоступно. Начинаем новую игру.');
+            return false;
         }
-    } catch (e) {
-        console.error('❌ Ошибка загрузки из облака Telegram:', e);
-    }
-    
-    // ── 2. Загрузка локального бэкапа ──
-    let localData = null;
-    let localTimestamp = 0;
-    try {
-        const localRaw = localStorage.getItem('cosmicClicker_localBackup');
-        if (localRaw) {
-            const parsed = JSON.parse(localRaw);
-            // ✅ Валидация: убеждаемся, что JSON не битый и содержит gameState
-            if (parsed && parsed.full_game_state) {
-                localData = parsed;
-                localTimestamp = parsed.timestamp || 0;
-                console.log('💾 [LOAD] Локальный бэкап прочитан. Timestamp:', localTimestamp);
-            } else {
-                console.warn('⚠️ [LOAD] Локальный бэкап невалиден, игнорируем');
-                localStorage.removeItem('cosmicClicker_localBackup');
-            }
-        }
-    } catch (err) {
-        console.error('❌ Ошибка чтения локального бэкапа (битый JSON?):', err);
-        // ✅ Фикс: удаляем битый бэкап, чтобы не мешал в будущем
-        try { localStorage.removeItem('cosmicClicker_localBackup'); } catch(e) {}
-    }
-    
-    // ── 3. ПРИОРИТЕТ: сравниваем timestamps ──
-    // Если есть и облако, и локальный бэкап — выбираем более свежий
-    if (cloudData && localData) {
-        if (localTimestamp > cloudTimestamp) {
-            console.warn('⚠️ [LOAD] Локальный бэкап НОВЕЕ облачного! Используем локальный.');
-            applyCloudData(localData);
-            // Обновляем облако свежими локальными данными (фоновое сохранение)
-            setTimeout(() => { if (window.saveGame) window.saveGame(); }, 2000);
+        
+        const result = await window.telegramCloud.loadProgress();
+        
+        if (result?.success && result.data) {
+            console.log('☁️ [LOAD] Данные загружены из облака');
+            applyCloudData(result.data);
             return true;
         } else {
-            console.log('☁️ [LOAD] Облачные данные новее или равны. Используем облако.');
-            applyCloudData(cloudData);
-            localStorage.setItem('cosmicClicker_localBackup', JSON.stringify(cloudData));
-            return true;
+            console.log('☁️ [LOAD] Облако пустое. Начинаем новую игру.');
+            return false;
         }
+    } catch (e) {
+        console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
+        console.warn('⚠️ [LOAD] Начинаем новую игру из-за ошибки облака');
+        return false;
     }
-    
-    // ── 4. Fallback: есть только один источник ──
-    if (cloudData) {
-        applyCloudData(cloudData);
-        localStorage.setItem('cosmicClicker_localBackup', JSON.stringify(cloudData));
-        return true;
-    }
-    if (localData) {
-        console.log('💾 [LOAD] Облако пусто, используем локальный бэкап');
-        applyCloudData(localData);
-        return true;
-    }
-    
-    console.log('🆕 [LOAD] Нет сохранений — начинаем новую игру');
-    return false;
 };
 
 window.cloudInit = async function() {
@@ -426,60 +326,66 @@ window.cloudInit = async function() {
         } else {
             await cloudSaveAsync();
         }
+        
+        // ✅ НОВОЕ: Сигнализируем о готовности gameState
+        if (window.EventBus) {
+            window.EventBus.emit('save:ready');
+            console.log('📡 [SAVE] Эмитировано событие save:ready');
+        }
     } catch (e) {
         console.warn(e);
     }
 };
 
-// ЧТО: Добавлен флаг _isNewGame для принудительного сохранения пустого сейва в облако
+// ЧТО: Сброс прогресса с очисткой облака
 // КУДА: save-system.js → window.resetGame()
-// ЗАЧЕМ: Без этого флага cloudSaveAsync() пропустит сохранение пустого сейва
-//        (из-за проверки hasRealData). При следующем заходе облако вернёт СТАРЫЙ
-//        прогресс и перезатрёт новую игру. Флаг заставляет сохранить "пустоту" в облако.
+// ЗАЧЕМ: При нажатии "Новая игра" отправляем пустой сейв в облако,
+//        чтобы перезаписать старый прогресс. Флаг _isNewGame гарантирует сохранение.
 window.resetGame = function() {
     window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
     window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
     window.gameMetrics.startTime = Date.now();
     
-    // ✅ КРИТИЧЕСКИЙ ФИКС: помечаем как новую игру
+    // ✅ Флаг новой игры для принудительного сохранения в облако
     window.gameState._isNewGame = true;
     
-    // Очищаем локальный бэкап
-    try { localStorage.removeItem('cosmicClicker_localBackup'); } catch(e) {}
+    // ❌ УБРАНО: localStorage.removeItem (не используем localStorage)
     
-    // ✅ Принудительно сохраняем пустой прогресс в облако (перезаписываем старый)
+    // Отправляем пустой прогресс в облако
     if (window.telegramCloud?.saveProgress) {
         const emptyData = extractCloudData();
         if (emptyData) {
             window.telegramCloud.saveProgress(emptyData)
-                .then(() => console.log('☁️ [RESET] Облако очищено (новая игра сохранена)'))
+                .then(() => console.log('☁️ [RESET] Облако очищено'))
                 .catch((e) => console.error('❌ [RESET] Ошибка очистки облака:', e));
         }
     }
-    console.log('🔄 Прогресс обнулен локально и в облаке');
+    console.log('🔄 Прогресс обнулен в облаке');
 };
 
 window.hasSave = async function() {
-    if (localStorage.getItem('cosmicClicker_localBackup')) return true;
     if (!window.telegramCloud?.isAvailable) return false;
     try {
         const result = await window.telegramCloud.loadProgress();
         return result?.success && !!result.data;
-    } catch { return false; }
+    } catch (e) {
+        console.warn('⚠️ [HAS-SAVE] Ошибка проверки облака:', e);
+        return false;
+    }
 };
 
 // ============================================
-// ВИЗУАЛЬНЫЙ ИНДИКАТОР СОХРАНЕНИЯ
+// ВИЗУАЛЬНЫЙ ИНДИКАТОР
 // ============================================
 function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '#4CAF50') {
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
         saveBtn.classList.remove('save-pending', 'save-pulse-success', 'save-pulse-error');
-        void saveBtn.offsetWidth; 
+        void saveBtn.offsetWidth;
         saveBtn.classList.add(color === '#4CAF50' ? 'save-pulse-success' : 'save-pulse-error');
         setTimeout(() => saveBtn.classList.remove('save-pulse-success', 'save-pulse-error'), 1000);
     }
-
+    
     let indicator = document.getElementById('saveIndicator');
     if (!indicator) {
         indicator = document.createElement('div');
@@ -490,7 +396,6 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
     indicator.textContent = `${icon} ${text}`;
     indicator.style.color = color;
     indicator.style.opacity = '1';
-
     clearTimeout(indicator._hideTimer);
     indicator._hideTimer = setTimeout(() => indicator.style.opacity = '0', 1500);
 }
@@ -503,33 +408,19 @@ function startAutoSave() {
 }
 
 // ============================================
-// ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ
+// ИНИЦИАЛИЗАЦИЯ
 // ============================================
-// ЧТО: Добавлен emit события 'save:ready' после инициализации gameState и gameMetrics
-// КУДА: save-system.js → init()
-// ЗАЧЕМ: Другие модули (game-core, daily-bonus, achievements) теперь могут подписаться
-//        на это событие и гарантированно дождаться появления gameState перед началом работы.
-//        Это устраняет race condition при асинхронной загрузке модулей.
 function init() {
     window.gameState = deepMerge(DEFAULT_GAME_STATE, window.gameState || {});
     window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, window.gameMetrics || {});
-    
-    // Дополнительная валидация на старте сессии
     reconstructMetricsFromAchievements();
-    
     startAutoSave();
     
     const forceSave = () => { if (window.gameState?.gameActive) window.flushCloudSave(); };
     window.addEventListener('beforeunload', forceSave);
     document.addEventListener('visibilitychange', () => { if (document.hidden) forceSave(); });
     
-    console.log('💾 Автоматическая Save System v3.1 готова. Метрики под защитой.');
-    
-    // ✅ НОВОЕ: Сигнализируем другим модулям о готовности gameState
-    if (window.EventBus) {
-        window.EventBus.emit('save:ready');
-        console.log('📡 [SAVE] Эмитировано событие save:ready');
-    }
+    console.log('💾 Save System v4.0 готова (ТОЛЬКО сервер, без localStorage)');
 }
 
 if (document.readyState === 'loading') {

@@ -710,7 +710,17 @@ function checkSavedAchievements() {
 
     syncGlobal('combatMastery', gs.totalDamageDealt);
     syncGlobal('resourceCollector', gm.totalCoinsEarned);
-    syncGlobal('explorer', (gm.visitedPlanets && gm.visitedPlanets.length) || 0);
+   // ✅ ИСПРАВЛЕНО: explorer считается по ПРОЙДЕННЫМ планетам (99% прогресс),
+// а не по текущей локации. При новой игре прогресс = 0, поэтому достижение не выдаётся.
+const planetsWith99Progress = (gm.planetStats && Object.keys(gm.planetStats).filter(p => {
+    const stats = gm.planetStats[p];
+    const planetConfig = window.GAME_CONFIG?.PROGRESSION_CONFIG?.[p];
+    if (!planetConfig || !stats.blocks) return false;
+    // Проверяем: урон >= 99% от требуемого для перехода
+    const damageInAU = stats.blocks / window.GAME_CONFIG.AU_TO_DAMAGE;
+    return damageInAU >= planetConfig.targetAU * 0.99;
+}).length) || 0;
+syncGlobal('explorer', planetsWith99Progress);
     syncGlobal('comboLegend', gm.maxCombo);
     syncGlobal('critMaster', gm.totalCrits);
     syncGlobal('upgradeEnthusiast', gm.upgradesBought);
@@ -811,17 +821,31 @@ window.achievementsSystem = {
         gm.totalCoinsEarned = (gm.totalCoinsEarned || 0) + a;
         updateProgress('resourceCollector', gm.totalCoinsEarned);
     },
-    updatePlanetProgress: function(planet) {
-        var gm = window.gameMetrics;
-        if (!gm) gm = window.gameMetrics = {};
-        if (!gm.visitedPlanets) gm.visitedPlanets = [];
-
-        if (gm.visitedPlanets.indexOf(planet) === -1) {
-            gm.visitedPlanets.push(planet);
-            gm.planetsVisited = gm.visitedPlanets.length;
-            updateProgress('explorer', gm.planetsVisited);
-        }
-    },
+    // ЧТО: Добавлена проверка 99% прогресса перед засчитыванием планеты
+// КУДА: achievements.js → updatePlanetProgress
+// ЗАЧЕМ: Достижение "explorer" должно выдаваться только при достижении
+//        99% расстояния до планеты, а не просто при переходе на неё.
+updatePlanetProgress: function(planet) {
+    var gm = window.gameMetrics;
+    if (!gm) gm = window.gameMetrics = {};
+    if (!gm.planetStats) gm.planetStats = {};
+    
+    // ✅ Проверяем: достиг ли игрок 99% прогресса до этой планеты
+    const stats = gm.planetStats[planet] || { blocks: 0 };
+    const planetConfig = window.GAME_CONFIG?.PROGRESSION_CONFIG?.[planet];
+    if (!planetConfig) return;
+    
+    const damageInAU = stats.blocks / window.GAME_CONFIG.AU_TO_DAMAGE;
+    const has99Progress = damageInAU >= planetConfig.targetAU * 0.99;
+    
+    if (!gm.visitedPlanets) gm.visitedPlanets = [];
+    if (has99Progress && gm.visitedPlanets.indexOf(planet) === -1) {
+        gm.visitedPlanets.push(planet);
+        gm.planetsVisited = gm.visitedPlanets.length;
+        updateProgress('explorer', gm.planetsVisited);
+        console.log('🏆 [ACHIEVEMENT] Planet ' + planet + ' reached 99%! Progress:', gm.planetsVisited);
+    }
+},
     updateCombo: function(combo) {
         var gm = window.gameMetrics;
         if (!gm) gm = window.gameMetrics = {};
