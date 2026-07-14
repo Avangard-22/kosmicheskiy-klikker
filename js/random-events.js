@@ -96,7 +96,7 @@ function initCanvas() {
     
     eventCanvas = document.createElement('canvas');
     eventCanvas.id = 'randomEventsCanvas';
-    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;';
+    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1000;';
     document.body.appendChild(eventCanvas);
     
     resizeCanvas();
