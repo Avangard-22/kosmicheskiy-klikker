@@ -334,12 +334,12 @@ function showMasterDetail() {
             <div class="ach-v2-detail-icon">👑</div>
             <div class="ach-v2-detail-info">
                 <div class="ach-v2-detail-title" style="color: #FFD700;">${t(master.nameKey, master.nameFallback)}</div>
-                <div class="ach-v2-detail-stats" style="color: #fff;">${masterState ? '✅ Выполнено!' : `Цель: ${formatNumber(master.target, true)} урона`}</div>
+                <div class="ach-v2-detail-stats" style="color: #fff;">${masterState ? '✅ Выполнено!' : `Покорить: ${formatNumber(master.target, true)} космического пути`}</div>
             </div>
         </div>
         <div style="padding:20px;text-align:center;color:#aaa;">
             <p>Финальное достижение планеты.</p>
-            <p>Разблокируется при достижении 99.9% прогресса AU.</p>
+           <p>Откроется, когда пройдёте 99.9% пути к планете.</p>
             <p style="color:#FFD700;font-size:1.2em;margin-top:20px;">Награда: +${formatNumber(master.reward)} 💎</p>
         </div>
     `;
