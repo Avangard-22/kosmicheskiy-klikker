@@ -1,7 +1,7 @@
 // js/random-events.js (v2.0)
 // ═══════════════════════════════════════════════════
 // 🌠 СИСТЕМА СЛУЧАЙНЫХ СОБЫТИЙ НА ЛОКАЦИИ
-// ЧТО: Астероиды (1 клик) и Кометы (2 клика) пролетают через экран
+// ЧТО: Астероиды (1 клик) и Кометы (1 клик) пролетают через экран
 // ЗАЧЕМ: Редкие сюрпризы (2-30 мин), оживление геймплея, доп. награды
 // ИНТЕГРАЦИЯ: Работает параллельно с game-core, не влияет на блоки
 // ═══════════════════════════════════════════════════
@@ -33,7 +33,7 @@ const EVENTS_CONFIG = {
         emoji: '🪨'
     },
     
-    // Комета: бафф (2 клика)
+    // Комета: бафф (1 клик)
     comet: {
         speed: { min: 3, max: 6 },
         size: { min: 50, max: 80 },
@@ -220,203 +220,119 @@ class AsteroidEvent {
 }
 
 // ─────────────────────────────────────────────────────
-// ☄️ КЛАСС: КОМЕТА (2 клика)
+// ☄️ КЛАСС: КОМЕТА (1 клик)
 // ─────────────────────────────────────────────────────
 class CometEvent {
-    constructor() {
-        const cfg = EVENTS_CONFIG.comet;
-        this.type = 'comet';
-        this.size = rand(cfg.size.min, cfg.size.max);
-        this.speed = rand(cfg.speed.min, cfg.speed.max);
-        this.alive = true;
-        this.clicked = false;
-        
-        // ✅ НОВОЕ: Состояние двухкликовой механики
-        this.caught = false;       // Первый клик — «поймана»
-        this.catchTimer = null;    // Таймер сброса состояния «поймана»
-        this.catchTimeout = 3000;  // 3 секунды на второй клик
-        
-        this.buff = pickWeighted(cfg.buffs);
-        this.buffValue = rand(this.buff.valueMin, this.buff.valueMax);
-        if (this.buff.type === 'crystal_boost') {
-            this.buffValue = Math.round(this.buffValue);
-        } else {
-            this.buffValue = Math.round(this.buffValue * 10) / 10;
-        }
-        
-        // Траектория по диагонали
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const direction = Math.random() > 0.5 ? 1 : -1;
-        
-        if (direction > 0) {
-            this.x = -this.size; this.y = rand(-this.size, h * 0.3);
-            this.vx = this.speed; this.vy = this.speed * rand(0.3, 0.8);
-        } else {
-            this.x = w + this.size; this.y = rand(-this.size, h * 0.3);
-            this.vx = -this.speed; this.vy = this.speed * rand(0.3, 0.8);
-        }
-        
-        this.trail = [];
+constructor() {
+    const cfg = EVENTS_CONFIG.comet;
+    this.type = 'comet';
+    this.size = rand(cfg.size.min, cfg.size.max);
+    this.speed = rand(cfg.speed.min, cfg.speed.max);
+    this.alive = true;
+    this.clicked = false;
+    this.buff = pickWeighted(cfg.buffs);
+    this.buffValue = rand(this.buff.valueMin, this.buff.valueMax);
+    if (this.buff.type === 'crystal_boost') {
+        this.buffValue = Math.round(this.buffValue);
+    } else {
+        this.buffValue = Math.round(this.buffValue * 10) / 10;
     }
-    
-    update() {
-        this.trail.push({ x: this.x, y: this.y });
-        if (this.trail.length > 20) this.trail.shift();
-        
-        this.x += this.vx;
-        this.y += this.vy;
-        
-        const margin = this.size * 2 + 120;
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        if (this.x < -margin || this.x > w + margin || this.y > h + margin) {
-            this.alive = false;
-            this.clearCatchTimer();
-        }
+    // Траектория по диагонали
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const direction = Math.random() > 0.5 ? 1 : -1;
+    if (direction > 0) {
+        this.x = -this.size; this.y = rand(-this.size, h * 0.3);
+        this.vx = this.speed; this.vy = this.speed * rand(0.3, 0.8);
+    } else {
+        this.x = w + this.size; this.y = rand(-this.size, h * 0.3);
+        this.vx = -this.speed; this.vy = this.speed * rand(0.3, 0.8);
     }
-    
-    draw(ctx) {
-        if (!this.alive || this.clicked) return;
-        
-        const cfg = EVENTS_CONFIG.comet;
-        
-        // Хвост
-        if (this.trail.length > 1) {
-            ctx.save();
-            for (let i = 0; i < this.trail.length - 1; i++) {
-                const alpha = (i / this.trail.length) * 0.6;
-                const width = (i / this.trail.length) * (this.size * 0.4);
-                ctx.beginPath();
-                ctx.moveTo(this.trail[i].x, this.trail[i].y);
-                ctx.lineTo(this.trail[i + 1].x, this.trail[i + 1].y);
-                ctx.strokeStyle = `rgba(79, 195, 247, ${alpha})`;
-                ctx.lineWidth = width;
-                ctx.lineCap = 'round';
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-        
-        // Голова кометы
+    this.trail = [];
+}
+
+update() {
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 20) this.trail.shift();
+    this.x += this.vx;
+    this.y += this.vy;
+    const margin = this.size * 2 + 120;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (this.x < -margin || this.x > w + margin || this.y > h + margin) {
+        this.alive = false;
+    }
+}
+
+draw(ctx) {
+    if (!this.alive || this.clicked) return;
+    const cfg = EVENTS_CONFIG.comet;
+    // Хвост
+    if (this.trail.length > 1) {
         ctx.save();
-        ctx.translate(this.x, this.y);
-        
-        // ✅ Визуальная индикация состояния «поймана»
-        if (this.caught) {
-            // Пульсирующее кольцо вокруг пойманной кометы
+        for (let i = 0; i < this.trail.length - 1; i++) {
+            const alpha = (i / this.trail.length) * 0.6;
+            const width = (i / this.trail.length) * (this.size * 0.4);
             ctx.beginPath();
-            ctx.arc(0, 0, this.size / 2 + 10, 0, Math.PI * 2);
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
+            ctx.moveTo(this.trail[i].x, this.trail[i].y);
+            ctx.lineTo(this.trail[i + 1].x, this.trail[i + 1].y);
+            ctx.strokeStyle = `rgba(79, 195, 247, ${alpha})`;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
             ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Подсказка «Кликни!»
-            ctx.shadowBlur = 0;
-            ctx.font = 'bold 14px Orbitron, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#FFD700';
-            ctx.fillText('👆', 0, -this.size / 2 - 15);
         }
-        
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = this.caught ? '#FFD700' : cfg.headColor;
-        
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(0, 0, this.size / 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.shadowBlur = 0;
-        ctx.font = `${this.size * 0.5}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(cfg.emoji, 0, 0);
-        
         ctx.restore();
     }
-    
-    hitTest(mx, my) {
-        if (!this.alive || this.clicked) return false;
-        const dx = mx - this.x;
-        const dy = my - this.y;
-        // ✅ Увеличенный хитбокс когда поймана (легче попасть второй раз)
-        const hitRadius = this.caught ? (this.size / 2 + 25) : (this.size / 2 + 20);
-        return (dx * dx + dy * dy) <= hitRadius * hitRadius;
+    // Голова кометы
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = cfg.headColor;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.size / 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.font = `${this.size * 0.5}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(cfg.emoji, 0, 0);
+    ctx.restore();
+}
+
+hitTest(mx, my) {
+    if (!this.alive || this.clicked) return false;
+    const dx = mx - this.x;
+    const dy = my - this.y;
+    const hitRadius = this.size / 2 + 20;
+    return (dx * dx + dy * dy) <= hitRadius * hitRadius;
+}
+
+// ✅ ТЕПЕРЬ ТОЛЬКО ОДИН КЛИК
+handleClick() {
+    if (this.clicked) return;
+    this.activate();
+}
+
+activate() {
+    if (this.clicked) return;
+    this.clicked = true;
+    this.alive = false;
+    const lang = window.currentLanguage || 'ru';
+    const buffName = this.buff.name[lang] || this.buff.name.en;
+    if (this.buff.type === 'damage_boost') {
+        activateDamageBuff(this.buffValue, this.buff.durationMs);
+        showFloatingText(`${buffName}\nx${this.buffValue} (${Math.round(this.buff.durationMs / 1000)}с)`, this.x, this.y, '#4FC3F7', 1.2);
+        console.log(`☄️ [EVENTS] Comet: Damage x${this.buffValue} for ${this.buff.durationMs / 1000}s`);
+    } else if (this.buff.type === 'crystal_boost') {
+        activateCrystalBuff(this.buffValue);
+        showFloatingText(`${buffName}\n+${this.buffValue}% 💎`, this.x, this.y, '#FFD700', 1.2);
+        console.log(`☄️ [EVENTS] Comet: +${this.buffValue}% crystals on next block`);
     }
-    
-    clearCatchTimer() {
-        if (this.catchTimer) {
-            clearTimeout(this.catchTimer);
-            this.catchTimer = null;
-        }
-    }
-    
-    // ✅ 2 КЛИКА: первый — ловит, второй — активирует
-    handleClick() {
-        if (this.clicked) return;
-        
-        if (!this.caught) {
-            // ── ПЕРВЫЙ КЛИК: «Поймать» комету ──
-            this.caught = true;
-            
-            // Замедляем комету чтобы игрок успел кликнуть второй раз
-            this.vx *= 0.3;
-            this.vy *= 0.3;
-            
-            // Вибрация и звук первого клика
-            if (window.telegramHaptic?.medium) window.telegramHaptic.medium();
-            else if (navigator.vibrate) navigator.vibrate(30);
-            if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('clickSound');
-            
-            showFloatingText('🎯 Поймана!', this.x, this.y - 30, '#FFD700', 0.9);
-            
-            // Таймер: если не кликнул второй раз за 3 сек — комета ускользает
-            this.clearCatchTimer();
-            this.catchTimer = setTimeout(() => {
-                if (this.alive && !this.clicked) {
-                    this.caught = false;
-                    // Возвращаем нормальную скорость
-                    this.vx /= 0.3;
-                    this.vy /= 0.3;
-                    showFloatingText('💨 Ускользнула...', this.x, this.y - 30, '#aaa', 0.8);
-                    console.log('☄️ [EVENTS] Comet escaped (timeout)');
-                }
-            }, this.catchTimeout);
-            
-            console.log('☄️ [EVENTS] Comet caught! Click again to activate');
-            
-        } else {
-            // ── ВТОРОЙ КЛИК: Активация баффа ──
-            this.clearCatchTimer();
-            this.activate();
-        }
-    }
-    
-    activate() {
-        if (this.clicked) return;
-        this.clicked = true;
-        this.alive = false;
-        
-        const lang = window.currentLanguage || 'ru';
-        const buffName = this.buff.name[lang] || this.buff.name.en;
-        
-        if (this.buff.type === 'damage_boost') {
-            activateDamageBuff(this.buffValue, this.buff.durationMs);
-            showFloatingText(`${buffName}\nx${this.buffValue} (${Math.round(this.buff.durationMs / 1000)}с)`, this.x, this.y, '#4FC3F7', 1.2);
-            console.log(`☄️ [EVENTS] Comet: Damage x${this.buffValue} for ${this.buff.durationMs / 1000}s`);
-        } else if (this.buff.type === 'crystal_boost') {
-            activateCrystalBuff(this.buffValue);
-            showFloatingText(`${buffName}\n+${this.buffValue}% 💎`, this.x, this.y, '#FFD700', 1.2);
-            console.log(`☄️ [EVENTS] Comet: +${this.buffValue}% crystals on next block`);
-        }
-        
-        if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('comboSound');
-        if (window.telegramHaptic?.success) window.telegramHaptic.success();
-        else if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
-    }
+    if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('comboSound');
+    if (window.telegramHaptic?.success) window.telegramHaptic.success();
+    else if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+}
 }
 
 // ─────────────────────────────────────────────────────
@@ -568,20 +484,16 @@ function gameLoop() {
 // ─────────────────────────────────────────────────────
 function handlePointerDown(e) {
     if (isPaused || !window.gameState?.gameActive) return;
-    
     const rect = eventCanvas.getBoundingClientRect();
     const mx = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
     const my = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
     
+    // Ищем событие сверху вниз (чтобы сначала обрабатывались верхние)
     for (let i = activeEvents.length - 1; i >= 0; i--) {
         const evt = activeEvents[i];
         if (evt.hitTest(mx, my)) {
-            if (evt.type === 'asteroid') {
-                evt.collect();      // ✅ 1 клик
-            } else if (evt.type === 'comet') {
-                evt.handleClick();  // ✅ 2 клика
-            }
-            break;
+            evt.handleClick();
+            break; // Обработали клик, дальше не ищем
         }
     }
 }
