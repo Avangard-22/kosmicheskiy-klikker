@@ -162,15 +162,20 @@
 <script src="js/shop.js"></script>
 
 <!-- 4. Ядро игры -->
+<script src="js/device-detector.js"></script>  <!-- ✅ НОВОЕ: Оптимизация под устройство -->
 <script src="js/game-core.js?v=27"></script>
 
 <!-- ✅ НОВОЕ: Музыкальная система -->
 <script src="js/music-system.js?v=10"></script>
 
 <!-- 5. Дополнительные системы -->
-<script src="js/achievements.js"></script>
+<!-- <script src="js/achievements.js"></script> -->  <!-- ❌ ОТКЛЮЧЁН: tracker.js полностью заменяет его -->
+<script src="js/achievements-v2/mercury.js"></script>
+<script src="js/achievements-v2/tracker.js"></script>
+<script src="js/achievements-v2/ui.js"></script> <!-- Должен быть ПОСЛЕДНИМ -->
 <script src="js/daily-bonus.js?v=28"></script>
 <script src="js/voyager-tracker.js"></script>
- 
+<script src="js/random-events.js"></script>  <!-- ✅ НОВОЕ: Случайные события (астероиды/кометы) -->
+  
 </body>
 </html>

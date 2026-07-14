@@ -70,7 +70,18 @@ const DEFAULT_GAME_STATE = {
     permanentBonuses: {},
     unlockedLocations: ['mercury'],
     boboSkin: 'default',
-    dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 }
+    dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
+    
+    // ✅ НОВОЕ: Состояние системы достижений v2 (контекстные карточки)
+    achievementsV2: {
+        mercury: {
+            rank: 0,
+            totalUnlocked: 0,
+            metrics: {},
+            masterUnlocked: false
+        }
+        // Остальные планеты будут добавляться динамически по мере масштабирования
+    }
 };
 
 const DEFAULT_GAME_METRICS = {
@@ -85,7 +96,26 @@ const DEFAULT_GAME_METRICS = {
     maxCombo: 0,
     rareBlocksDestroyed: 0,
     sessions: 0,
-    visitedPlanets: []
+    visitedPlanets: [],
+    currentPerfectStreak: 0,  // ✅ НОВОЕ: Сбрасывается при пропуске блока
+    
+    // ✅ НОВОЕ: Планетарные метрики для всех 12 типов достижений
+    planetStats: {
+        mercury: {
+            blocks: 0,
+            crits: 0,
+            combo: 0,
+            rare: 0,
+            crystalsEarned: 0,    // НОВОЕ: crystals
+            boboActivations: 0,   // НОВОЕ: bobo
+            boboDamage: 0,        // НОВОЕ: boboDmg
+            timePlayed: 0,        // НОВОЕ: time (секунды)
+            fastestBlock: 0,      // НОВОЕ: speed (мс, меньше = лучше)
+            bestAccuracy: 0,      // НОВОЕ: accuracy (%)
+            maxPerfectStreak: 0   // НОВОЕ: perfect (рекорд серии)
+        }
+        // Остальные планеты будут создаваться динамически при первой игре
+    }
 };
 
 // ============================================
@@ -137,6 +167,57 @@ function reconstructMetricsFromAchievements() {
     if ((gm.upgradesBought || 0) < currentUpgradesCount) {
         gm.upgradesBought = currentUpgradesCount;
         healed = true;
+    }
+    
+    // ✅ НОВОЕ: Верификация achievementsV2
+    // Синхронизируем прогресс метрик с реальными значениями из planetStats
+    if (window.gameState?.achievementsV2 && gm.planetStats) {
+        let v2Healed = false;
+        const ach = window.gameState.achievementsV2;
+        
+        // Для каждой планеты в достижениях
+        for (const planet in ach) {
+            if (!ach[planet] || !ach[planet].metrics) continue;
+            const planetStats = gm.planetStats[planet];
+            if (!planetStats) continue;
+            
+            const metrics = ach[planet].metrics;
+            
+            // Маппинг полей planetStats → ключей метрик
+            const mapping = {
+                blocks:   'blocks',
+                crits:    'crits',
+                combo:    'combo',
+                rare:     'rare',
+                crystals: 'crystalsEarned',
+                bobo:     'boboActivations',
+                boboDmg:  'boboDamage',
+                time:     'timePlayed',
+                speed:    'fastestBlock',
+                accuracy: 'bestAccuracy',
+                perfect:  'maxPerfectStreak'
+            };
+            
+            for (const [metricKey, statField] of Object.entries(mapping)) {
+                if (!metrics[metricKey]) {
+                    metrics[metricKey] = { level: 0, progress: 0 };
+                }
+                
+                const realValue = planetStats[statField] || 0;
+                const savedProgress = metrics[metricKey].progress || 0;
+                
+                // Если реальное значение больше сохранённого — восстанавливаем
+                if (realValue > savedProgress) {
+                    metrics[metricKey].progress = realValue;
+                    v2Healed = true;
+                    healed = true;
+                }
+            }
+        }
+        
+        if (v2Healed) {
+            console.warn('⚠️ [SAVE-SYSTEM] achievementsV2 синхронизированы с planetStats');
+        }
     }
     
     if (healed) {

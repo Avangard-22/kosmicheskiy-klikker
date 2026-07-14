@@ -14,47 +14,63 @@ window.CombatSystem = {
             window.gameState?.permanentBonuses?.crystal_interval) intervalMult = 4;
 
         let dmg = baseDamage * getBonus('getDamageMultiplier', 1) * intervalMult;
-        let isCrit = false;
-        let critChance = Math.min(1, (window.gameState.critChance || 0.001) * getBonus('getCritChanceMultiplier', 1));
-        let critMult = (window.gameState.critMultiplier || 2) * getBonus('getCritMultMultiplier', 1);
 
-        if (Math.random() < critChance) { dmg = Math.round(dmg * critMult); isCrit = true; }
-        else dmg = Math.round(dmg);
+// ✅ НОВОЕ: Применяем бафф урона от кометы (random-events.js)
+// ЧТО: Умножает урон на множитель (1.5-3.0), если активен бафф
+// ЗАЧЕМ: Кометы дают временное усиление урона
+if (window.RandomEvents && typeof window.RandomEvents.getDamageMultiplier === 'function') {
+    dmg *= window.RandomEvents.getDamageMultiplier();
+}
 
-        return { finalDamage: Math.max(0, dmg), isCrit };
+let isCrit = false;
+let critChance = Math.min(1, (window.gameState.critChance || 0.001) * getBonus('getCritChanceMultiplier', 1));
+let critMult = (window.gameState.critMultiplier || 2) * getBonus('getCritMultMultiplier', 1);
+if (Math.random() < critChance) { dmg = Math.round(dmg * critMult); isCrit = true; }
+else dmg = Math.round(dmg);
+return { finalDamage: Math.max(0, dmg), isCrit };
     },
 
-    applyHit: function(baseDamage, isAuto = false) {
-        if (!window.gameState?.gameActive || window.GAME_CORE?.isGamePaused)
-            return { destroyed: false, damage: 0, isCrit: false };
-
-        const r = this.calculateHit(baseDamage, isAuto);
-
-        if (window.GAME_CORE) window.GAME_CORE.currentBlockHealth -= r.finalDamage;
-        // planetDamageDealt (прогресс-бар) — не achievements, трогаем напрямую
-        window.gameState.planetDamageDealt = (window.gameState.planetDamageDealt || 0) + r.finalDamage;
-
-        // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
-        if (window.achievementsSystem) {
-            // incrementTotalDamage внутри делает: gs.totalDamageDealt += d (и ачивки)
-            window.achievementsSystem.incrementTotalDamage(r.finalDamage);
-            // incrementTotalClicks внутри делает: gm.totalClicks += 1 (и ачивки)
-            if (!isAuto) window.achievementsSystem.incrementTotalClicks(1);
-            if (r.isCrit) {
-                // incrementCrits внутри делает: gm.totalCrits += 1 (и ачивки)
-                window.achievementsSystem.incrementCrits(1);
-                if (window.achievementsSystem.incrementPlanetCrits) {
-                    window.achievementsSystem.incrementPlanetCrits(window.gameState.currentLocation, 1);
-                }
-            }
-        }
-
-        return {
-            destroyed: (window.GAME_CORE?.currentBlockHealth || 0) <= 0,
-            damage: r.finalDamage,
-            isCrit: r.isCrit
-        };
-    },
+ applyHit: function(baseDamage, isAuto = false) {
+     if (!window.gameState?.gameActive || window.GAME_CORE?.isGamePaused)
+         return { destroyed: false, damage: 0, isCrit: false };
+     
+     // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка перед нанесением урона
+     if (window.GAME_CORE && window.GAME_CORE.currentBlockHealth <= 0) {
+         console.warn('️ [COMBAT] Block already destroyed, skipping hit');
+         return { destroyed: true, damage: 0, isCrit: false };
+     }
+     
+     const r = this.calculateHit(baseDamage, isAuto);
+     if (window.GAME_CORE) window.GAME_CORE.currentBlockHealth -= r.finalDamage;
+     // planetDamageDealt (прогресс-бар) — не achievements, трогаем напрямую
+     window.gameState.planetDamageDealt = (window.gameState.planetDamageDealt || 0) + r.finalDamage;
+     // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
+     if (window.achievementsSystem) {
+         // incrementTotalDamage внутри делает: gs.totalDamageDealt += d (и ачивки)
+         window.achievementsSystem.incrementTotalDamage(r.finalDamage);
+         // incrementTotalClicks внутри делает: gm.totalClicks += 1 (и ачивки)
+         if (!isAuto) window.achievementsSystem.incrementTotalClicks(1);
+         if (r.isCrit) {
+             // incrementCrits внутри делает: gm.totalCrits += 1 (и ачивки)
+             window.achievementsSystem.incrementCrits(1);
+             if (window.achievementsSystem.incrementPlanetCrits) {
+                 window.achievementsSystem.incrementPlanetCrits(window.gameState.currentLocation, 1);
+             }
+         }
+     }
+     
+     // ✅ ИСПРАВЛЕНИЕ: Надёжная проверка разрушения
+     const isDestroyed = (window.GAME_CORE?.currentBlockHealth || 0) <= 0;
+     if (isDestroyed && window.GAME_CORE) {
+         window.GAME_CORE.currentBlockHealth = 0; // Нормализуем в 0
+     }
+     
+     return {
+         destroyed: isDestroyed,
+         damage: r.finalDamage,
+         isCrit: r.isCrit
+     };
+ },
 
     calculateBlockHealth: function() {
         const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
@@ -92,14 +108,21 @@ window.CombatSystem = {
             }
         }
 
-        let comboBonus = 0;
-        if (window.gameState.comboCount > 1) {
-            const cm = CFG.balanceConfig.comboMultiplier * getBonus('getComboMultiplier', 1);
-            comboBonus = Math.floor(reward * (window.gameState.comboCount * cm));
-            reward += comboBonus;
-        }
+let comboBonus = 0;
+if (window.gameState.comboCount > 1) {
+    const cm = CFG.balanceConfig.comboMultiplier * getBonus('getComboMultiplier', 1);
+    comboBonus = Math.floor(reward * (window.gameState.comboCount * cm));
+    reward += comboBonus;
+}
 
-        return { reward, comboCount: window.gameState.comboCount, comboBonus, isRare };
+// ✅ НОВОЕ: Применяем бафф кристаллов от кометы (random-events.js)
+// ЧТО: consumeCrystalBuff() добавляет +50-500% к награде за следующий блок
+// ЗАЧЕМ: Одноразовый бонус от кометы «Кристальный дождь»
+if (window.RandomEvents && typeof window.RandomEvents.consumeCrystalBuff === 'function') {
+    reward = window.RandomEvents.consumeCrystalBuff(reward);
+}
+
+return { reward, comboCount: window.gameState.comboCount, comboBonus, isRare };
     },
 
     applyDestroy: function(block, isAuto = false) {

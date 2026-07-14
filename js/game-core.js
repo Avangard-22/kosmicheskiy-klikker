@@ -27,6 +27,7 @@ window.GAME_CORE = {
     autoClickInterval: null,
     magnetInterval: null,
     blockSpeed: CFG.isMobile ? 25 : 20,
+   deviceHealthMult: 1.0,  // ✅ НОВОЕ: множитель здоровья от детектора устройства
     lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
     getBonus: function(type, fallback = 1) {
@@ -39,17 +40,20 @@ window.GAME_CORE = {
         if (s) { s.currentTime = 0; s.play().catch(() => {}); }
     },
 
-    pauseGame: function() {
-        this.isGamePaused = true;
-        if (window.gameState) window.gameState.gamePaused = true;
-        const shopPanel = document.getElementById('shopPanel');
-        if (shopPanel) { shopPanel.style.maxHeight = '65vh'; shopPanel.style.overflowY = 'auto'; }
-    },
-
-    resumeGame: function() {
-        this.isGamePaused = false;
-        if (window.gameState) window.gameState.gamePaused = false;
-    },
+ pauseGame: function() {
+     this.isGamePaused = true;
+     if (window.gameState) window.gameState.gamePaused = true;
+     const shopPanel = document.getElementById('shopPanel');
+     if (shopPanel) { shopPanel.style.maxHeight = '65vh'; shopPanel.style.overflowY = 'auto'; }
+     // ✅ НОВОЕ: Эмитируем событие паузы для random-events
+     if (window.EventBus) window.EventBus.emit('game:paused');
+ },
+ resumeGame: function() {
+     this.isGamePaused = false;
+     if (window.gameState) window.gameState.gamePaused = false;
+     // ✅ НОВОЕ: Эмитируем событие возобновления для random-events
+     if (window.EventBus) window.EventBus.emit('game:resumed');
+ },
 
     calculateClickPower: function() {
         const lvl = window.gameState.clickUpgradeLevel || 0;
@@ -69,13 +73,23 @@ window.GAME_CORE = {
 //        автоматически применяются в игре. Метод-обёртка сохранён для совместимости.
 calculateBlockHealth: function() {
     if (window.CombatSystem && typeof window.CombatSystem.calculateBlockHealth === 'function') {
-        return window.CombatSystem.calculateBlockHealth();
+        // ✅ НОВОЕ: Применяем множитель от детектора устройства
+        let hp = window.CombatSystem.calculateBlockHealth();
+        if (this.deviceHealthMult && this.deviceHealthMult !== 1.0) {
+            hp = Math.floor(hp * this.deviceHealthMult);
+        }
+        return hp;
     }
     // Fallback на старую логику, если CombatSystem ещё не загружен (защита от race condition)
     const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
     const base = CFG.balanceConfig.baseHealth * (1 + CFG.astronomicalUnits[window.gameState.currentLocation] * 2);
     const random = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
-    return Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
+    let hp = Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
+    // ✅ НОВОЕ: Применяем множитель от детектора устройства
+    if (this.deviceHealthMult && this.deviceHealthMult !== 1.0) {
+        hp = Math.floor(hp * this.deviceHealthMult);
+    }
+    return hp;
 },
 
     createMovingBlock: function() {
@@ -125,10 +139,12 @@ block.addEventListener('click', () => {
     this.hitBlock(block, window.gameState.clickPower, false);
 });
         
-        gameArea.appendChild(block);
-        this.currentBlock = block;
-        this.animateBlock(block);
-    },
+       gameArea.appendChild(block);
+this.currentBlock = block;
+// ✅ НОВОЕ: Запоминаем время спавна для метрики speed
+block.dataset.spawnTime = Date.now();
+this.animateBlock(block);
+},
 
     getRareBlockType: function() {
         const rand = Math.random(), luck = this.getBonus('getLuckMultiplier', 1);
@@ -160,11 +176,17 @@ block.addEventListener('click', () => {
             }
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
-            if (pos > window.innerHeight) {
-                FEAT.applyUpgradePenalty();
-                if (window.gameState?.gameActive) setTimeout(() => this.createMovingBlock(), 500);
-                return;
-            }
+         if (pos > window.innerHeight) {
+    FEAT.applyUpgradePenalty();
+    
+    // ✅ НОВОЕ: Сброс идеальной серии при пропуске блока
+    if (window.gameMetrics) {
+        window.gameMetrics.currentPerfectStreak = 0;
+    }
+    
+    if (window.gameState?.gameActive) setTimeout(() => this.createMovingBlock(), 500);
+    return;
+}
             requestAnimationFrame(move);
         };
         move();
@@ -182,6 +204,12 @@ block.addEventListener('click', () => {
  */
 hitBlock: function(block, damage) {
     if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+    
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Блокировка ударов по блоку с HP <= 0
+    if (this.currentBlockHealth <= 0) {
+        console.warn('⚠️ [CORE] Block already destroyed (HP <= 0), ignoring hit');
+        return;
+    }
     
     // ── UX: Вибрация и звук (специфично для Core, не переносим) ──
     const now = Date.now();
@@ -211,11 +239,13 @@ hitBlock: function(block, damage) {
     this.createDamageText(hitResult.damage, block, hitResult.isCrit ? '#FFD700' : '#ff4444');
     UI.checkLocationUpgrade();
     
-    // ── Логика: разрушение или обновление блока ──
-    if (hitResult.destroyed) {
+     // ── Логика: разрушение или обновление блока ──
+    if (hitResult.destroyed || this.currentBlockHealth <= 0) {
+        console.log('💥 [CORE] Block destroyed! HP:', this.currentBlockHealth);
         this.destroyBlock(block);
     } else {
-        block.textContent = Math.floor(this.currentBlockHealth);
+        // ✅ ИСПРАВЛЕНИЕ: Показываем минимум 0, а не отрицательное число
+        block.textContent = Math.max(0, Math.floor(this.currentBlockHealth));
         this.updateCracks(block, this.currentBlockHealth);
     }
 },
@@ -247,10 +277,22 @@ destroyBlock: function(block) {
         this.playSound('comboSound');
     }
     
-    // ── UX: Обновление интерфейса ──
-    UI.updateHUD();
-    UI.updateUpgradeButtons();
-    this.playSound('breakSound');
+  // ── UX: Обновление интерфейса ──
+UI.updateHUD();
+UI.updateUpgradeButtons();
+this.playSound('breakSound');
+
+// ✅ НОВОЕ: Метрика crystals (заработано кристаллов на планете)
+const planet = window.gameState?.currentLocation;
+if (planet && window.achievementsSystem?.incrementPlanetCrystals) {
+    window.achievementsSystem.incrementPlanetCrystals(planet, destroyResult.reward || 0);
+}
+
+// ✅ НОВОЕ: Метрика speed (рекорд скорости уничтожения блока)
+if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlanetSpeed) {
+    const speed = Date.now() - parseInt(block.dataset.spawnTime);
+    window.achievementsSystem.updatePlanetSpeed(planet, speed);
+}
     this.showRewardText(destroyResult.reward || 0, block);
     FEAT.createExplosion(block);
     
@@ -468,10 +510,16 @@ helperAttack: function() {
         this.currentBlockHealth -= hitResult.damage;
         window.gameState.totalDamageDealt += hitResult.damage;
     }
-    
-    // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
-    this.createDamageText(hitResult.damage, this.currentBlock, '#69f0ae');
-    UI.checkLocationUpgrade();
+
+ // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
+this.createDamageText(hitResult.damage, this.currentBlock, '#69f0ae');
+UI.checkLocationUpgrade();
+
+// ✅ НОВОЕ: Метрика boboDmg (урон нанесённый Bobo на планете)
+const planet = window.gameState?.currentLocation;
+if (planet && window.achievementsSystem?.incrementPlanetBoboDamage) {
+    window.achievementsSystem.incrementPlanetBoboDamage(planet, hitResult.damage || 0);
+}
     
     // ── Логика: разрушение или обновление блока ──
     if (hitResult.destroyed) {
@@ -482,10 +530,15 @@ helperAttack: function() {
     }
 },
 
-    setLocation: function(loc) {
+setLocation: function(loc) {
     if (!window.gameState) return;
     if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
     window.gameState.currentLocation = loc;
+    
+    // ✅ НОВОЕ: Сброс идеальной серии при смене планеты
+    if (window.gameMetrics) {
+        window.gameMetrics.currentPerfectStreak = 0;
+    }
 
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
@@ -560,14 +613,22 @@ if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(lo
 
         UI.updateHUD();
         UI.updateUpgradeButtons();
-        UI.updateProgressBar();
-        this.setLocation(window.gameState.currentLocation);
+UI.updateProgressBar();
+this.setLocation(window.gameState.currentLocation);
+if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
+if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
 
-        if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
-        if (window.achievementsSystem?.updateAchievementsDisplay) window.achievementsSystem.updateAchievementsDisplay();
+// ✅ НОВОЕ: Таймер времени на планете (каждые 10 секунд)
+if (this._planetTimeInterval) clearInterval(this._planetTimeInterval);
+this._planetTimeInterval = setInterval(() => {
+    const planet = window.gameState?.currentLocation;
+    if (planet && window.achievementsSystem?.updatePlanetTime) {
+        window.achievementsSystem.updatePlanetTime(planet, 10);
+    }
+}, 10000);
 
-        setTimeout(() => this.createMovingBlock(), 500);
-    },
+setTimeout(() => this.createMovingBlock(), 500);
+},
 
     /**
      * ✅ ИСПРАВЛЕНО: continueGame теперь работает ТОЛЬКО с облаком
@@ -581,38 +642,42 @@ if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(lo
         // ✅ Инициализируем gameState дефолтными значениями
         // (на случай, если облако пустое — игра начнётся с нуля)
         if (!window.gameState || Object.keys(window.gameState).length === 0) {
-            window.gameState = {
-                coins: 0,
-                clickPower: 1,
-                critChance: 0.001,
-                critMultiplier: 2.0,
-                currentLocation: 'mercury',
-                totalDamageDealt: 0,
-                clickUpgradeLevel: 0,
-                critChanceUpgradeLevel: 0,
-                critMultiplierUpgradeLevel: 0,
-                helperUpgradeLevel: 0,
-                helperActivations: 0,
-                helperActive: false,
-                helperTimeLeft: 0,
-                helperDamageBonus: 0,
-                boboCoinBonus: 0,
-                comboCount: 0,
-                lastDestroyTime: 0,
-                gameActive: false,
-                gamePaused: false,
-                achievements: {},
-                shopItems: {},
-                permanentBonuses: {},
-                unlockedLocations: ['mercury'],
-                boboSkin: 'default',
-                dailyBonus: {
-                    lastClaimDate: null,
-                    currentDay: 1,
-                    totalClaimed: 0,
-                    streak: 0
-                }
-            };
+         window.gameState = {
+             coins: 0,
+             clickPower: 1,
+             critChance: 0.001,
+             critMultiplier: 2.0,
+             currentLocation: 'mercury',
+             totalDamageDealt: 0,
+             clickUpgradeLevel: 0,
+             critChanceUpgradeLevel: 0,
+             critMultiplierUpgradeLevel: 0,
+             helperUpgradeLevel: 0,
+             helperActivations: 0,
+             helperActive: false,
+             helperTimeLeft: 0,
+             helperDamageBonus: 0,
+             boboCoinBonus: 0,
+             comboCount: 0,
+             lastDestroyTime: 0,
+             gameActive: false,
+             gamePaused: false,
+             achievements: {},
+             shopItems: {},
+             permanentBonuses: {},
+             unlockedLocations: ['mercury'],
+             boboSkin: 'default',
+             dailyBonus: {
+                 lastClaimDate: null,
+                 currentDay: 1,
+                 totalClaimed: 0,
+                 streak: 0
+             },
+             // ✅ НОВОЕ: Система достижений v2
+             achievementsV2: {
+                 mercury: { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false }
+             }
+         };
             console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
         }
 
@@ -759,10 +824,31 @@ if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(lo
         });
 
         window.addEventListener('resize', () => {
-            if (this.helperElement) this.moveHelperToRandomPosition();
-        });
-    }
+        if (this.helperElement) this.moveHelperToRandomPosition();
+    });
+ }
 };
+
+// ✅ НОВОЕ: Применяем настройки детектора устройства (с задержкой, чтобы дождаться инициализации DeviceDetector)
+(function applyDeviceSettings() {
+    function tryApply() {
+        if (window.DeviceDetector && typeof window.DeviceDetector.getGameSettings === 'function') {
+            const settings = window.DeviceDetector.getGameSettings();
+            if (settings.blockSpeed) {
+                window.GAME_CORE.blockSpeed = settings.blockSpeed;
+                console.log('📱 [CORE] blockSpeed applied from DeviceDetector:', settings.blockSpeed);
+            }
+            if (settings.blockHealth) {
+                window.GAME_CORE.deviceHealthMult = settings.blockHealth;
+                console.log('📱 [CORE] blockHealth multiplier applied:', settings.blockHealth);
+            }
+        } else {
+            // Повторяем через 300мс если DeviceDetector ещё не готов
+            setTimeout(tryApply, 300);
+        }
+    }
+    setTimeout(tryApply, 500);
+})();
 
 window.gameFunctions = {
     startGame: () => window.GAME_CORE.startGame(true),
