@@ -63,12 +63,7 @@ window.GAME_CORE = {
 
 getCurrentSpeed: function() {
     if (!window.gameState) return this.blockSpeed;
-    
-    // ✅ Глобальный множитель скорости для десктопа
-    const desktopSpeedMult = CFG.isMobile ? 1.0 : 0.75;  // Desktop: -25% к скорости
-    
-    let speed = this.blockSpeed * desktopSpeedMult;
-    speed *= (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
+    let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
     return speed * this.getBonus('getSpeedMultiplier', 1);
 },
 
