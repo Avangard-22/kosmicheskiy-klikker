@@ -3,7 +3,7 @@
 'use strict';
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
-const getFeat = () => window.GAME_FEATURES || {};
+const FEAT = window.GAME_FEATURES;
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
 if (!window.gameState) {
