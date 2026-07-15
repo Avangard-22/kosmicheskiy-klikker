@@ -142,10 +142,10 @@ const DeviceDetector = {
         
         const settings = {
             // Базовые настройки для всех
-            blockSpeed: 20,
-            blockHealth: 1,
-            particleDensity: 1,
-            fpsTarget: 60
+    blockSpeed: CFG?.isMobile ? 25 : 12,  // Desktop: 12, Mobile: 25
+    blockHealth: 1,
+    particleDensity: 1,
+    fpsTarget: 60
         };
         
         // 🔧 Адаптация под Realme 10 Pro 5G и подобные
@@ -158,32 +158,30 @@ const DeviceDetector = {
         }
         
         // Адаптация по tiers
-        switch (this.performanceTier) {
-            case 'high':
-                // Высокая производительность
-                settings.blockSpeed = 25;
-                settings.blockHealth = 1.2;
-                settings.particleDensity = 1;
-                settings.fpsTarget = 60;
-                break;
-                
-            case 'medium':
-                // Средняя производительность
-                settings.blockSpeed = 30;
-                settings.blockHealth = 1.1;
-                settings.particleDensity = 0.8;
-                settings.fpsTarget = 60;
-                break;
-                
-            case 'low':
-            default:
-                // Низкая производительность
-                settings.blockSpeed = 40;
-                settings.blockHealth = 1.5;
-                settings.particleDensity = 0.5;
-                settings.fpsTarget = 30;
-                break;
-        }
+// ✅ Настройка скорости в зависимости от устройства и tier
+const isMobile = window.GAME_CONFIG?.isMobile || 'ontouchstart' in window;
+
+switch (this.performanceTier) {
+    case 'high':
+        settings.blockSpeed = isMobile ? 25 : 15;  // Desktop high: 15 (было 25)
+        settings.blockHealth = 1.2;
+        settings.particleDensity = 1;
+        settings.fpsTarget = 60;
+        break;
+    case 'medium':
+        settings.blockSpeed = isMobile ? 30 : 18;  // Desktop medium: 18 (было 30)
+        settings.blockHealth = 1.1;
+        settings.particleDensity = 0.8;
+        settings.fpsTarget = 60;
+        break;
+    case 'low':
+    default:
+        settings.blockSpeed = isMobile ? 40 : 22;  // Desktop low: 22 (было 40)
+        settings.blockHealth = 1.5;
+        settings.particleDensity = 0.5;
+        settings.fpsTarget = 30;
+        break;
+}
         
         return settings;
     },
