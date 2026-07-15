@@ -142,7 +142,7 @@ const DeviceDetector = {
         
         const settings = {
             // Базовые настройки для всех
-    blockSpeed: CFG?.isMobile ? 25 : 12,  // Desktop: 12, Mobile: 25
+    blockSpeed: CFG?.isMobile ? 25 : 18,  // Desktop: 18, Mobile: 25
     blockHealth: 1,
     particleDensity: 1,
     fpsTarget: 60
@@ -163,20 +163,20 @@ const isMobile = window.GAME_CONFIG?.isMobile || 'ontouchstart' in window;
 
 switch (this.performanceTier) {
     case 'high':
-        settings.blockSpeed = isMobile ? 25 : 15;  // Desktop high: 15 (было 25)
+        settings.blockSpeed = isMobile ? 25 : 20;  // Desktop high: 20 (было 25)
         settings.blockHealth = 1.2;
         settings.particleDensity = 1;
         settings.fpsTarget = 60;
         break;
     case 'medium':
-        settings.blockSpeed = isMobile ? 30 : 18;  // Desktop medium: 18 (было 30)
+        settings.blockSpeed = isMobile ? 30 : 25;  // Desktop medium: 25 (было 30)
         settings.blockHealth = 1.1;
         settings.particleDensity = 0.8;
         settings.fpsTarget = 60;
         break;
     case 'low':
     default:
-        settings.blockSpeed = isMobile ? 40 : 22;  // Desktop low: 22 (было 40)
+        settings.blockSpeed = isMobile ? 40 : 30;  // Desktop low: 30 (было 40)
         settings.blockHealth = 1.5;
         settings.particleDensity = 0.5;
         settings.fpsTarget = 30;
