@@ -140,9 +140,10 @@
     <!-- Панель достижений -->
     <div id="achievementsPanel" class="achievements-panel"></div>
 
-    <!-- ========================================== -->
-    <!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
-    <!-- ========================================== -->
+<!-- ========================================== -->
+<!-- СКРИПТЫ (СТРОГО В ЭТОМ ПОРЯДКЕ!)           -->
+<!-- ========================================== -->
+
 <!-- 0. Шина событий -->
 <script src="js/event-bus.js"></script>
 
@@ -161,25 +162,46 @@
 <script src="js/planet-background.js"></script>
 <script src="js/shop.js"></script>
 
-<!-- 4. Ядро игры -->
-<script src="js/device-detector.js"></script>  <!-- ✅ НОВОЕ: Оптимизация под устройство -->
+<!-- 4. Детектор устройства (ДО game-core!) -->
+<script src="js/device-detector.js"></script>
+
+<!-- 5. Ядро игры -->
 <script src="js/game-core.js?v=27"></script>
 
-<!-- ✅ НОВОЕ: Музыкальная система -->
+<!-- 6. Музыкальная система -->
 <script src="js/music-system.js?v=10"></script>
 
-<!-- 5. Дополнительные системы -->
-<!-- <script src="js/achievements.js"></script> -->  <!-- ❌ ОТКЛЮЧЁН: tracker.js полностью заменяет его -->
-<script src="js/achievements-v2/planet-factory.js"></script>  <!-- ✅ НОВОЕ: фабрика -->
+<!-- ═══════════════════════════════════════════ -->
+<!-- 🏆 СИСТЕМА ДОСТИЖЕНИЙ v2 (ПОРЯДОК КРИТИЧЕН!) -->
+<!-- ═══════════════════════════════════════════ -->
+<!-- Старая система отключена -->
+<!-- <script src="js/achievements.js"></script> -->
+
+<!-- 7. Фабрика планет (базовый движок) -->
+<script src="js/achievements-v2/planet-factory.js"></script>
+
+<!-- 8. Конфиги планет (по порядку от Солнца) -->
 <script src="js/achievements-v2/mercury.js"></script>
-    <!-- Будущие планеты подключаются здесь: -->
 <!-- <script src="js/achievements-v2/venus.js"></script> -->
 <!-- <script src="js/achievements-v2/earth.js"></script> -->
+<!-- <script src="js/achievements-v2/mars.js"></script> -->
+<!-- <script src="js/achievements-v2/jupiter.js"></script> -->
+<!-- <script src="js/achievements-v2/saturn.js"></script> -->
+<!-- <script src="js/achievements-v2/uranus.js"></script> -->
+<!-- <script src="js/achievements-v2/neptune.js"></script> -->
+<!-- <script src="js/achievements-v2/pluto.js"></script> -->
+
+<!-- 9. Трекер метрик (мост между combat-system и достижениями) -->
 <script src="js/achievements-v2/tracker.js"></script>
-<script src="js/achievements-v2/ui.js"></script> <!-- Должен быть ПОСЛЕДНИМ -->
+
+<!-- 10. UI панели достижений (должен быть ПОСЛЕДНИМ из v2) -->
+<script src="js/achievements-v2/ui.js"></script>
+<!-- ═══════════════════════════════════════════ -->
+
+<!-- 11. Дополнительные системы -->
 <script src="js/daily-bonus.js?v=28"></script>
 <script src="js/voyager-tracker.js"></script>
-<script src="js/random-events.js"></script>  <!-- ✅ НОВОЕ: Случайные события (астероиды/кометы) -->
+<script src="js/random-events.js"></script>
   
 </body>
 </html>
