@@ -158,25 +158,24 @@ return { reward, comboCount: window.gameState.comboCount, comboBonus, isRare };
 
          // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
         if (window.achievementsSystem) {
-            const p = window.gameState.currentLocation;
-            // incrementCoinsEarned внутри делает: gm.totalCoinsEarned += reward (и ачивки)
-            window.achievementsSystem.incrementCoinsEarned(res.reward);
-            window.achievementsSystem.incrementPlanetBlocks(p, 1);
-            
-            // ✅ НОВОЕ: Если блок уничтожен Bobo (isAuto=true) — считаем boboKills
-            if (isAuto && window.achievementsSystem.incrementPlanetBoboKills) {
-                window.achievementsSystem.incrementPlanetBoboKills(p, 1);
-            }
-            
-            if (res.isRare) {
-                window.achievementsSystem.incrementRareBlocks(1);
-                window.achievementsSystem.incrementPlanetRareBlocks(p, 1);
-            }
-            if (res.comboCount > (window.gameMetrics.maxCombo || 0)) {
-                window.achievementsSystem.updateCombo(res.comboCount);
-                window.achievementsSystem.updatePlanetCombo(p, res.comboCount);
-            }
+        const p = window.gameState.currentLocation;
+        window.achievementsSystem.incrementCoinsEarned(res.reward);
+        window.achievementsSystem.incrementPlanetBlocks(p, 1);
+        
+        // ✅ НОВОЕ: Если блок уничтожен Bobo (isAuto=true), считаем его кристаллы
+        if (isAuto && window.achievementsSystem.incrementPlanetBoboCrystals) {
+            window.achievementsSystem.incrementPlanetBoboCrystals(p, res.reward);
         }
+        
+        if (res.isRare) {
+            window.achievementsSystem.incrementRareBlocks(1);
+            window.achievementsSystem.incrementPlanetRareBlocks(p, 1);
+        }
+        if (res.comboCount > (window.gameMetrics.maxCombo || 0)) {
+            window.achievementsSystem.updateCombo(res.comboCount);
+            window.achievementsSystem.updatePlanetCombo(p, res.comboCount);
+        }
+    }
 
         if (window.GAME_CORE) { window.GAME_CORE.currentBlock = null; window.GAME_CORE.currentBlockHealth = 0; }
         return res;
