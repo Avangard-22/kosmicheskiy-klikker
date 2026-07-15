@@ -186,7 +186,7 @@ function createPlanetModule(config, nameTemplates) {
             }
         }
         
-        // ✅ Начисляем кристаллы + обновляем UI
+        // ✅ КРИТИЧЕСКИ ВАЖНО: Начисление кристаллов и обновление UI
         if (totalReward > 0) {
             window.gameState.coins = (window.gameState.coins || 0) + totalReward;
             if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(totalReward);
