@@ -54,13 +54,15 @@ metrics: {
     // ── ЭКОНОМИКА И ПОМОЩНИКИ (подключаем) ──
     crystals: { base: 200,   growth: 1.60, rewardBase: 30,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
     bobo:     { base: 3,     growth: 1.50, rewardBase: 100,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
-    boboDmg:  { base: 1000,  growth: 1.55, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' }, // НОВОЕ
+    boboKills: { base: 5,     growth: 1.55, rewardBase: 45,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
+    boboDmg:   { base: 1000,  growth: 1.55, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '⚡' },
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ (подключаем + новое) ──
     time:     { base: 60,    growth: 1.30, rewardBase: 50,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
     speed:    { base: 30000, growth: 0.85, rewardBase: 120,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
     accuracy: { base: 50,    growth: 1.20, rewardBase: 90,   rewardGrowth: 1.10, type: 'record_max',  emoji: '🎯' },
     perfect:  { base: 10,    growth: 1.50, rewardBase: 200,  rewardGrowth: 1.15, type: 'record_max',  emoji: '✨' } // НОВОЕ
+    critStreak:{ base: 3,     growth: 1.40, rewardBase: 150,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
 }
 };
 
@@ -80,13 +82,15 @@ const NAME_TEMPLATES = {
     // ── ЭКОНОМИКА И ПОМОЩНИКИ ──
     crystals: { key: 'achievements.mercury.metrics.crystals', fallback: 'Заработано кристаллов' },
     bobo:     { key: 'achievements.mercury.metrics.bobo',     fallback: 'Активаций Bobo' },
-    boboDmg:  { key: 'achievements.mercury.metrics.boboDmg',  fallback: 'Урона нанесено Bobo' }, // НОВОЕ
-    
+    boboKills: { key: 'achievements.mercury.metrics.boboKills', fallback: 'Блоков уничтожено Bobo' },
+    boboDmg:   { key: 'achievements.mercury.metrics.boboDmg',   fallback: 'Урона нанесено Bobo' },
+     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:     { key: 'achievements.mercury.metrics.time',     fallback: 'Секунд на планете' },
     speed:    { key: 'achievements.mercury.metrics.speed',    fallback: 'Рекорд скорости (мс)' },
     accuracy: { key: 'achievements.mercury.metrics.accuracy', fallback: 'Точность попаданий (%)' },
     perfect:  { key: 'achievements.mercury.metrics.perfect',  fallback: 'Идеальная серия' } // НОВОЕ
+    critStreak:{ key: 'achievements.mercury.metrics.critStreak',fallback: 'Серия критов подряд' }
 };
 
 // ─────────────────────────────────────────────────────
