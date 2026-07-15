@@ -4,9 +4,7 @@
 
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
-// ✅ БЕЗОПАСНОЕ ПОЛУЧЕНИЕ: Геттер предотвращает краш, если game-features.js 
-// загрузился с задержкой или содержит ошибку.
-const getFeat = () => window.GAME_FEATURES || {};
+const FEAT = window.GAME_FEATURES;
 
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
@@ -28,7 +26,7 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: CFG.isMobile ? 25 : 18,  // Desktop: снижена с 20 до 18
+    blockSpeed: CFG.isMobile ? 25 : 20,
    deviceHealthMult: 1.0,  // ✅ НОВОЕ: множитель здоровья от детектора устройства
     lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
@@ -63,11 +61,11 @@ window.GAME_CORE = {
         return 1 + (lvl * Math.pow(prog.diminishingReturns, Math.min(lvl, prog.maxLevelEffect)) * Math.sqrt(lvl + 1) * prog.baseMultiplier);
     },
 
-getCurrentSpeed: function() {
-    if (!window.gameState) return this.blockSpeed;
-    let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
-    return speed * this.getBonus('getSpeedMultiplier', 1);
-},
+    getCurrentSpeed: function() {
+        if (!window.gameState) return this.blockSpeed;
+        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
+        return speed * this.getBonus('getSpeedMultiplier', 1);
+    },
 
 // ЧТО: Делегируем расчёт HP блока в единый CombatSystem
 // КУДА: game-core.js → GAME_CORE.calculateBlockHealth()
@@ -179,8 +177,7 @@ this.animateBlock(block);
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
          if (pos > window.innerHeight) {
-    // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: не упадёт, если FEAT ещё не загружен
-    if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
+    FEAT.applyUpgradePenalty();
     
     // ✅ НОВОЕ: Сброс идеальной серии при пропуске блока
     if (window.gameMetrics) {
@@ -297,8 +294,7 @@ if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlane
     window.achievementsSystem.updatePlanetSpeed(planet, speed);
 }
     this.showRewardText(destroyResult.reward || 0, block);
-    // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
-    if (getFeat().createExplosion) getFeat().createExplosion(block);
+    FEAT.createExplosion(block);
     
     // ── Очистка блока из DOM ──
     const ga = document.getElementById('gameArea');
@@ -515,7 +511,7 @@ helperAttack: function() {
         window.gameState.totalDamageDealt += hitResult.damage;
     }
 
-  // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
+ // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
 this.createDamageText(hitResult.damage, this.currentBlock, '#69f0ae');
 UI.checkLocationUpgrade();
 
@@ -539,9 +535,9 @@ setLocation: function(loc) {
     if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
     window.gameState.currentLocation = loc;
     
-    // ✅ НОВОЕ: Сброс серии критов при смене планеты
+    // ✅ НОВОЕ: Сброс идеальной серии при смене планеты
     if (window.gameMetrics) {
-        window.gameMetrics.currentCritStreak = 0;
+        window.gameMetrics.currentPerfectStreak = 0;
     }
 
         const gameTitle = document.getElementById('gameTitle');
@@ -784,12 +780,11 @@ setTimeout(() => this.createMovingBlock(), 500);
             }
         };
 
-        // ✅ БЕЗОПАСНЫЕ ВЫЗОВЫ с опциональной цепочкой (?.)
-        add('upgradeClickBtn', () => getFeat().buyClickPower?.());
-        add('upgradeHelperBtn', () => getFeat().buyHelper?.());
-        add('upgradeCritChanceBtn', () => getFeat().buyCritChance?.());
-        add('upgradeCritMultBtn', () => getFeat().buyCritMultiplier?.());
-        add('upgradeHelperDmgBtn', () => getFeat().buyHelperDamage?.());
+        add('upgradeClickBtn', () => FEAT.buyClickPower());
+        add('upgradeHelperBtn', () => FEAT.buyHelper());
+        add('upgradeCritChanceBtn', () => FEAT.buyCritChance());
+        add('upgradeCritMultBtn', () => FEAT.buyCritMultiplier());
+        add('upgradeHelperDmgBtn', () => FEAT.buyHelperDamage());
 
         add('shareBtn', () => {
             if (!window.gameState) return;
@@ -868,7 +863,7 @@ window.gameFunctions = {
     createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
     showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
     showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
-    createExplosion: bl => getFeat().createExplosion?.(bl),
+    createExplosion: bl => FEAT.createExplosion(bl),
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
@@ -876,7 +871,7 @@ window.gameFunctions = {
     shareResult: () => {},
     updateAllTranslations: () => {},
     setLocation: loc => window.GAME_CORE.setLocation(loc),
-    applyUpgradePenalty: () => getFeat().applyUpgradePenalty?.(),
+    applyUpgradePenalty: () => FEAT.applyUpgradePenalty(),
     calculateClickPower: () => window.GAME_CORE.calculateClickPower()
 };
 
