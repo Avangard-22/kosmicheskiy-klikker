@@ -153,6 +153,12 @@ window.GAME_FEATURES = {
         // ✅ НОВОЕ: хук PerkSystem (каждый 4-й вызов Bobo даёт бонус)
         if (window.PerkSystem?.onBoboCall) window.PerkSystem.onBoboCall();
 
+        // ✅ НОВОЕ: Метрика bobo (активации Bobo на планете)
+        const planet = window.gameState?.currentLocation;
+        if (planet && window.achievementsSystem?.incrementPlanetBobo) {
+            window.achievementsSystem.incrementPlanetBobo(planet);
+        }
+
         if (typeof window.saveGame === 'function') window.saveGame();
     },
 
