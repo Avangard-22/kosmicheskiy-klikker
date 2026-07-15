@@ -1,9 +1,4 @@
-// js/achievements-v2/tracker.js (UNIVERSAL v2.0)
-// ═══════════════════════════════════════════════════
-// 🔗 УНИВЕРСАЛЬНЫЙ ТРЕКЕР — работает с ЛЮБОЙ планетой
-// ЧТО: Мост между combat-system.js и достижениями v2.
-// ЗАЧЕМ: Не нужно переписывать при добавлении новой планеты.
-// ═══════════════════════════════════════════════════
+// js/achievements-v2/tracker.js (УНИВЕРСАЛЬНЫЙ ЧЕРЕЗ ФАБРИКУ)
 (function() {
 'use strict';
 
@@ -15,7 +10,6 @@ function debouncedSave() {
     }, 10000);
 }
 
-// ✅ УНИВЕРСАЛЬНЫЙ ПОИСК МОДУЛЯ ПЛАНЕТЫ ЧЕРЕЗ ФАБРИКУ
 function getPlanetModule(planet) {
     if (window.AchievementsV2 && window.AchievementsV2.PlanetFactory) {
         return window.AchievementsV2.PlanetFactory.get(planet);
@@ -24,7 +18,7 @@ function getPlanetModule(planet) {
 }
 
 // ═══════════════════════════════════════════════════
-// 🌍 ПЛАНЕТАРНЫЕ МЕТРИКИ (12 штук)
+// 🌍 ПЛАНЕТАРНЫЕ МЕТРИКИ
 // ═══════════════════════════════════════════════════
 function incrementPlanetBlocks(planet, c) {
     if (!c) c = 1;
@@ -32,9 +26,8 @@ function incrementPlanetBlocks(planet, c) {
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].blocks = (gm.planetStats[planet].blocks || 0) + c;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('blocks', gm.planetStats[planet].blocks);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('blocks', gm.planetStats[planet].blocks);
     debouncedSave();
 }
 
@@ -44,9 +37,8 @@ function incrementPlanetCrits(planet, c) {
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].crits = (gm.planetStats[planet].crits || 0) + c;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('crits', gm.planetStats[planet].crits);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('crits', gm.planetStats[planet].crits);
     debouncedSave();
 }
 
@@ -56,8 +48,8 @@ function updatePlanetCombo(planet, combo) {
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     if (combo > (gm.planetStats[planet].combo || 0)) {
         gm.planetStats[planet].combo = combo;
-        const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('combo', combo);
+        const mod = getPlanetModule(planet);
+        if (mod) mod.updateMetricProgress('combo', combo);
     }
 }
 
@@ -67,44 +59,19 @@ function incrementPlanetRareBlocks(planet, c) {
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].rare = (gm.planetStats[planet].rare || 0) + c;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('rare', gm.planetStats[planet].rare);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('rare', gm.planetStats[planet].rare);
     debouncedSave();
 }
 
-function incrementPlanetCrystals(planet, amount) {
-    if (!amount) return;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    if (!gm.planetStats) gm.planetStats = {};
-    if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
-    gm.planetStats[planet].crystalsEarned = (gm.planetStats[planet].crystalsEarned || 0) + amount;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('crystals', gm.planetStats[planet].crystalsEarned);
-    debouncedSave();
-}
-
+// ✅ НОВОЕ: Метрики Bobo
 function incrementPlanetBobo(planet) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].boboActivations = (gm.planetStats[planet].boboActivations || 0) + 1;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('bobo', gm.planetStats[planet].boboActivations);
-    debouncedSave();
-}
-
-function incrementPlanetBoboKills(planet, c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    if (!gm.planetStats) gm.planetStats = {};
-    if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
-    gm.planetStats[planet].boboKills = (gm.planetStats[planet].boboKills || 0) + c;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('boboKills', gm.planetStats[planet].boboKills);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('bobo', gm.planetStats[planet].boboActivations);
     debouncedSave();
 }
 
@@ -114,9 +81,19 @@ function incrementPlanetBoboDamage(planet, damage) {
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].boboDamage = (gm.planetStats[planet].boboDamage || 0) + damage;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('boboDmg', gm.planetStats[planet].boboDamage);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('boboDmg', gm.planetStats[planet].boboDamage);
+    debouncedSave();
+}
+
+function incrementPlanetBoboCrystals(planet, amount) {
+    if (!amount) return;
+    var gm = window.gameMetrics || (window.gameMetrics = {});
+    if (!gm.planetStats) gm.planetStats = {};
+    if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    gm.planetStats[planet].boboCrystalsEarned = (gm.planetStats[planet].boboCrystalsEarned || 0) + amount;
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('boboCrystals', gm.planetStats[planet].boboCrystalsEarned);
     debouncedSave();
 }
 
@@ -128,8 +105,8 @@ function updatePlanetCritStreak(planet, streak) {
     const current = gm.planetStats[planet].maxCritStreak || 0;
     if (streak > current) {
         gm.planetStats[planet].maxCritStreak = streak;
-        const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('critStreak', streak);
+        const mod = getPlanetModule(planet);
+        if (mod) mod.updateMetricProgress('critStreak', streak);
         debouncedSave();
     }
 }
@@ -140,9 +117,8 @@ function updatePlanetTime(planet, seconds) {
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].timePlayed = (gm.planetStats[planet].timePlayed || 0) + seconds;
-    
-    const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('time', gm.planetStats[planet].timePlayed);
+    const mod = getPlanetModule(planet);
+    if (mod) mod.updateMetricProgress('time', gm.planetStats[planet].timePlayed);
     debouncedSave();
 }
 
@@ -154,8 +130,8 @@ function updatePlanetSpeed(planet, milliseconds) {
     const current = gm.planetStats[planet].fastestBlock || 0;
     if (current === 0 || milliseconds < current) {
         gm.planetStats[planet].fastestBlock = milliseconds;
-        const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('speed', milliseconds);
+        const mod = getPlanetModule(planet);
+        if (mod) mod.updateMetricProgress('speed', milliseconds);
         debouncedSave();
     }
 }
@@ -166,9 +142,8 @@ function updatePlanetSpeed(planet, milliseconds) {
 function incrementTotalDamage(d) {
     var gs = window.gameState || (window.gameState = {});
     gs.totalDamageDealt = (gs.totalDamageDealt || 0) + d;
-    const currentPlanet = gs.currentLocation;
-    const module = getPlanetModule(currentPlanet);
-    if (module) module.checkMasterAchievement(gs.planetDamageDealt || 0);
+    const mod = getPlanetModule(gs.currentLocation);
+    if (mod) mod.checkMasterAchievement(gs.planetDamageDealt || 0);
 }
 
 function incrementCoinsEarned(a) {
@@ -190,42 +165,12 @@ function updateCombo(combo) {
     if (combo > (gm.maxCombo || 0)) gm.maxCombo = combo;
 }
 
-function incrementCrits(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.totalCrits = (gm.totalCrits || 0) + c;
-}
-
-function incrementUpgrades(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.upgradesBought = (gm.upgradesBought || 0) + c;
-}
-
-function incrementHelpers(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.helpersBought = (gm.helpersBought || 0) + c;
-}
-
-function incrementBoosters(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.boostersUsed = (gm.boostersUsed || 0) + c;
-}
-
-function incrementRareBlocks(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.rareBlocksDestroyed = (gm.rareBlocksDestroyed || 0) + c;
-}
-
-function incrementTotalClicks(c) {
-    if (!c) c = 1;
-    var gm = window.gameMetrics || (window.gameMetrics = {});
-    gm.totalClicks = (gm.totalClicks || 0) + c;
-}
-
+function incrementCrits(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.totalCrits = (gm.totalCrits || 0) + c; }
+function incrementUpgrades(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.upgradesBought = (gm.upgradesBought || 0) + c; }
+function incrementHelpers(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.helpersBought = (gm.helpersBought || 0) + c; }
+function incrementBoosters(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.boostersUsed = (gm.boostersUsed || 0) + c; }
+function incrementRareBlocks(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.rareBlocksDestroyed = (gm.rareBlocksDestroyed || 0) + c; }
+function incrementTotalClicks(c) { if (!c) c = 1; var gm = window.gameMetrics || (window.gameMetrics = {}); gm.totalClicks = (gm.totalClicks || 0) + c; }
 function updateTimePlayed() {}
 
 // ═══════════════════════════════════════════════════
@@ -245,10 +190,9 @@ window.achievementsSystem = {
     incrementPlanetCrits: incrementPlanetCrits,
     updatePlanetCombo: updatePlanetCombo,
     incrementPlanetRareBlocks: incrementPlanetRareBlocks,
-    incrementPlanetCrystals: incrementPlanetCrystals,
     incrementPlanetBobo: incrementPlanetBobo,
-    incrementPlanetBoboKills: incrementPlanetBoboKills,
     incrementPlanetBoboDamage: incrementPlanetBoboDamage,
+    incrementPlanetBoboCrystals: incrementPlanetBoboCrystals,
     updatePlanetCritStreak: updatePlanetCritStreak,
     updatePlanetTime: updatePlanetTime,
     updatePlanetSpeed: updatePlanetSpeed,
