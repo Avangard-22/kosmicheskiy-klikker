@@ -61,11 +61,16 @@ window.GAME_CORE = {
         return 1 + (lvl * Math.pow(prog.diminishingReturns, Math.min(lvl, prog.maxLevelEffect)) * Math.sqrt(lvl + 1) * prog.baseMultiplier);
     },
 
-    getCurrentSpeed: function() {
-        if (!window.gameState) return this.blockSpeed;
-        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
-        return speed * this.getBonus('getSpeedMultiplier', 1);
-    },
+getCurrentSpeed: function() {
+    if (!window.gameState) return this.blockSpeed;
+    
+    // ✅ Глобальный множитель скорости для десктопа
+    const desktopSpeedMult = CFG.isMobile ? 1.0 : 0.75;  // Desktop: -25% к скорости
+    
+    let speed = this.blockSpeed * desktopSpeedMult;
+    speed *= (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
+    return speed * this.getBonus('getSpeedMultiplier', 1);
+},
 
 // ЧТО: Делегируем расчёт HP блока в единый CombatSystem
 // КУДА: game-core.js → GAME_CORE.calculateBlockHealth()
