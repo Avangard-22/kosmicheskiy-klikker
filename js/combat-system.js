@@ -44,20 +44,36 @@ return { finalDamage: Math.max(0, dmg), isCrit };
      if (window.GAME_CORE) window.GAME_CORE.currentBlockHealth -= r.finalDamage;
      // planetDamageDealt (прогресс-бар) — не achievements, трогаем напрямую
      window.gameState.planetDamageDealt = (window.gameState.planetDamageDealt || 0) + r.finalDamage;
+    
      // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
-     if (window.achievementsSystem) {
-         // incrementTotalDamage внутри делает: gs.totalDamageDealt += d (и ачивки)
-         window.achievementsSystem.incrementTotalDamage(r.finalDamage);
-         // incrementTotalClicks внутри делает: gm.totalClicks += 1 (и ачивки)
-         if (!isAuto) window.achievementsSystem.incrementTotalClicks(1);
-         if (r.isCrit) {
-             // incrementCrits внутри делает: gm.totalCrits += 1 (и ачивки)
-             window.achievementsSystem.incrementCrits(1);
-             if (window.achievementsSystem.incrementPlanetCrits) {
-                 window.achievementsSystem.incrementPlanetCrits(window.gameState.currentLocation, 1);
-             }
-         }
-     }
+    if (window.achievementsSystem) {
+        // incrementTotalDamage внутри делает: gs.totalDamageDealt += d (и ачивки)
+        window.achievementsSystem.incrementTotalDamage(r.finalDamage);
+        // incrementTotalClicks внутри делает: gm.totalClicks += 1 (и ачивки)
+        if (!isAuto) window.achievementsSystem.incrementTotalClicks(1);
+        
+        // ✅ НОВОЕ: Отслеживание серии критов (critStreak)
+        if (!window.gameMetrics) window.gameMetrics = {};
+        if (r.isCrit) {
+            // incrementCrits внутри делает: gm.totalCrits += 1 (и ачивки)
+            window.achievementsSystem.incrementCrits(1);
+            if (window.achievementsSystem.incrementPlanetCrits) {
+                window.achievementsSystem.incrementPlanetCrits(window.gameState.currentLocation, 1);
+            }
+            
+            // Увеличиваем серию критов
+            window.gameMetrics.currentCritStreak = (window.gameMetrics.currentCritStreak || 0) + 1;
+            if (window.achievementsSystem.updatePlanetCritStreak) {
+                window.achievementsSystem.updatePlanetCritStreak(
+                    window.gameState.currentLocation,
+                    window.gameMetrics.currentCritStreak
+                );
+            }
+        } else {
+            // Не крит — сбрасываем серию
+            window.gameMetrics.currentCritStreak = 0;
+        }
+    }
      
      // ✅ ИСПРАВЛЕНИЕ: Надёжная проверка разрушения
      const isDestroyed = (window.GAME_CORE?.currentBlockHealth || 0) <= 0;
@@ -140,12 +156,18 @@ return { reward, comboCount: window.gameState.comboCount, comboBonus, isRare };
         // Оставляем только один источник — через achievements, убираем прямой.
         // if (res.comboCount > (window.gameMetrics.maxCombo || 0)) window.gameMetrics.maxCombo = res.comboCount;
 
-        // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
+         // ── ЕДИНСТВЕННЫЙ ИСТОЧНИК метрик: achievements.increment ──
         if (window.achievementsSystem) {
             const p = window.gameState.currentLocation;
             // incrementCoinsEarned внутри делает: gm.totalCoinsEarned += reward (и ачивки)
             window.achievementsSystem.incrementCoinsEarned(res.reward);
             window.achievementsSystem.incrementPlanetBlocks(p, 1);
+            
+            // ✅ НОВОЕ: Если блок уничтожен Bobo (isAuto=true) — считаем boboKills
+            if (isAuto && window.achievementsSystem.incrementPlanetBoboKills) {
+                window.achievementsSystem.incrementPlanetBoboKills(p, 1);
+            }
+            
             if (res.isRare) {
                 window.achievementsSystem.incrementRareBlocks(1);
                 window.achievementsSystem.incrementPlanetRareBlocks(p, 1);
