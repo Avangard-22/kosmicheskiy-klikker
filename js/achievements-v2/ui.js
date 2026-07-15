@@ -166,13 +166,16 @@ function attachButtonListener() {
 // ═══════════════════════════════════════════════
 function getCurrentPlanetModule() {
     const planet = window.gameState?.currentLocation || 'mercury';
+    
     // ✅ Используем фабрику вместо жёсткого маппинга
-    if (window.AchievementsV2?.PlanetFactory) {
-        return window.AchievementsV2.PlanetFactory.get(planet);
+    if (window.AchievementsV2 && window.AchievementsV2.PlanetFactory) {
+        const module = window.AchievementsV2.PlanetFactory.get(planet);
+        if (module) return module;
     }
-    // Fallback для совместимости
-    const modules = { mercury: window.AchievementsV2?.Mercury };
-    return modules[planet] || window.AchievementsV2?.Mercury;
+    
+    // Fallback на случай, если что-то пошло не так
+    console.warn(`⚠️ [ACH-V2] Module for planet '${planet}' not found in Factory`);
+    return null;
 }
 
 function renderGridView() {
