@@ -511,7 +511,7 @@ helperAttack: function() {
         window.gameState.totalDamageDealt += hitResult.damage;
     }
 
- // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
+  // ── UX: Визуальные эффекты (зелёный цвет для Bobo) ──
 this.createDamageText(hitResult.damage, this.currentBlock, '#69f0ae');
 UI.checkLocationUpgrade();
 
