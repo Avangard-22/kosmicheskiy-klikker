@@ -262,10 +262,9 @@ window.GAME_CORE = {
             const speed = Date.now() - parseInt(block.dataset.spawnTime);
             window.achievementsSystem.updatePlanetSpeed(planet, speed);
         }
- this.showRewardText(destroyResult.reward || 0, block);
-// ✅ БЕЗОПАСНЫЙ ВЫЗОВ: проверяем что GAME_FEATURES загружен
-if (window.GAME_FEATURES && typeof window.GAME_FEATURES.createExplosion === 'function') {
-    window.GAME_FEATURES.createExplosion(block);
+
+    this.showRewardText(destroyResult.reward || 0, block);
+    FEAT.createExplosion(block);
 }
         // ── Очистка блока из DOM ──
         const ga = document.getElementById('gameArea');
