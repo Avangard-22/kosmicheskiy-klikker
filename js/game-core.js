@@ -3,7 +3,6 @@
 'use strict';
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
-const getFeat = () => window.GAME_FEATURES || {};
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
 if (!window.gameState) {
@@ -263,10 +262,9 @@ window.GAME_CORE = {
             const speed = Date.now() - parseInt(block.dataset.spawnTime);
             window.achievementsSystem.updatePlanetSpeed(planet, speed);
         }
-
-    this.showRewardText(destroyResult.reward || 0, block);
-    FEAT.createExplosion(block);
-}
+        this.showRewardText(destroyResult.reward || 0, block);
+        // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
+        if (getFeat().createExplosion) getFeat().createExplosion(block);
         // ── Очистка блока из DOM ──
         const ga = document.getElementById('gameArea');
         if (ga?.contains(block)) ga.removeChild(block);
@@ -757,8 +755,7 @@ window.gameFunctions = {
     createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
     showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
     showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
-    createExplosion: bl => {
-    if (window.GAME_FEATURES && typeof window,
+    createExplosion: bl => getFeat().createExplosion?.(bl),
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
