@@ -96,7 +96,7 @@ function initCanvas() {
     
     eventCanvas = document.createElement('canvas');
     eventCanvas.id = 'randomEventsCanvas';
-    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1000;';
+    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1050;';
     document.body.appendChild(eventCanvas);
     
     resizeCanvas();
@@ -488,6 +488,13 @@ function handlePointerDown(e) {
     const mx = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
     const my = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
     
+    // ✅ НОВОЕ: Отладочный лог перед поиском события
+    console.log('🖱️ [EVENTS] Pointer down at', mx, my, 'activeEvents:', activeEvents.length);
+    for (let i = 0; i < activeEvents.length; i++) {
+        const evt = activeEvents[i];
+        console.log(`  → Event ${i}: ${evt.type}, alive=${evt.alive}, clicked=${evt.clicked}`);
+    }
+    
     // Ищем событие сверху вниз (чтобы сначала обрабатывались верхние)
     for (let i = activeEvents.length - 1; i >= 0; i--) {
         const evt = activeEvents[i];
@@ -517,22 +524,21 @@ function resume() {
 function init() {
     initCanvas();
     
+    // ✅ ГАРАНТИЯ: привязываем обработчики ДО запуска gameLoop
     eventCanvas.addEventListener('pointerdown', handlePointerDown);
     eventCanvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handlePointerDown(e);
     }, { passive: false });
-    
+
     if (window.EventBus) {
         window.EventBus.on('game:paused', pause);
         window.EventBus.on('game:resumed', resume);
     }
-    
-    // Запускаем планировщик событий
+
     scheduleNextEvent();
     gameLoop();
-    
-    console.log('🌠 Random Events v2.0 initialized (2-30 min interval, 1/2 clicks)');
+    console.log('🌠 Random Events v2.0 initialized (z-index: 1000)');
 }
 
 // ─────────────────────────────────────────────────────
