@@ -535,11 +535,7 @@ setLocation: function(loc) {
     if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
     window.gameState.currentLocation = loc;
     
-    // ✅ НОВОЕ: Сброс идеальной серии при смене планеты
-    if (window.gameMetrics) {
-        window.gameMetrics.currentPerfectStreak = 0;
-    }
-        // ✅ НОВОЕ: Сброс серии критов при смене планеты
+    // ✅ НОВОЕ: Сброс серии критов при смене планеты
     if (window.gameMetrics) {
         window.gameMetrics.currentCritStreak = 0;
     }
