@@ -26,7 +26,7 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: CFG.isMobile ? 25 : 20,
+    blockSpeed: CFG.isMobile ? 25 : 12,  // Desktop: снижена с 20 до 12
    deviceHealthMult: 1.0,  // ✅ НОВОЕ: множитель здоровья от детектора устройства
     lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
