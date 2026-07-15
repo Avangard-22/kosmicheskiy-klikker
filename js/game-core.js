@@ -756,7 +756,8 @@ window.gameFunctions = {
     createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
     showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
     showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
-    createExplosion: bl => getFeat().createExplosion?.(bl),
+    createExplosion: bl => {
+    if (window.GAME_FEATURES && typeof window,
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
