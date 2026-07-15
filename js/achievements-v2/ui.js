@@ -166,6 +166,11 @@ function attachButtonListener() {
 // ═══════════════════════════════════════════════
 function getCurrentPlanetModule() {
     const planet = window.gameState?.currentLocation || 'mercury';
+    // ✅ Используем фабрику вместо жёсткого маппинга
+    if (window.AchievementsV2?.PlanetFactory) {
+        return window.AchievementsV2.PlanetFactory.get(planet);
+    }
+    // Fallback для совместимости
     const modules = { mercury: window.AchievementsV2?.Mercury };
     return modules[planet] || window.AchievementsV2?.Mercury;
 }
