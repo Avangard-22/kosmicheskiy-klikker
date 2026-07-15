@@ -4,7 +4,9 @@
 
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
-const FEAT = window.GAME_FEATURES;
+// ✅ БЕЗОПАСНОЕ ПОЛУЧЕНИЕ: Геттер предотвращает краш, если game-features.js 
+// загрузился с задержкой или содержит ошибку.
+const getFeat = () => window.GAME_FEATURES || {};
 
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
@@ -177,7 +179,8 @@ this.animateBlock(block);
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
          if (pos > window.innerHeight) {
-    FEAT.applyUpgradePenalty();
+    // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: не упадёт, если FEAT ещё не загружен
+    if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
     
     // ✅ НОВОЕ: Сброс идеальной серии при пропуске блока
     if (window.gameMetrics) {
@@ -294,7 +297,8 @@ if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlane
     window.achievementsSystem.updatePlanetSpeed(planet, speed);
 }
     this.showRewardText(destroyResult.reward || 0, block);
-    FEAT.createExplosion(block);
+    // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
+    if (getFeat().createExplosion) getFeat().createExplosion(block);
     
     // ── Очистка блока из DOM ──
     const ga = document.getElementById('gameArea');
@@ -780,11 +784,12 @@ setTimeout(() => this.createMovingBlock(), 500);
             }
         };
 
-        add('upgradeClickBtn', () => FEAT.buyClickPower());
-        add('upgradeHelperBtn', () => FEAT.buyHelper());
-        add('upgradeCritChanceBtn', () => FEAT.buyCritChance());
-        add('upgradeCritMultBtn', () => FEAT.buyCritMultiplier());
-        add('upgradeHelperDmgBtn', () => FEAT.buyHelperDamage());
+        // ✅ БЕЗОПАСНЫЕ ВЫЗОВЫ с опциональной цепочкой (?.)
+        add('upgradeClickBtn', () => getFeat().buyClickPower?.());
+        add('upgradeHelperBtn', () => getFeat().buyHelper?.());
+        add('upgradeCritChanceBtn', () => getFeat().buyCritChance?.());
+        add('upgradeCritMultBtn', () => getFeat().buyCritMultiplier?.());
+        add('upgradeHelperDmgBtn', () => getFeat().buyHelperDamage?.());
 
         add('shareBtn', () => {
             if (!window.gameState) return;
@@ -863,7 +868,7 @@ window.gameFunctions = {
     createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
     showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
     showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
-    createExplosion: bl => FEAT.createExplosion(bl),
+    createExplosion: bl => getFeat().createExplosion?.(bl),
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
@@ -871,7 +876,7 @@ window.gameFunctions = {
     shareResult: () => {},
     updateAllTranslations: () => {},
     setLocation: loc => window.GAME_CORE.setLocation(loc),
-    applyUpgradePenalty: () => FEAT.applyUpgradePenalty(),
+    applyUpgradePenalty: () => getFeat().applyUpgradePenalty?.(),
     calculateClickPower: () => window.GAME_CORE.calculateClickPower()
 };
 
