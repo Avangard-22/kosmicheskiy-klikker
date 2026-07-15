@@ -263,8 +263,12 @@ window.GAME_CORE = {
             window.achievementsSystem.updatePlanetSpeed(planet, speed);
         }
         this.showRewardText(destroyResult.reward || 0, block);
-        // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
-        if (getFeat().createExplosion) getFeat().createExplosion(block);
+    // ✅ ПРЯМОЙ ВЫЗОВ с явной проверкой и логом для отладки
+    if (window.GAME_FEATURES && typeof window.GAME_FEATURES.createExplosion === 'function') {
+        window.GAME_FEATURES.createExplosion(block);
+    } else {
+        console.warn('⚠️ [CORE] GAME_FEATURES.createExplosion недоступен!');
+    }
         // ── Очистка блока из DOM ──
         const ga = document.getElementById('gameArea');
         if (ga?.contains(block)) ga.removeChild(block);
