@@ -158,6 +158,11 @@ window.GAME_FEATURES = {
         if (planet && window.achievementsSystem?.incrementPlanetBobo) {
             window.achievementsSystem.incrementPlanetBobo(planet);
         }
+        // ✅ НОВОЕ: Метрика активации Bobo
+        const planet = window.gameState?.currentLocation;
+        if (planet && window.achievementsSystem?.incrementPlanetBobo) {
+            window.achievementsSystem.incrementPlanetBobo(planet);
+        }
 
         if (typeof window.saveGame === 'function') window.saveGame();
     },
