@@ -21,8 +21,8 @@ const CONFIG = {
         // ── ЭКОНОМИКА И ПОМОЩНИКИ ──
         crystals:  { base: 200,   growth: 1.60, rewardBase: 30,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:      { base: 3,     growth: 1.50, rewardBase: 100,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
-        boboKills: { base: 5,     growth: 1.55, rewardBase: 45,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
         boboDmg:   { base: 1000,  growth: 1.55, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '⚡' },
+        boboCrystals: { base: 500, growth: 1.60, rewardBase: 40,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '💰' }, // ✅ НОВОЕ: Кристаллы Bobo
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:      { base: 60,    growth: 1.30, rewardBase: 50,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
@@ -32,26 +32,21 @@ const CONFIG = {
 };
 
 const NAME_TEMPLATES = {
-    // ── БОЕВЫЕ ──
-    blocks:    { key: 'achievements.mercury.metrics.blocks',   fallback: 'Уничтожено блоков' },
-    crits:     { key: 'achievements.mercury.metrics.crits',    fallback: 'Критических ударов' },
-    combo:     { key: 'achievements.mercury.metrics.combo',    fallback: 'Максимальное комбо' },
-    rare:      { key: 'achievements.mercury.metrics.rare',     fallback: 'Редких блоков' },
-    damage:    { key: 'achievements.mercury.metrics.damage',   fallback: 'Нанесено урона' },
-    
-    // ── ЭКОНОМИКА И ПОМОЩНИКИ ──
-    crystals:  { key: 'achievements.mercury.metrics.crystals', fallback: 'Заработано кристаллов' },
-    bobo:      { key: 'achievements.mercury.metrics.bobo',     fallback: 'Активаций Bobo' },
-    boboKills: { key: 'achievements.mercury.metrics.boboKills',fallback: 'Блоков уничтожено Bobo' },
-    boboDmg:   { key: 'achievements.mercury.metrics.boboDmg',  fallback: 'Урона нанесено Bobo' },
-    
-    // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
-    time:      { key: 'achievements.mercury.metrics.time',     fallback: 'Секунд на планете' },
-    speed:     { key: 'achievements.mercury.metrics.speed',    fallback: 'Рекорд скорости (мс)' },
+    blocks:    { key: 'achievements.mercury.metrics.blocks',    fallback: 'Уничтожено блоков' },
+    crits:     { key: 'achievements.mercury.metrics.crits',     fallback: 'Критических ударов' },
+    combo:     { key: 'achievements.mercury.metrics.combo',     fallback: 'Максимальное комбо' },
+    rare:      { key: 'achievements.mercury.metrics.rare',      fallback: 'Редких блоков' },
+    damage:    { key: 'achievements.mercury.metrics.damage',    fallback: 'Нанесено урона' },
+    crystals:  { key: 'achievements.mercury.metrics.crystals',  fallback: 'Заработано кристаллов' },
+    bobo:      { key: 'achievements.mercury.metrics.bobo',      fallback: 'Активаций Bobo' },
+    boboDmg:   { key: 'achievements.mercury.metrics.boboDmg',   fallback: 'Урона нанесено Bobo' },
+    boboCrystals: { key: 'achievements.mercury.metrics.boboCrystals', fallback: 'Кристаллов заработано Bobo' }, // ✅ НОВОЕ
+    time:      { key: 'achievements.mercury.metrics.time',      fallback: 'Секунд на планете' },
+    speed:     { key: 'achievements.mercury.metrics.speed',     fallback: 'Рекорд скорости (мс)' },
     critStreak:{ key: 'achievements.mercury.metrics.critStreak',fallback: 'Серия критов подряд' }
 };
 
-// ✅ Надёжная регистрация через фабрику (с повторными попытками)
+// ✅ Надёжная регистрация через фабрику
 function registerMercury() {
     if (window.AchievementsV2 && window.AchievementsV2.PlanetFactory) {
         window.AchievementsV2.PlanetFactory.create(CONFIG, NAME_TEMPLATES);
@@ -62,7 +57,6 @@ function registerMercury() {
     }
 }
 
-// Запускаем регистрацию
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', registerMercury);
 } else {
