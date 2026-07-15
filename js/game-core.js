@@ -539,6 +539,10 @@ setLocation: function(loc) {
     if (window.gameMetrics) {
         window.gameMetrics.currentPerfectStreak = 0;
     }
+        // ✅ НОВОЕ: Сброс серии критов при смене планеты
+    if (window.gameMetrics) {
+        window.gameMetrics.currentCritStreak = 0;
+    }
 
         const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
