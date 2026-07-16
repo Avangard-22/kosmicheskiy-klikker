@@ -6,15 +6,9 @@
 const translations = {
     ru: {
         gameTitle: {
-            mercury: "☿ Меркурий",
-            venus: "♀ Венера",
-            earth: "♁ Земля",
-            mars: "♂ Марс",
-            jupiter: "♃ Юпитер",
-            saturn: "♄ Сатурн",
-            uranus: "♅ Уран",
-            neptune: "♆ Нептун",
-            pluto: "♇ Плутон"
+            mercury: "☿ Меркурий", venus: "♀ Венера", earth: "♁ Земля",
+            mars: "♂ Марс", jupiter: "♃ Юпитер", saturn: "♄ Сатурн",
+            uranus: "♅ Уран", neptune: "♆ Нептун", pluto: "♇ Плутон"
         },
         progressText: "Прогресс: {current} / {target} а.е. ({percent}%)",
         tooltips: {
@@ -38,243 +32,21 @@ const translations = {
             unlocked: "🪐 {location} разблокирована!"
         },
         ui: {
-            continue: "Продолжить",
-            newGame: "Новая игра",
-            crystals: "Кристаллы",
-            power: "Сила",
-            crit: "Крит",
-            critMult: "Множ.крита",
-            save: "Сохранить",
-            shop: "Магазин",
-            achievements: "Достижения",
+            continue: "Продолжить", newGame: "Новая игра", crystals: "Кристаллы",
+            power: "Сила", crit: "Крит", critMult: "Множ.крита",
+            save: "Сохранить", shop: "Магазин", achievements: "Достижения",
             dailyBonus: "Ежедневный бонус"
         },
         achievements: {
-            mercury: {
-                description: "Исследование Меркурия",
-                levels: {
-                    m_first: "Первый камень Меркурия",
-                    m_blocks_100: "Разрушитель кратеров",
-                    m_blocks_500: "Покоритель поверхности",
-                    m_crits_50: "Точный удар в жаре",
-                    m_combo_15: "Ритм Меркурия",
-                    m_rare_5: "Охотник за аномалиями",
-                    m_complete: "☿ Меркурий покорён!"
-                }
-            },
-            venus: {
-                description: "Исследование Венеры",
-                levels: {
-                    v_first: "Сквозь облака Венеры",
-                    v_blocks_250: "Борец с парниковым эффектом",
-                    v_blocks_1000: "Кислотный разрушитель",
-                    v_crits_100: "Точность в тумане",
-                    v_combo_25: "Вихрь Венеры",
-                    v_rare_10: "Искатель артефактов",
-                    v_complete: "♀ Венера покорена!"
-                }
-            },
-            earth: {
-                description: "Защита Земли",
-                levels: {
-                    e_first: "Голубая планета",
-                    e_blocks_500: "Защитник Земли",
-                    e_blocks_2500: "Страж атмосферы",
-                    e_crits_200: "Мастер гравитации",
-                    e_combo_35: "Орбитальный ритм",
-                    e_rare_20: "Коллекционер реликвий",
-                    e_complete: "♁ Земля спасена!"
-                }
-            },
-            mars: {
-                description: "Колонизация Марса",
-                levels: {
-                    ma_first: "Красная пыль",
-                    ma_blocks_1000: "Путник по каньонам",
-                    ma_blocks_5000: "Покоритель Олимпа",
-                    ma_crits_300: "Марсианский снайпер",
-                    ma_combo_50: "Шторм в пустыне",
-                    ma_rare_30: "Археолог Марса",
-                    ma_complete: "♂ Марс колонизирован!"
-                }
-            },
-            jupiter: {
-                description: "Покорение Юпитера",
-                levels: {
-                    j_first: "Газовый гигант",
-                    j_blocks_2500: "В буре Юпитера",
-                    j_blocks_12000: "В сердце БКП",
-                    j_crits_500: "Молния Юпитера",
-                    j_combo_75: "Вихрь гиганта",
-                    j_rare_50: "Охотник за спутниками",
-                    j_complete: "♃ Юпитер покорён!"
-                }
-            },
-            saturn: {
-                description: "Исследование Сатурна",
-                levels: {
-                    s_first: "Властелин колец",
-                    s_blocks_5000: "Скольжение по кольцам",
-                    s_blocks_25000: "Разрушитель ледяных глыб",
-                    s_crits_800: "Точность сквозь кольца",
-                    s_combo_100: "Космический серфер",
-                    s_rare_75: "Коллекционер Титана",
-                    s_complete: "♄ Сатурн покорён!"
-                }
-            },
-            uranus: {
-                description: "Исследование Урана",
-                levels: {
-                    u_first: "Ледяной гигант",
-                    u_blocks_10000: "Наклонный путь",
-                    u_blocks_50000: "Холодная ярость",
-                    u_crits_1200: "Замораживающий удар",
-                    u_combo_150: "Метель Урана",
-                    u_rare_100: "Ледяные кристаллы",
-                    u_complete: "♅ Уран покорён!"
-                }
-            },
-            neptune: {
-                description: "Покорение Нептуна",
-                levels: {
-                    n_first: "Синяя бездна",
-                    n_blocks_20000: "В ураганах Нептуна",
-                    n_blocks_100000: "Повелитель ветров",
-                    n_crits_2000: "Глубинный удар",
-                    n_combo_200: "Шторм 2000 км/ч",
-                    n_rare_150: "Сокровища Тритона",
-                    n_complete: "♆ Нептун покорён!"
-                }
-            },
-            pluto: {
-                description: "Покорение Плутона",
-                levels: {
-                    p_first: "Граница системы",
-                    p_blocks_50000: "Путник пояса Койпера",
-                    p_blocks_250000: "Тень Харона",
-                    p_crits_3500: "Ледяное сердце",
-                    p_combo_300: "Вечная мерзлота",
-                    p_rare_250: "Секреты Плутона",
-                    p_complete: "♇ Плутон покорён!"
-                }
-            },
-            combatMastery: {
-                description: "Общий урон",
-                levels: {
-                    dmg_100k: "100K урона",
-                    dmg_1m: "1M урона",
-                    dmg_10m: "10M урона",
-                    dmg_100m: "100M урона",
-                    dmg_1b: "1B урона",
-                    dmg_10b: "Разрушитель миров 💥"
-                }
-            },
-            resourceCollector: {
-                description: "Собрано кристаллов",
-                levels: {
-                    cry_10k: "10K кристаллов",
-                    cry_100k: "100K кристаллов",
-                    cry_1m: "1M кристаллов",
-                    cry_10m: "10M кристаллов",
-                    cry_100m: "Магнат космоса 💎"
-                }
-            },
-            explorer: {
-                description: "Посещено планет",
-                levels: {
-                    planets_1: "Первая планета",
-                    planets_3: "Внутренние планеты",
-                    planets_5: "Пояс астероидов",
-                    planets_7: "Внешние планеты",
-                    planets_9: "Покоритель СС 🌌"
-                }
-            },
-            comboLegend: {
-                description: "Максимальное комбо",
-                levels: {
-                    cmb_50: "50x комбо",
-                    cmb_100: "100x комбо",
-                    cmb_250: "250x комбо",
-                    cmb_500: "500x комбо",
-                    cmb_1000: "Легенда ритма 🔥"
-                }
-            },
-            critMaster: {
-                description: "Критических ударов",
-                levels: {
-                    crit_1k: "1K критов",
-                    crit_10k: "10K критов",
-                    crit_100k: "100K критов",
-                    crit_1m: "Мастер точности ⚡"
-                }
-            },
-            upgradeEnthusiast: {
-                description: "Куплено улучшений",
-                levels: {
-                    up_10: "10 улучшений",
-                    up_50: "50 улучшений",
-                    up_100: "100 улучшений",
-                    up_250: "Архитектор силы 🔧"
-                }
-            },
-            helperCommander: {
-                description: "Активировано помощников",
-                levels: {
-                    help_5: "5 помощников",
-                    help_25: "25 помощников",
-                    help_100: "Командир эскадры 🤖"
-                }
-            },
-            boosterUser: {
-                description: "Использовано бустов",
-                levels: {
-                    boost_1: "Первый буст",
-                    boost_5: "5 бустов",
-                    boost_15: "15 бустов",
-                    boost_30: "30 бустов",
-                    boost_50: "50 бустов",
-                    boost_100: "100 бустов"
-                }
-            },
-            timeInvestor: {
-                description: "Время в игре",
-                levels: {
-                    t_1h: "1 час",
-                    t_5h: "5 часов",
-                    t_10h: "10 часов",
-                    t_25h: "Преданный игрок ⏰"
-                }
-            },
-            rareHunter: {
-                description: "Разрушено редких блоков",
-                levels: {
-                    r_10: "10 редких блоков",
-                    r_50: "50 редких блоков",
-                    r_200: "200 редких блоков",
-                    r_1000: "Легенда удачи ⭐"
-                }
-            },
-            clickMaster: {
-                description: "Совершено кликов",
-                levels: {
-                    cl_1k: "1K кликов",
-                    cl_10k: "10K кликов",
-                    cl_100k: "100K кликов",
-                    cl_1m: "1M кликов",
-                    cl_10m: "Легенда кликов 👆"
-                }
-            }
-        },
-        shop: {
-            title: "🛒 Магазин бонусов",
-            items: {
-                timeWarp: { name: "⏳ Искажение времени", desc: "Блоки движутся на 50% медленнее" },
-                crystalBoost: { name: "💰 Усилитель кристаллов", desc: "+100% к наградам за блоки" },
-                powerSurge: { name: "⚡ Скачок силы", desc: "+200% к силе клика" },
-                luckyCharm: { name: "🍀 Талисман удачи", desc: "+50% шанс редких блоков" },
-                invincible: { name: "🛡️ Неуязвимость", desc: "Защита от штрафов за пропуск блока" },
-                autoClicker: { name: "🤖 Авто-кликер", desc: "Автоматический клик каждые 0.5 сек" }
-            }
+            mercury: { description: "Исследование Меркурия", levels: {} },
+            venus: { description: "Исследование Венеры", levels: {} },
+            earth: { description: "Защита Земли", levels: {} },
+            mars: { description: "Колонизация Марса", levels: {} },
+            jupiter: { description: "Покорение Юпитера", levels: {} },
+            saturn: { description: "Исследование Сатурна", levels: {} },
+            uranus: { description: "Исследование Урана", levels: {} },
+            neptune: { description: "Покорение Нептуна", levels: {} },
+            pluto: { description: "Покорение Плутона", levels: {} }
         },
         dailyBonus: {
             title: "Ежедневный бонус",
@@ -326,191 +98,22 @@ const translations = {
             noSave: "❌ No save found",
             helperAlreadyActive: "Bobo is already active!"
         },
-        locationProgress: {
-            unlocked: "🪐 {location} unlocked!"
-        },
+        locationProgress: { unlocked: "🪐 {location} unlocked!" },
         ui: {
             continue: "Continue", newGame: "New Game", crystals: "Crystals",
             power: "Power", crit: "Crit", critMult: "Crit Mult",
-            save: "Save", shop: "Shop", achievements: "Achievements",
-            dailyBonus: "Daily Bonus"
+            save: "Save", shop: "Shop", achievements: "Achievements", dailyBonus: "Daily Bonus"
         },
         achievements: {
-            mercury: {
-                description: "Mercury Exploration",
-                levels: {
-                    m_first: "First Mercury Stone", m_blocks_100: "Crater Destroyer",
-                    m_blocks_500: "Surface Conqueror", m_crits_50: "Precise Hit in Heat",
-                    m_combo_15: "Mercury Rhythm", m_rare_5: "Anomaly Hunter",
-                    m_complete: "☿ Mercury Conquered!"
-                }
-            },
-            venus: {
-                description: "Venus Exploration",
-                levels: {
-                    v_first: "Through Venus Clouds", v_blocks_250: "Greenhouse Fighter",
-                    v_blocks_1000: "Acid Destroyer", v_crits_100: "Precision in Fog",
-                    v_combo_25: "Venus Vortex", v_rare_10: "Artifact Seeker",
-                    v_complete: "♀ Venus Conquered!"
-                }
-            },
-            earth: {
-                description: "Earth Defense",
-                levels: {
-                    e_first: "Blue Planet", e_blocks_500: "Earth Defender",
-                    e_blocks_2500: "Atmosphere Guardian", e_crits_200: "Gravity Master",
-                    e_combo_35: "Orbital Rhythm", e_rare_20: "Relic Collector",
-                    e_complete: "♁ Earth Saved!"
-                }
-            },
-            mars: {
-                description: "Mars Colonization",
-                levels: {
-                    ma_first: "Red Dust", ma_blocks_1000: "Canyon Walker",
-                    ma_blocks_5000: "Olympus Conqueror", ma_crits_300: "Martian Sniper",
-                    ma_combo_50: "Desert Storm", ma_rare_30: "Mars Archaeologist",
-                    ma_complete: "♂ Mars Colonized!"
-                }
-            },
-            jupiter: {
-                description: "Jupiter Conquest",
-                levels: {
-                    j_first: "Gas Giant", j_blocks_2500: "In Jupiter's Storm",
-                    j_blocks_12000: "In the Heart of GRS", j_crits_500: "Jupiter's Lightning",
-                    j_combo_75: "Giant's Vortex", j_rare_50: "Moon Hunter",
-                    j_complete: "♃ Jupiter Conquered!"
-                }
-            },
-            saturn: {
-                description: "Saturn Exploration",
-                levels: {
-                    s_first: "Lord of the Rings", s_blocks_5000: "Ring Slider",
-                    s_blocks_25000: "Ice Block Destroyer", s_crits_800: "Precision Through Rings",
-                    s_combo_100: "Cosmic Surfer", s_rare_75: "Titan Collector",
-                    s_complete: "♄ Saturn Conquered!"
-                }
-            },
-            uranus: {
-                description: "Uranus Exploration",
-                levels: {
-                    u_first: "Ice Giant", u_blocks_10000: "Tilted Path",
-                    u_blocks_50000: "Cold Fury", u_crits_1200: "Freezing Strike",
-                    u_combo_150: "Uranus Blizzard", u_rare_100: "Ice Crystals",
-                    u_complete: "♅ Uranus Conquered!"
-                }
-            },
-            neptune: {
-                description: "Neptune Conquest",
-                levels: {
-                    n_first: "Blue Abyss", n_blocks_20000: "In Neptune's Hurricanes",
-                    n_blocks_100000: "Wind Lord", n_crits_2000: "Deep Strike",
-                    n_combo_200: "2000 km/h Storm", n_rare_150: "Triton's Treasures",
-                    n_complete: "♆ Neptune Conquered!"
-                }
-            },
-            pluto: {
-                description: "Pluto Conquest",
-                levels: {
-                    p_first: "System's Edge", p_blocks_50000: "Kuiper Belt Walker",
-                    p_blocks_250000: "Charon's Shadow", p_crits_3500: "Ice Heart",
-                    p_combo_300: "Eternal Frost", p_rare_250: "Pluto's Secrets",
-                    p_complete: "♇ Pluto Conquered!"
-                }
-            },
-            combatMastery: {
-                description: "Total Damage",
-                levels: {
-                    dmg_100k: "100K Damage", dmg_1m: "1M Damage",
-                    dmg_10m: "10M Damage", dmg_100m: "100M Damage",
-                    dmg_1b: "1B Damage", dmg_10b: "World Destroyer 💥"
-                }
-            },
-            resourceCollector: {
-                description: "Crystals Collected",
-                levels: {
-                    cry_10k: "10K Crystals", cry_100k: "100K Crystals",
-                    cry_1m: "1M Crystals", cry_10m: "10M Crystals",
-                    cry_100m: "Space Magnate 💎"
-                }
-            },
-            explorer: {
-                description: "Planets Visited",
-                levels: {
-                    planets_1: "First Planet", planets_3: "Inner Planets",
-                    planets_5: "Asteroid Belt", planets_7: "Outer Planets",
-                    planets_9: "Solar System Conqueror 🌌"
-                }
-            },
-            comboLegend: {
-                description: "Maximum Combo",
-                levels: {
-                    cmb_50: "50x Combo", cmb_100: "100x Combo",
-                    cmb_250: "250x Combo", cmb_500: "500x Combo",
-                    cmb_1000: "Rhythm Legend 🔥"
-                }
-            },
-            critMaster: {
-                description: "Critical Hits",
-                levels: {
-                    crit_1k: "1K Crits", crit_10k: "10K Crits",
-                    crit_100k: "100K Crits", crit_1m: "Precision Master ⚡"
-                }
-            },
-            upgradeEnthusiast: {
-                description: "Upgrades Purchased",
-                levels: {
-                    up_10: "10 Upgrades", up_50: "50 Upgrades",
-                    up_100: "100 Upgrades", up_250: "Power Architect 🔧"
-                }
-            },
-            helperCommander: {
-                description: "Helpers Activated",
-                levels: {
-                    help_5: "5 Helpers", help_25: "25 Helpers",
-                    help_100: "Squad Commander 🤖"
-                }
-            },
-            boosterUser: {
-                description: "Boosters Used",
-                levels: {
-                    boost_1: "First Boost", boost_5: "5 Boosts",
-                    boost_15: "15 Boosts", boost_30: "30 Boosts",
-                    boost_50: "50 Boosts", boost_100: "100 Boosts"
-                }
-            },
-            timeInvestor: {
-                description: "Time Played",
-                levels: {
-                    t_1h: "1 Hour", t_5h: "5 Hours",
-                    t_10h: "10 Hours", t_25h: "Dedicated Player ⏰"
-                }
-            },
-            rareHunter: {
-                description: "Rare Blocks Destroyed",
-                levels: {
-                    r_10: "10 Rare Blocks", r_50: "50 Rare Blocks",
-                    r_200: "200 Rare Blocks", r_1000: "Luck Legend ⭐"
-                }
-            },
-            clickMaster: {
-                description: "Clicks Made",
-                levels: {
-                    cl_1k: "1K Clicks", cl_10k: "10K Clicks",
-                    cl_100k: "100K Clicks", cl_1m: "1M Clicks",
-                    cl_10m: "Click Legend 👆"
-                }
-            }
-        },
-        shop: {
-            title: "🛒 Bonus Shop",
-            items: {
-                timeWarp: { name: "⏳ Time Warp", desc: "Blocks move 50% slower" },
-                crystalBoost: { name: "💰 Crystal Boost", desc: "+100% block rewards" },
-                powerSurge: { name: "⚡ Power Surge", desc: "+200% click power" },
-                luckyCharm: { name: "🍀 Lucky Charm", desc: "+50% rare block chance" },
-                invincible: { name: "🛡️ Invincibility", desc: "Protection from skip penalties" },
-                autoClicker: { name: "🤖 Auto-Clicker", desc: "Automatic click every 0.5 sec" }
-            }
+            mercury: { description: "Mercury Exploration", levels: {} },
+            venus: { description: "Venus Exploration", levels: {} },
+            earth: { description: "Earth Defense", levels: {} },
+            mars: { description: "Mars Colonization", levels: {} },
+            jupiter: { description: "Jupiter Conquest", levels: {} },
+            saturn: { description: "Saturn Exploration", levels: {} },
+            uranus: { description: "Uranus Exploration", levels: {} },
+            neptune: { description: "Neptune Conquest", levels: {} },
+            pluto: { description: "Pluto Conquest", levels: {} }
         },
         dailyBonus: {
             title: "Daily Bonus",
@@ -532,10 +135,8 @@ const translations = {
             }
         },
         notifications: {
-            achievement: "🏆 ACHIEVEMENT!",
-            reward: "+{amount} 💎",
-            stage: "Stage: {stage}",
-            allLevelsComplete: "🏆 All levels complete! Total: {total}"
+            achievement: "🏆 ACHIEVEMENT!", reward: "+{amount} 💎",
+            stage: "Stage: {stage}", allLevelsComplete: "🏆 All levels complete! Total: {total}"
         }
     },
     zh: {
@@ -562,191 +163,22 @@ const translations = {
             noSave: "❌ 未找到存档",
             helperAlreadyActive: "Bobo 已经激活!"
         },
-        locationProgress: {
-            unlocked: "🪐 {location} 已解锁!"
-        },
+        locationProgress: { unlocked: "🪐 {location} 已解锁!" },
         ui: {
             continue: "继续", newGame: "新游戏", crystals: "水晶",
             power: "力量", crit: "暴击", critMult: "暴击倍率",
-            save: "保存", shop: "商店", achievements: "成就",
-            dailyBonus: "每日奖励"
+            save: "保存", shop: "商店", achievements: "成就", dailyBonus: "每日奖励"
         },
         achievements: {
-            mercury: {
-                description: "水星探索",
-                levels: {
-                    m_first: "第一块水星石", m_blocks_100: "陨石坑破坏者",
-                    m_blocks_500: "表面征服者", m_crits_50: "高温精准打击",
-                    m_combo_15: "水星节奏", m_rare_5: "异常猎人",
-                    m_complete: "☿ 水星已征服!"
-                }
-            },
-            venus: {
-                description: "金星探索",
-                levels: {
-                    v_first: "穿越金星云层", v_blocks_250: "温室效应战士",
-                    v_blocks_1000: "酸性破坏者", v_crits_100: "雾中精准",
-                    v_combo_25: "金星漩涡", v_rare_10: "神器寻找者",
-                    v_complete: "♀ 金星已征服!"
-                }
-            },
-            earth: {
-                description: "地球防御",
-                levels: {
-                    e_first: "蓝色星球", e_blocks_500: "地球守护者",
-                    e_blocks_2500: "大气层守卫", e_crits_200: "重力大师",
-                    e_combo_35: "轨道节奏", e_rare_20: "遗物收藏家",
-                    e_complete: "♁ 地球已拯救!"
-                }
-            },
-            mars: {
-                description: "火星殖民",
-                levels: {
-                    ma_first: "红色尘埃", ma_blocks_1000: "峡谷行者",
-                    ma_blocks_5000: "奥林匹斯征服者", ma_crits_300: "火星狙击手",
-                    ma_combo_50: "沙漠风暴", ma_rare_30: "火星考古学家",
-                    ma_complete: "♂ 火星已殖民!"
-                }
-            },
-            jupiter: {
-                description: "木星征服",
-                levels: {
-                    j_first: "气态巨行星", j_blocks_2500: "木星风暴中",
-                    j_blocks_12000: "大红斑中心", j_crits_500: "木星闪电",
-                    j_combo_75: "巨行星漩涡", j_rare_50: "卫星猎人",
-                    j_complete: "♃ 木星已征服!"
-                }
-            },
-            saturn: {
-                description: "土星探索",
-                levels: {
-                    s_first: "环之王", s_blocks_5000: "环上滑行",
-                    s_blocks_25000: "冰块破坏者", s_crits_800: "环间精准",
-                    s_combo_100: "宇宙冲浪者", s_rare_75: "泰坦收藏家",
-                    s_complete: "♄ 土星已征服!"
-                }
-            },
-            uranus: {
-                description: "天王星探索",
-                levels: {
-                    u_first: "冰巨行星", u_blocks_10000: "倾斜之路",
-                    u_blocks_50000: "寒冷之怒", u_crits_1200: "冰冻打击",
-                    u_combo_150: "天王星暴风雪", u_rare_100: "冰晶",
-                    u_complete: "♅ 天王星已征服!"
-                }
-            },
-            neptune: {
-                description: "海王星征服",
-                levels: {
-                    n_first: "蓝色深渊", n_blocks_20000: "海王星飓风中",
-                    n_blocks_100000: "风之王", n_crits_2000: "深海打击",
-                    n_combo_200: "2000公里/小时风暴", n_rare_150: "海卫一的宝藏",
-                    n_complete: "♆ 海王星已征服!"
-                }
-            },
-            pluto: {
-                description: "冥王星征服",
-                levels: {
-                    p_first: "系统边缘", p_blocks_50000: "柯伊伯带行者",
-                    p_blocks_250000: "卡戎之影", p_crits_3500: "冰之心",
-                    p_combo_300: "永恒霜冻", p_rare_250: "冥王星的秘密",
-                    p_complete: "♇ 冥王星已征服!"
-                }
-            },
-            combatMastery: {
-                description: "总伤害",
-                levels: {
-                    dmg_100k: "100K 伤害", dmg_1m: "1M 伤害",
-                    dmg_10m: "10M 伤害", dmg_100m: "100M 伤害",
-                    dmg_1b: "1B 伤害", dmg_10b: "世界破坏者 💥"
-                }
-            },
-            resourceCollector: {
-                description: "收集的水晶",
-                levels: {
-                    cry_10k: "10K 水晶", cry_100k: "100K 水晶",
-                    cry_1m: "1M 水晶", cry_10m: "10M 水晶",
-                    cry_100m: "太空大亨 💎"
-                }
-            },
-            explorer: {
-                description: "访问的行星",
-                levels: {
-                    planets_1: "第一颗行星", planets_3: "内行星",
-                    planets_5: "小行星带", planets_7: "外行星",
-                    planets_9: "太阳系征服者 🌌"
-                }
-            },
-            comboLegend: {
-                description: "最大连击",
-                levels: {
-                    cmb_50: "50x 连击", cmb_100: "100x 连击",
-                    cmb_250: "250x 连击", cmb_500: "500x 连击",
-                    cmb_1000: "节奏传奇 🔥"
-                }
-            },
-            critMaster: {
-                description: "暴击次数",
-                levels: {
-                    crit_1k: "1K 暴击", crit_10k: "10K 暴击",
-                    crit_100k: "100K 暴击", crit_1m: "精准大师 ⚡"
-                }
-            },
-            upgradeEnthusiast: {
-                description: "购买的升级",
-                levels: {
-                    up_10: "10 次升级", up_50: "50 次升级",
-                    up_100: "100 次升级", up_250: "力量架构师 🔧"
-                }
-            },
-            helperCommander: {
-                description: "激活的助手",
-                levels: {
-                    help_5: "5 个助手", help_25: "25 个助手",
-                    help_100: "小队指挥官 🤖"
-                }
-            },
-            boosterUser: {
-                description: "使用的增益",
-                levels: {
-                    boost_1: "第一个增益", boost_5: "5 个增益",
-                    boost_15: "15 个增益", boost_30: "30 个增益",
-                    boost_50: "50 个增益", boost_100: "100 个增益"
-                }
-            },
-            timeInvestor: {
-                description: "游戏时间",
-                levels: {
-                    t_1h: "1 小时", t_5h: "5 小时",
-                    t_10h: "10 小时", t_25h: "忠实玩家 ⏰"
-                }
-            },
-            rareHunter: {
-                description: "破坏的稀有方块",
-                levels: {
-                    r_10: "10 个稀有方块", r_50: "50 个稀有方块",
-                    r_200: "200 个稀有方块", r_1000: "运气传奇 ⭐"
-                }
-            },
-            clickMaster: {
-                description: "点击次数",
-                levels: {
-                    cl_1k: "1K 点击", cl_10k: "10K 点击",
-                    cl_100k: "100K 点击", cl_1m: "1M 点击",
-                    cl_10m: "点击传奇 👆"
-                }
-            }
-        },
-        shop: {
-            title: "🛒 增益商店",
-            items: {
-                timeWarp: { name: "⏳ 时间扭曲", desc: "方块移动速度降低 50%" },
-                crystalBoost: { name: "💰 水晶增益", desc: "方块奖励 +100%" },
-                powerSurge: { name: "⚡ 力量激增", desc: "点击力量 +200%" },
-                luckyCharm: { name: "🍀 幸运符", desc: "稀有方块几率 +50%" },
-                invincible: { name: "🛡️ 无敌", desc: "免受跳过惩罚" },
-                autoClicker: { name: "🤖 自动点击器", desc: "每 0.5 秒自动点击" }
-            }
+            mercury: { description: "水星探索", levels: {} },
+            venus: { description: "金星探索", levels: {} },
+            earth: { description: "地球防御", levels: {} },
+            mars: { description: "火星殖民", levels: {} },
+            jupiter: { description: "木星征服", levels: {} },
+            saturn: { description: "土星探索", levels: {} },
+            uranus: { description: "天王星探索", levels: {} },
+            neptune: { description: "海王星征服", levels: {} },
+            pluto: { description: "冥王星征服", levels: {} }
         },
         dailyBonus: {
             title: "每日奖励",
@@ -768,12 +200,273 @@ const translations = {
             }
         },
         notifications: {
-            achievement: "🏆 成就!",
-            reward: "+{amount} 💎",
-            stage: "阶段: {stage}",
-            allLevelsComplete: "🏆 所有关卡完成! 总计: {total}"
+            achievement: "🏆 成就!", reward: "+{amount} 💎",
+            stage: "阶段: {stage}", allLevelsComplete: "🏆 所有关卡完成! 总计: {total}"
         }
     }
+};
+
+// ═══════════════════════════════════════════════════
+// 🏭 АВТОГЕНЕРАТОР ПЕРЕВОДОВ ДЛЯ ВСЕХ ПЛАНЕТ
+// ═══════════════════════════════════════════════════
+(function autoGeneratePlanetTranslations() {
+    const planets = {
+        mercury: { ru: 'Меркурий', en: 'Mercury', zh: '水星', emoji: '☿' },
+        venus:   { ru: 'Венера',   en: 'Venus',   zh: '金星', emoji: '♀' },
+        earth:   { ru: 'Земля',    en: 'Earth',   zh: '地球', emoji: '♁' },
+        mars:    { ru: 'Марс',     en: 'Mars',    zh: '火星', emoji: '♂' },
+        jupiter: { ru: 'Юпитер',   en: 'Jupiter', zh: '木星', emoji: '♃' },
+        saturn:  { ru: 'Сатурн',   en: 'Saturn',  zh: '土星', emoji: '♄' },
+        uranus:  { ru: 'Уран',     en: 'Uranus',  zh: '天王星', emoji: '♅' },
+        neptune: { ru: 'Нептун',   en: 'Neptune', zh: '海王星', emoji: '♆' },
+        pluto:   { ru: 'Плутон',   en: 'Pluto',   zh: '冥王星', emoji: '♇' }
+    };
+    
+    const metricTemplates = {
+        blocks:      { ru: 'Уничтожено блоков',     en: 'Blocks Destroyed',     zh: '摧毁的方块' },
+        crits:       { ru: 'Критических ударов',    en: 'Critical Hits',        zh: '暴击次数' },
+        combo:       { ru: 'Максимальное комбо',    en: 'Maximum Combo',        zh: '最大连击' },
+        rare:        { ru: 'Редких блоков',         en: 'Rare Blocks',          zh: '稀有方块' },
+        damage:      { ru: 'Нанесено урона',        en: 'Damage Dealt',         zh: '造成的伤害' },
+        crystals:    { ru: 'Заработано кристаллов', en: 'Crystals Earned',      zh: '获得的水晶' },
+        bobo:        { ru: 'Активаций Bobo',        en: 'Bobo Activations',     zh: 'Bobo 激活次数' },
+        boboDmg:     { ru: 'Урона нанесено Bobo',   en: 'Bobo Damage',          zh: 'Bobo 造成的伤害' },
+        boboCrystals:{ ru: 'Кристаллов от Bobo',    en: 'Bobo Crystals',        zh: 'Bobo 水晶' },
+        upgrades:    { ru: 'Улучшений куплено',     en: 'Upgrades Purchased',   zh: '购买的升级' },
+        time:        { ru: 'Секунд на планете',     en: 'Seconds on Planet',    zh: '在星球上的秒数' },
+        speed:       { ru: 'Рекорд скорости (мс)',  en: 'Speed Record (ms)',    zh: '速度记录(毫秒)' },
+        critStreak:  { ru: 'Серия критов подряд',   en: 'Crit Streak',          zh: '连续暴击' }
+    };
+    
+    const masterTemplates = {
+        ru: '{emoji} {planet} покорён!',
+        en: '{emoji} {planet} Conquered!',
+        zh: '{emoji} {planet} 已征服!'
+    };
+    
+    for (const [planetId, planetData] of Object.entries(planets)) {
+        ['ru', 'en', 'zh'].forEach(lang => {
+            if (!translations[lang].achievements[planetId].metrics) {
+                translations[lang].achievements[planetId].metrics = {};
+            }
+        });
+        
+        for (const [metricId, metricTranslations] of Object.entries(metricTemplates)) {
+            translations.ru.achievements[planetId].metrics[metricId] = metricTranslations.ru;
+            translations.en.achievements[planetId].metrics[metricId] = metricTranslations.en;
+            translations.zh.achievements[planetId].metrics[metricId] = metricTranslations.zh;
+        }
+        
+        translations.ru.achievements[planetId].master = masterTemplates.ru
+            .replace('{emoji}', planetData.emoji).replace('{planet}', planetData.ru);
+        translations.en.achievements[planetId].master = masterTemplates.en
+            .replace('{emoji}', planetData.emoji).replace('{planet}', planetData.en);
+        translations.zh.achievements[planetId].master = masterTemplates.zh
+            .replace('{emoji}', planetData.emoji).replace('{planet}', planetData.zh);
+    }
+    
+    console.log(`🌍 [TRANSLATIONS] Auto-generated metrics for ${Object.keys(planets).length} planets`);
+})();
+
+// ═══════════════════════════════════════════════════
+// 🎖️ ПЕРЕВОДЫ РАНГОВ
+// ═══════════════════════════════════════════════════
+translations.ru.ranks = {
+    spark: '✨ Искра', constellation: '🌟 Созвездие', galaxy: '🌌 Галактика',
+    nebula: '🌫️ Туманность', supernova: '💥 Сверхновая', blackHole: '🕳️ Чёрная дыра',
+    quark: '⚛️ Кварк', legend: '👑 Легенда {N}'
+};
+translations.en.ranks = {
+    spark: '✨ Spark', constellation: '🌟 Constellation', galaxy: '🌌 Galaxy',
+    nebula: '🌫️ Nebula', supernova: '💥 Supernova', blackHole: '🕳️ Black Hole',
+    quark: '⚛️ Quark', legend: '👑 Legend {N}'
+};
+translations.zh.ranks = {
+    spark: '✨ 火花', constellation: '🌟 星座', galaxy: '🌌 星系',
+    nebula: '🌫️ 星云', supernova: '💥 超新星', blackHole: '🕳️ 黑洞',
+    quark: '⚛️ 夸克', legend: '👑 传奇 {N}'
+};
+
+// ═══════════════════════════════════════════════════
+// 📉 ПЕРЕВОДЫ ОТКАТА (rollback card)
+// ═══════════════════════════════════════════════════
+translations.ru.rollback = {
+    title: 'ОТКАТ НАЗАД!',
+    reason: 'Пропущено слишком много блоков',
+    lost: 'Потеряно',
+    auUnit: 'а.е.',
+    damageUnit: 'урона',
+    rollbackCount: 'Откат {current} из {max}'
+};
+translations.en.rollback = {
+    title: 'ROLLBACK!',
+    reason: 'Too many blocks skipped',
+    lost: 'Lost',
+    auUnit: 'AU',
+    damageUnit: 'damage',
+    rollbackCount: 'Rollback {current} of {max}'
+};
+translations.zh.rollback = {
+    title: '回滚!',
+    reason: '跳过的方块太多',
+    lost: '损失',
+    auUnit: '天文单位',
+    damageUnit: '伤害',
+    rollbackCount: '回滚 {current} / {max}'
+};
+
+// ═══════════════════════════════════════════════════
+// 🌠 ПЕРЕВОДЫ СЛУЧАЙНЫХ СОБЫТИЙ
+// ═══════════════════════════════════════════════════
+translations.ru.events = {
+    asteroidCollected: '🪨 Астероид собран!',
+    cometCaught: '🎯 Поймана!',
+    cometEscaped: '💨 Ускользнула...',
+    damageBoost: '⚡ Усиление урона',
+    crystalRain: '💰 Кристальный дождь',
+    boboActivated: '🤖 Bobo активен!',
+    boboCrystalBoost: '💰 Bobo +{percent}%!'
+};
+translations.en.events = {
+    asteroidCollected: '🪨 Asteroid collected!',
+    cometCaught: '🎯 Caught!',
+    cometEscaped: '💨 Escaped...',
+    damageBoost: '⚡ Damage Boost',
+    crystalRain: '💰 Crystal Rain',
+    boboActivated: '🤖 Bobo active!',
+    boboCrystalBoost: '💰 Bobo +{percent}%!'
+};
+translations.zh.events = {
+    asteroidCollected: '🪨 小行星已收集!',
+    cometCaught: '🎯 已捕获!',
+    cometEscaped: '💨 逃走了...',
+    damageBoost: '⚡ 伤害增强',
+    crystalRain: '💰 水晶雨',
+    boboActivated: '🤖 Bobo 激活!',
+    boboCrystalBoost: '💰 Bobo +{percent}%!'
+};
+
+// ═══════════════════════════════════════════════════
+// 🚀 ПЕРЕВОДЫ WELCOME SCREEN
+// ═══════════════════════════════════════════════════
+translations.ru.welcome = {
+    title: '🚀 КОСМИЧЕСКИЙ КЛИКЕР',
+    subtitle: 'Разрушайте восходящие блоки и собирайте космические Кристаллы!',
+    description: 'Каждый блок требует определённого количества ударов для разрушения.',
+    progressionTitle: 'Реалистичная система прогресса:',
+    features: [
+        '🌌 Астрономические единицы — перемещайтесь по Солнечной системе',
+        '🪐 9 реальных планет — от Меркурия до Плутона',
+        '🚀 Улучшения — увеличивайте силу, криты и активируйте помощника',
+        '✨ Редкие блоки — дают бонусы и огромные награды!'
+    ],
+    continueBtn: 'Продолжить',
+    newGameBtn: 'Новая игра'
+};
+translations.en.welcome = {
+    title: '🚀 COSMIC CLICKER',
+    subtitle: 'Destroy rising blocks and collect cosmic Crystals!',
+    description: 'Each block requires a certain number of hits to destroy.',
+    progressionTitle: 'Realistic progression system:',
+    features: [
+        '🌌 Astronomical Units — travel through the Solar System',
+        '🪐 9 real planets — from Mercury to Pluto',
+        '🚀 Upgrades — increase power, crits and activate helper',
+        '✨ Rare blocks — give bonuses and huge rewards!'
+    ],
+    continueBtn: 'Continue',
+    newGameBtn: 'New Game'
+};
+translations.zh.welcome = {
+    title: '🚀 宇宙点击器',
+    subtitle: '破坏上升的方块并收集宇宙水晶!',
+    description: '每个方块需要一定数量的点击才能破坏。',
+    progressionTitle: '真实的进度系统:',
+    features: [
+        '🌌 天文单位 - 穿越太阳系',
+        '🪐 9个真实行星 - 从水星到冥王星',
+        '🚀 升级 - 增加力量、暴击并激活助手',
+        '✨ 稀有方块 - 提供奖励和巨大回报!'
+    ],
+    continueBtn: '继续',
+    newGameBtn: '新游戏'
+};
+
+// ═══════════════════════════════════════════════════
+// 🛒 ПЕРЕВОДЫ МАГАЗИНА (6 бустов)
+// ═══════════════════════════════════════════════════
+translations.ru.shop = {
+    title: '🛒 Магазин бонусов',
+    balance: '💎 Баланс:',
+    items: {
+        timeWarp: { name: '⏳ Искажение времени', desc: 'Блоки движутся на 50% медленнее' },
+        crystalBoost: { name: '💰 Усилитель кристаллов', desc: '+100% к наградам за блоки' },
+        powerSurge: { name: '⚡ Скачок силы', desc: '+200% к силе клика' },
+        luckyCharm: { name: '🍀 Талисман удачи', desc: '+50% шанс редких блоков' },
+        invincible: { name: '🛡️ Неуязвимость', desc: 'Защита от штрафов за пропуск блока' },
+        autoClicker: { name: '🤖 Авто-кликер', desc: 'Автоматический клик каждые 0.5 сек' }
+    },
+    states: { active: 'Активно', confirm: '✅ Покупаем?' },
+    notifications: {
+        alreadyActive: '⚠️ Бонус уже активен!',
+        notEnough: '❌ Недостаточно кристаллов!',
+        activated: '✅ {name} активирован!',
+        expired: '⏰ {name} завершился'
+    }
+};
+translations.en.shop = {
+    title: '🛒 Bonus Shop',
+    balance: '💎 Balance:',
+    items: {
+        timeWarp: { name: '⏳ Time Warp', desc: 'Blocks move 50% slower' },
+        crystalBoost: { name: '💰 Crystal Boost', desc: '+100% block rewards' },
+        powerSurge: { name: '⚡ Power Surge', desc: '+200% click power' },
+        luckyCharm: { name: '🍀 Lucky Charm', desc: '+50% rare block chance' },
+        invincible: { name: '🛡️ Invincibility', desc: 'Protection from skip penalties' },
+        autoClicker: { name: '🤖 Auto-Clicker', desc: 'Automatic click every 0.5 sec' }
+    },
+    states: { active: 'Active', confirm: '✅ Buy?' },
+    notifications: {
+        alreadyActive: '⚠️ Boost already active!',
+        notEnough: '❌ Not enough crystals!',
+        activated: '✅ {name} activated!',
+        expired: '⏰ {name} expired'
+    }
+};
+translations.zh.shop = {
+    title: '🛒 增益商店',
+    balance: '💎 余额:',
+    items: {
+        timeWarp: { name: '⏳ 时间扭曲', desc: '方块移动速度降低 50%' },
+        crystalBoost: { name: '💰 水晶增益', desc: '方块奖励 +100%' },
+        powerSurge: { name: '⚡ 力量激增', desc: '点击力量 +200%' },
+        luckyCharm: { name: '🍀 幸运符', desc: '稀有方块几率 +50%' },
+        invincible: { name: '🛡️ 无敌', desc: '免受跳过惩罚' },
+        autoClicker: { name: '🤖 自动点击器', desc: '每 0.5 秒自动点击' }
+    },
+    states: { active: '激活中', confirm: '✅ 购买?' },
+    notifications: {
+        alreadyActive: '⚠️ 增益已激活!',
+        notEnough: '❌ 水晶不足!',
+        activated: '✅ {name} 已激活!',
+        expired: '⏰ {name} 已结束'
+    }
+};
+
+// ═══════════════════════════════════════════════════
+// 🎮 ПЕРЕВОДЫ HUD (рабочее пространство)
+// ═══════════════════════════════════════════════════
+translations.ru.hud = {
+    crystals: 'Кристаллы:', power: 'Сила:', crit: 'Крит:',
+    critMult: 'Множ.крита:', progress: 'Прогресс:'
+};
+translations.en.hud = {
+    crystals: 'Crystals:', power: 'Power:', crit: 'Crit:',
+    critMult: 'Crit Mult:', progress: 'Progress:'
+};
+translations.zh.hud = {
+    crystals: '水晶:', power: '力量:', crit: '暴击:',
+    critMult: '暴击倍率:', progress: '进度:'
 };
 
 // === КОНСТАНТЫ ===
@@ -788,26 +481,36 @@ try {
 } catch (e) {
     currentLanguage = 'ru';
 }
-
 window.currentLanguage = currentLanguage;
 window.translations = translations;
 
-// === ПОЛУЧЕНИЕ ПЕРЕВОДА ===
+// === ПОЛУЧЕНИЕ ПЕРЕВОДА (с умным fallback) ===
+function getNestedTranslation(obj, key) {
+    const keys = key.split('.');
+    let result = obj;
+    for (const k of keys) {
+        if (result && typeof result === 'object' && k in result) {
+            result = result[k];
+        } else {
+            return null;
+        }
+    }
+    return result;
+}
+
 window.getTranslation = function(key, lang) {
     lang = lang || currentLanguage;
-    const keys = key.split('.');
-    let result = translations[lang];
-    for (const k of keys) {
-        if (result && typeof result === 'object') result = result[k];
-        else return key;
+    let result = getNestedTranslation(translations[lang], key);
+    if (result === null || result === undefined || result === key) {
+        result = getNestedTranslation(translations.ru, key);
     }
-    return result || key;
+    return result !== null && result !== undefined ? result : key;
 };
 
 // === ФОРМАТИРОВАНИЕ СТРОК ===
 window.formatString = function(template, vars) {
     if (!template || typeof template !== 'string') return '';
-    return template.replace(/\{(\w+)\}/g, function(match, key) {
+    return template.replace(/{(\w+)}/g, function(match, key) {
         return vars && vars[key] !== undefined ? vars[key] : match;
     });
 };
@@ -815,24 +518,30 @@ window.formatString = function(template, vars) {
 // === ПРИМЕНЕНИЕ ПЕРЕВОДА К DOM ===
 window.applyTranslation = function(el, key, vars) {
     if (!el) return;
-    const text = window.getTranslation(key);
-    const finalText = vars ? window.formatString(text, vars) : text;
-    
-    if (el.children.length > 0) {
-        let textNode = null;
-        for (let i = el.childNodes.length - 1; i >= 0; i--) {
-            if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim()) {
-                textNode = el.childNodes[i];
-                break;
+    try {
+        const text = window.getTranslation(key);
+        if (!text || typeof text !== 'string') {
+            return;
+        }
+        const finalText = vars ? window.formatString(text, vars) : text;
+        if (el.children.length > 0) {
+            let textNode = null;
+            for (let i = el.childNodes.length - 1; i >= 0; i--) {
+                if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim()) {
+                    textNode = el.childNodes[i];
+                    break;
+                }
             }
-        }
-        if (textNode) {
-            textNode.textContent = ' ' + finalText;
+            if (textNode) {
+                textNode.textContent = ' ' + finalText;
+            } else {
+                el.appendChild(document.createTextNode(' ' + finalText));
+            }
         } else {
-            el.appendChild(document.createTextNode(' ' + finalText));
+            el.textContent = finalText;
         }
-    } else {
-        el.textContent = finalText;
+    } catch (e) {
+        console.error(`❌ [TRANSLATIONS] Error applying translation for ${key}:`, e);
     }
 };
 
@@ -841,14 +550,9 @@ window.switchLanguage = function() {
     const idx = LANG_ORDER.indexOf(currentLanguage);
     currentLanguage = LANG_ORDER[(idx + 1) % LANG_ORDER.length];
     window.currentLanguage = currentLanguage;
-    
-    try {
-        localStorage.setItem('cosmicLang', currentLanguage);
-    } catch (e) {}
-    
+    try { localStorage.setItem('cosmicLang', currentLanguage); } catch (e) {}
     window.updateLanguageFlag();
     window.updateAllUITexts();
-    
     console.log('🌍 Язык переключён:', currentLanguage);
 };
 
@@ -862,14 +566,12 @@ window.updateLanguageFlag = function() {
 window.updateContinueButton = function() {
     const btn = document.getElementById('continueBtn');
     if (!btn) return;
-    
     let hasSaveData = false;
     try {
         hasSaveData = typeof window.hasSave === 'function'
             ? window.hasSave()
             : localStorage.getItem('cosmicClickerSave') !== null;
     } catch (e) {}
-    
     if (hasSaveData) {
         btn.classList.add('save-available');
         btn.classList.remove('no-save');
@@ -881,8 +583,59 @@ window.updateContinueButton = function() {
     }
 };
 
-// === ОБНОВЛЕНИЕ ВСЕХ ТЕКСТОВ ===
+// === ОБНОВЛЕНИЕ ВСЕХ ТЕКСТОВ (с универсальным обработчиком data-i18n) ===
 window.updateAllUITexts = function() {
+    // ✅ ИСПРАВЛЕНИЕ 1: Универсальный обработчик ВСЕХ элементов с data-i18n
+    const i18nElements = document.querySelectorAll('[data-i18n]');
+    i18nElements.forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const attrTarget = el.getAttribute('data-i18n-attr'); // Для атрибутов (title, placeholder)
+        
+        if (!key) return;
+        
+        // ✅ ИСПРАВЛЕНИЕ 2: Специальная обработка для массивов (welcome.features.0, .1, .2, .3)
+        if (key.startsWith('welcome.features.')) {
+            const idx = parseInt(key.split('.')[2]);
+            if (!isNaN(idx) && translations[currentLanguage]?.welcome?.features?.[idx]) {
+                el.textContent = translations[currentLanguage].welcome.features[idx];
+            }
+            return;
+        }
+        
+        try {
+            const translated = window.getTranslation(key);
+            if (!translated || translated === key) return; // Нет перевода
+            
+            if (attrTarget) {
+                // ✅ ИСПРАВЛЕНИЕ 3: Обновляем АТРИБУТ (title, placeholder, alt)
+                el.setAttribute(attrTarget, translated);
+            } else {
+                // Обновляем ТЕКСТ элемента
+                if (el.children.length > 0) {
+                    // Если есть дочерние элементы — ищем текстовый узел
+                    let textNode = null;
+                    for (let i = el.childNodes.length - 1; i >= 0; i--) {
+                        if (el.childNodes[i].nodeType === Node.TEXT_NODE && el.childNodes[i].textContent.trim()) {
+                            textNode = el.childNodes[i];
+                            break;
+                        }
+                    }
+                    if (textNode) {
+                        textNode.textContent = translated;
+                    } else {
+                        el.insertBefore(document.createTextNode(translated), el.firstChild);
+                    }
+                } else {
+                    // Простой элемент без детей
+                    el.textContent = translated;
+                }
+            }
+        } catch (e) {
+            // Игнорируем ошибки перевода
+        }
+    });
+    
+    // Специфичные обновления (уже существующие)
     if (window.gameState && window.gameState.currentLocation) {
         const titleEl = document.getElementById('gameTitle');
         if (titleEl) window.applyTranslation(titleEl, 'gameTitle.' + window.gameState.currentLocation);
@@ -902,6 +655,15 @@ window.updateAllUITexts = function() {
         window.shopSystem.updateShopDisplay();
     }
 };
+
+// ✅ ИСПРАВЛЕНИЕ 4: Первичный перевод при загрузке (особенно для Welcome Screen)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(window.updateAllUITexts, 100);
+    });
+} else {
+    setTimeout(window.updateAllUITexts, 100);
+}
 
 console.log('🌍 Translations initialized. Language:', currentLanguage);
 })();
