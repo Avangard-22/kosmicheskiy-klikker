@@ -24,8 +24,8 @@ const EVENTS_CONFIG = {
     
     // Астероид: кристаллы (1 клик)
     asteroid: {
-        minCrystals: 10000,
-        maxCrystals: 50000,
+        minCrystals: 500,
+        maxCrystals: 2000,
         speed: { min: 2, max: 5 },
         size: { min: 40, max: 70 },
         color: '#a0826d',
@@ -93,15 +93,14 @@ let isPaused = false;
 
 function initCanvas() {
     if (eventCanvas) return;
-    
     eventCanvas = document.createElement('canvas');
     eventCanvas.id = 'randomEventsCanvas';
-    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;';
+    // ✅ ИСПРАВЛЕНО: pointer-events:none чтобы клики проходили к блокам
+    // Обработчики вешаем на document, не на canvas
+    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:150;';
     document.body.appendChild(eventCanvas);
-    
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-    
     eventCtx = eventCanvas.getContext('2d');
     console.log('🌠 [EVENTS] Canvas initialized');
 }
@@ -189,38 +188,174 @@ class AsteroidEvent {
         ctx.restore();
     }
     
-    hitTest(mx, my) {
-        if (!this.alive || this.clicked) return false;
-        const dx = mx - this.x;
-        const dy = my - this.y;
-        return (dx * dx + dy * dy) <= (this.size / 2 + 15) * (this.size / 2 + 15);
+hitTest(clientX, clientY) {
+    if (!this.alive || this.clicked) return false;
+    // ✅ Координаты уже в viewport space (совпадают с this.x, this.y)
+    const dx = clientX - this.x;
+    const dy = clientY - this.y;
+    const hitRadius = this.size / 2 + 20; // ✅ Увеличенный хитбокс для удобства
+    return (dx * dx + dy * dy) <= hitRadius * hitRadius;
+}
+    
+// ✅ 1 КЛИК — мгновенный сбор
+collect() {
+    if (this.clicked) return;
+    this.clicked = true;
+    this.alive = false;
+    
+    // 🌌 УЧИТЫВАЕМ КОЭФФИЦИЕНТ ПЛАНЕТЫ (баланс)
+    const planetIndex = CFG.planetOrder.indexOf(window.gameState?.currentLocation || 'mercury');
+    const planetMultiplier = 1 + (planetIndex * 0.1);
+    const crystals = Math.floor(this.crystals * planetMultiplier);
+    
+    if (window.gameState) {
+        window.gameState.coins = (window.gameState.coins || 0) + crystals;
     }
     
-    // ✅ 1 КЛИК — мгновенный сбор
-    collect() {
-        if (this.clicked) return;
-        this.clicked = true;
-        this.alive = false;
+    // ✅ НОВОЕ: Учитываем кристаллы от астероида в метриках достижений
+    if (window.achievementsSystem) {
+        const planet = window.gameState?.currentLocation;
+        // Глобальная метрика "Всего заработано кристаллов"
+        if (window.achievementsSystem.incrementCoinsEarned) {
+            window.achievementsSystem.incrementCoinsEarned(crystals);
+        }
+        // Планетарная метрика "Заработано кристаллов" (на текущей планете)
+        if (planet && window.achievementsSystem.incrementPlanetCrystals) {
+            window.achievementsSystem.incrementPlanetCrystals(planet, crystals);
+        }
+    }
+    
+    const fmt = window.formatNumber ? window.formatNumber(crystals) : crystals;
+showFloatingText(`+${fmt} 💎`, this.x, this.y, '#FFD700', 1.3);
+    
+    // 🌠 С НЕБОЛЬШИМ ШАНСОМ (10%) ДОБАВЛЯЕМ ВРЕМЕННЫЕ БУСТЫ
+    if (Math.random() < 0.1) {
+        const boostType = Math.floor(Math.random() * 3);
         
-        if (window.gameState) {
-            window.gameState.coins = (window.gameState.coins || 0) + this.crystals;
+        switch (boostType) {
+            // 🔥 БУСТ 1: Усиление урона на 100% на 1-3 минуты
+            case 0:
+                const duration = rand(60000, 180000); // 1-3 минуты
+                activateDamageBuff(2, duration);
+                showFloatingText('⚡ Усиление урона x2!', this.x, this.y - 30, '#4FC3F7', 1.2);
+                break;
+                
+// 🤖 БУСТ 2: Активация Bobo с ускоренной стрельбой
+case 1:
+    const duration2 = rand(60000, 180000); // 1-3 минуты
+    const interval = Math.floor(rand(500, 1000)); // 0.5-1 сек между выстрелами
+    const gs = window.gameState;
+    const core = window.GAME_CORE;
+    
+    if (gs && core) {
+        // Сохраняем оригинальные значения для восстановления
+        const originalInterval = gs.permanentHelperInterval || 1500;
+        const wasActive = gs.helperActive;
+        const originalTimeLeft = gs.helperTimeLeft || 0;
+        
+        // ✅ Устанавливаем ускоренный интервал
+        gs.permanentHelperInterval = interval;
+        
+        if (!wasActive) {
+            // ── Bobo НЕ был активен: АКТИВИРУЕМ его ──
+            if (window.GAME_FEATURES?.activateHelper) {
+                window.GAME_FEATURES.activateHelper();
+                console.log(`☄️ [EVENTS] Bobo activated by asteroid! Interval: ${interval}ms for ${(duration2/1000).toFixed(0)}s`);
+            }
+        } else {
+            // ── Bobo УЖЕ активен: перезапускаем интервал и продлеваем время ──
+            
+            // Останавливаем текущий интервал стрельбы
+            if (core.helperInterval) {
+                clearInterval(core.helperInterval);
+                core.helperInterval = null;
+            }
+            
+            // Создаём новый интервал с ускоренной стрельбой
+            core.helperInterval = setInterval(() => {
+                if (gs.helperActive && core.currentBlock &&
+                    gs.gameActive && !core.isGamePaused) {
+                    core.helperAttack();
+                }
+            }, interval);
+            
+            // Продлеваем время работы Bobo на duration2
+            gs.helperTimeLeft = Math.max(gs.helperTimeLeft || 0, duration2);
+            
+            console.log(`☄️ [EVENTS] Bobo boosted! Interval: ${interval}ms for ${(duration2/1000).toFixed(0)}s`);
         }
         
-        showFloatingText(`+${this.crystals.toLocaleString()} 💎`, this.x, this.y, '#FFD700', 1.3);
+        // ⏰ Через duration2 восстанавливаем оригинальный интервал
+        setTimeout(() => {
+            // Проверяем, что буст ещё не был перезаписан другим бустом
+            if (gs.permanentHelperInterval === interval) {
+                gs.permanentHelperInterval = originalInterval;
+                
+                // Если Bobo всё ещё активен — перезапускаем интервал с оригинальной скоростью
+                if (gs.helperActive && core.helperInterval) {
+                    clearInterval(core.helperInterval);
+                    core.helperInterval = setInterval(() => {
+                        if (gs.helperActive && core.currentBlock &&
+                            gs.gameActive && !core.isGamePaused) {
+                            core.helperAttack();
+                        }
+                    }, originalInterval);
+                }
+                
+                console.log(`☄️ [EVENTS] Bobo boost expired. Interval restored to ${originalInterval}ms`);
+            }
+        }, duration2);
         
-        if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
-        if (window.telegramHaptic?.success) window.telegramHaptic.success();
-        else if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-        
-        if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
-        if (typeof window.saveGame === 'function') window.saveGame();
-        
-        console.log(`🪨 [EVENTS] Asteroid collected! +${this.crystals} 💎`);
+        showFloatingText(`🤖 Bobo x${(1500/interval).toFixed(1)}!\n(${(duration2/1000).toFixed(0)}с)`, this.x, this.y - 30, '#4FC3F7', 1.2);
     }
+    break;
+                
+// 💰 БУСТ 3: Случайный бонус (+10% до +150%) к ТЕКУЩЕМУ бонусу Bobo
+case 2: {
+    const duration3 = rand(60000, 180000); // 1-3 минуты
+    const originalBonus = window.gameState?.boboCoinBonus || 0;
+    
+    // ✅ Генерируем случайный бонус от 10% до 150% (0.10 - 1.50)
+    const randomBoost = Math.floor(rand(10, 151)) / 100;
+    const newBonus = originalBonus + randomBoost;
+    window.gameState.boboCoinBonus = newBonus;
+    
+    // ⏰ Через duration3 восстанавливаем исходный бонус
+    setTimeout(() => {
+        // Проверяем что буст ещё активен (не был перезаписан другим бустом)
+        if (window.gameState?.boboCoinBonus === newBonus) {
+            window.gameState.boboCoinBonus = originalBonus;
+            console.log(`💰 [EVENTS] Bobo crystal boost expired. Restored to ${(originalBonus * 100).toFixed(0)}%`);
+        }
+    }, duration3);
+    
+    // 🎨 Отображаем реальный процент бонуса
+    const percentDisplay = Math.round(randomBoost * 100);
+    const durationSec = Math.round(duration3 / 1000);
+    showFloatingText(
+        `💰 Bobo +${percentDisplay}%!\n(${durationSec}с)`,
+        this.x, this.y - 30, '#4FC3F7', 1.2
+    );
+    
+    console.log(`💰 [EVENTS] Bobo crystal boost: +${percentDisplay}% (was ${(originalBonus*100).toFixed(0)}% → now ${(newBonus*100).toFixed(0)}%) for ${durationSec}s`);
+    break;
+}
+        }
+    }
+    
+    if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
+    if (window.telegramHaptic?.success) window.telegramHaptic.success();
+    else if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+    
+    if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+    if (typeof window.saveGame === 'function') window.saveGame();
+    
+    console.log(`🪨 [EVENTS] Asteroid collected! +${crystals} 💎`);
+}
 }
 
 // ─────────────────────────────────────────────────────
-// ☄️ КЛАСС: КОМЕТА (2 клика)
+// ☄️ КЛАСС: КОМЕТА (1 клик — как астероид, но даёт бафф)
 // ─────────────────────────────────────────────────────
 class CometEvent {
     constructor() {
@@ -230,14 +365,9 @@ class CometEvent {
         this.speed = rand(cfg.speed.min, cfg.speed.max);
         this.alive = true;
         this.clicked = false;
-        
-        // ✅ НОВОЕ: Состояние двухкликовой механики
-        this.caught = false;       // Первый клик — «поймана»
-        this.catchTimer = null;    // Таймер сброса состояния «поймана»
-        this.catchTimeout = 3000;  // 3 секунды на второй клик
-        
         this.buff = pickWeighted(cfg.buffs);
         this.buffValue = rand(this.buff.valueMin, this.buff.valueMax);
+        
         if (this.buff.type === 'crystal_boost') {
             this.buffValue = Math.round(this.buffValue);
         } else {
@@ -250,11 +380,15 @@ class CometEvent {
         const direction = Math.random() > 0.5 ? 1 : -1;
         
         if (direction > 0) {
-            this.x = -this.size; this.y = rand(-this.size, h * 0.3);
-            this.vx = this.speed; this.vy = this.speed * rand(0.3, 0.8);
+            this.x = -this.size; 
+            this.y = rand(-this.size, h * 0.3);
+            this.vx = this.speed; 
+            this.vy = this.speed * rand(0.3, 0.8);
         } else {
-            this.x = w + this.size; this.y = rand(-this.size, h * 0.3);
-            this.vx = -this.speed; this.vy = this.speed * rand(0.3, 0.8);
+            this.x = w + this.size; 
+            this.y = rand(-this.size, h * 0.3);
+            this.vx = -this.speed; 
+            this.vy = this.speed * rand(0.3, 0.8);
         }
         
         this.trail = [];
@@ -270,15 +404,14 @@ class CometEvent {
         const margin = this.size * 2 + 120;
         const w = window.innerWidth;
         const h = window.innerHeight;
+        
         if (this.x < -margin || this.x > w + margin || this.y > h + margin) {
             this.alive = false;
-            this.clearCatchTimer();
         }
     }
     
     draw(ctx) {
         if (!this.alive || this.clicked) return;
-        
         const cfg = EVENTS_CONFIG.comet;
         
         // Хвост
@@ -301,101 +434,32 @@ class CometEvent {
         // Голова кометы
         ctx.save();
         ctx.translate(this.x, this.y);
-        
-        // ✅ Визуальная индикация состояния «поймана»
-        if (this.caught) {
-            // Пульсирующее кольцо вокруг пойманной кометы
-            ctx.beginPath();
-            ctx.arc(0, 0, this.size / 2 + 10, 0, Math.PI * 2);
-            ctx.strokeStyle = '#FFD700';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([5, 5]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Подсказка «Кликни!»
-            ctx.shadowBlur = 0;
-            ctx.font = 'bold 14px Orbitron, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillStyle = '#FFD700';
-            ctx.fillText('👆', 0, -this.size / 2 - 15);
-        }
-        
         ctx.shadowBlur = 20;
-        ctx.shadowColor = this.caught ? '#FFD700' : cfg.headColor;
-        
+        ctx.shadowColor = cfg.headColor;
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(0, 0, this.size / 4, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.shadowBlur = 0;
+        
         ctx.font = `${this.size * 0.5}px serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(cfg.emoji, 0, 0);
-        
         ctx.restore();
     }
     
-    hitTest(mx, my) {
-        if (!this.alive || this.clicked) return false;
-        const dx = mx - this.x;
-        const dy = my - this.y;
-        // ✅ Увеличенный хитбокс когда поймана (легче попасть второй раз)
-        const hitRadius = this.caught ? (this.size / 2 + 25) : (this.size / 2 + 20);
-        return (dx * dx + dy * dy) <= hitRadius * hitRadius;
-    }
+hitTest(clientX, clientY) {
+    if (!this.alive || this.clicked) return false;
+    // ✅ Координаты уже в viewport space
+    const dx = clientX - this.x;
+    const dy = clientY - this.y;
+    const hitRadius = this.size / 2 + 25; // ✅ Ещё больший хитбокс (кометы быстрые!)
+    return (dx * dx + dy * dy) <= hitRadius * hitRadius;
+}
     
-    clearCatchTimer() {
-        if (this.catchTimer) {
-            clearTimeout(this.catchTimer);
-            this.catchTimer = null;
-        }
-    }
-    
-    // ✅ 2 КЛИКА: первый — ловит, второй — активирует
-    handleClick() {
-        if (this.clicked) return;
-        
-        if (!this.caught) {
-            // ── ПЕРВЫЙ КЛИК: «Поймать» комету ──
-            this.caught = true;
-            
-            // Замедляем комету чтобы игрок успел кликнуть второй раз
-            this.vx *= 0.3;
-            this.vy *= 0.3;
-            
-            // Вибрация и звук первого клика
-            if (window.telegramHaptic?.medium) window.telegramHaptic.medium();
-            else if (navigator.vibrate) navigator.vibrate(30);
-            if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('clickSound');
-            
-            showFloatingText('🎯 Поймана!', this.x, this.y - 30, '#FFD700', 0.9);
-            
-            // Таймер: если не кликнул второй раз за 3 сек — комета ускользает
-            this.clearCatchTimer();
-            this.catchTimer = setTimeout(() => {
-                if (this.alive && !this.clicked) {
-                    this.caught = false;
-                    // Возвращаем нормальную скорость
-                    this.vx /= 0.3;
-                    this.vy /= 0.3;
-                    showFloatingText('💨 Ускользнула...', this.x, this.y - 30, '#aaa', 0.8);
-                    console.log('☄️ [EVENTS] Comet escaped (timeout)');
-                }
-            }, this.catchTimeout);
-            
-            console.log('☄️ [EVENTS] Comet caught! Click again to activate');
-            
-        } else {
-            // ── ВТОРОЙ КЛИК: Активация баффа ──
-            this.clearCatchTimer();
-            this.activate();
-        }
-    }
-    
-    activate() {
+    // ✅ 1 КЛИК — мгновенная активация баффа (как у астероида)
+    collect() {
         if (this.clicked) return;
         this.clicked = true;
         this.alive = false;
@@ -569,21 +633,26 @@ function gameLoop() {
 function handlePointerDown(e) {
     if (isPaused || !window.gameState?.gameActive) return;
     
-    const rect = eventCanvas.getBoundingClientRect();
-    const mx = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const my = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    // ✅ ИСПРАВЛЕНО: Получаем координаты клика относительно viewport
+    const clientX = e.clientX || e.touches?.[0]?.clientX;
+    const clientY = e.clientY || e.touches?.[0]?.clientY;
     
+    if (clientX === undefined || clientY === undefined) return;
+    
+    // Проверяем попадание по активным событиям
     for (let i = activeEvents.length - 1; i >= 0; i--) {
         const evt = activeEvents[i];
-        if (evt.hitTest(mx, my)) {
-            if (evt.type === 'asteroid') {
-                evt.collect();      // ✅ 1 клик
-            } else if (evt.type === 'comet') {
-                evt.handleClick();  // ✅ 2 клика
-            }
-            break;
+        if (evt.hitTest(clientX, clientY)) {
+            // ✅ Попадание! Останавливаем всплытие чтобы клик не дошел до блоков
+            e.preventDefault();
+            e.stopPropagation();
+            evt.collect();
+            console.log(`🎯 [EVENTS] Hit! Type: ${evt.type}`);
+            return; // Обрабатываем только одно событие за клик
         }
     }
+    // Если не попали ни по одному событию — ничего не делаем, 
+    // событие всплывает дальше к игровым блокам
 }
 
 // ─────────────────────────────────────────────────────
@@ -605,22 +674,22 @@ function resume() {
 function init() {
     initCanvas();
     
-    eventCanvas.addEventListener('pointerdown', handlePointerDown);
-    eventCanvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
+    // ✅ ИСПРАВЛЕНО: Вешаем обработчики на document, а не на canvas
+    // Это позволяет ловить клики даже когда canvas имеет pointer-events:none
+    document.addEventListener('pointerdown', handlePointerDown, { capture: true });
+    document.addEventListener('touchstart', (e) => {
+        // Не preventDefault здесь — это блокирует все клики!
+        // preventDefault вызывается в handlePointerDown только при попадании
         handlePointerDown(e);
-    }, { passive: false });
+    }, { capture: true, passive: false });
     
     if (window.EventBus) {
         window.EventBus.on('game:paused', pause);
         window.EventBus.on('game:resumed', resume);
     }
-    
-    // Запускаем планировщик событий
     scheduleNextEvent();
     gameLoop();
-    
-    console.log('🌠 Random Events v2.0 initialized (2-30 min interval, 1/2 clicks)');
+    console.log('🌠 Random Events v2.0 initialized (clickable events)');
 }
 
 // ─────────────────────────────────────────────────────

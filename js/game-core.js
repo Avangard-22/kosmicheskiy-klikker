@@ -5,6 +5,8 @@
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const FEAT = window.GAME_FEATURES;
+// ✅ БЕЗОПАСНЫЙ ГЕТТЕР: предотвращает краш, если game-features.js не загрузился
+const getFeat = () => window.GAME_FEATURES || {};
 
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
@@ -101,7 +103,7 @@ calculateBlockHealth: function() {
         this.currentBlockHealth = this.calculateBlockHealth();
         const block = document.createElement('div');
         block.className = 'moving-block';
-        const size = (window.innerWidth < 768 ? 80 : 60) * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 1.2 : (1 + CFG.planetOrder.indexOf(window.gameState.currentLocation) * 0.15));
+        const size = (window.innerWidth < 768 ? 80 : 60);
         block.style.width = size + 'px';
         block.style.height = size + 'px';
         block.style.bottom = '0px';
@@ -177,11 +179,88 @@ this.animateBlock(block);
             pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
          if (pos > window.innerHeight) {
-    FEAT.applyUpgradePenalty();
+    // ── СТАРЫЙ ШТРАФ: дебаф на апгрейды (сохраняем как есть) ──
+    if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
     
-    // ✅ НОВОЕ: Сброс идеальной серии при пропуске блока
+    // ✅ Сброс серии критов
     if (window.gameMetrics) {
-        window.gameMetrics.currentPerfectStreak = 0;
+        window.gameMetrics.currentCritStreak = 0;
+    }
+    
+    // ═══════════════════════════════════════════════════
+    // 📉 НОВОЕ: ПРОТОКОЛ ОТКАТА (активируется после 30%)
+    // ═══════════════════════════════════════════════════
+    const gs = window.gameState;
+    if (gs) {
+        const planet = gs.currentLocation || 'mercury';
+        const planetDamage = gs.planetDamageDealt || 0;
+        const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU || 
+                         CFG.astronomicalUnits?.[planet] || 0.38710;
+        const targetDamage = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
+        const progressPercent = targetDamage > 0 ? (planetDamage / targetDamage) * 100 : 0;
+        
+        // Инициализируем состояние протокола если его нет
+        if (!gs.skipPenaltyState) {
+            gs.skipPenaltyState = {
+                activated: false,
+                skipCount: 0,
+                rollbackCount: 0,
+                activationDistance: 0,
+                totalRolledBack: 0
+            };
+        }
+        
+        const state = gs.skipPenaltyState;
+        
+        // 🔓 Активация протокола при достижении 30%
+        if (!state.activated && progressPercent >= 30) {
+            state.activated = true;
+            state.activationDistance = planetDamage;
+            console.log(`📊 [PENALTY] Протокол отката активирован на ${progressPercent.toFixed(1)}% (якорь: ${planetDamage.toFixed(0)})`);
+        }
+        
+        // Если протокол активирован — считаем пропуски
+        if (state.activated) {
+            state.skipCount++;
+            
+            // 📉 Каждые 6 пропусков — откат
+            if (state.skipCount >= 6) {
+                const MAX_ROLLBACKS = 10;
+                const MAX_ROLLBACK_PERCENT = 0.5; // 50% от якоря
+                
+                if (state.rollbackCount < MAX_ROLLBACKS) {
+                    const maxRollback = state.activationDistance * MAX_ROLLBACK_PERCENT;
+                    const remainingRollback = maxRollback - state.totalRolledBack;
+                    
+                    if (remainingRollback > 0) {
+                        // Случайный процент 5-15%
+                        const rollbackPercent = 5 + Math.random() * 10;
+                        let rollbackAmount = planetDamage * (rollbackPercent / 100);
+                        
+                        // Ограничиваем оставшимся лимитом
+                        rollbackAmount = Math.min(rollbackAmount, remainingRollback);
+                        
+                        // Применяем откат (не ниже 0)
+                        gs.planetDamageDealt = Math.max(0, planetDamage - rollbackAmount);
+                        state.totalRolledBack += rollbackAmount;
+                        state.rollbackCount++;
+                        
+                        // Обновляем прогресс-бар
+                        if (window.GAME_UI?.updateProgressBar) {
+                            window.GAME_UI.updateProgressBar();
+                        }
+                        
+                        // Показываем карточку отката
+                        this.showRollbackCard(rollbackPercent, rollbackAmount, state.rollbackCount, MAX_ROLLBACKS);
+                        
+                        console.log(`⚠️ [PENALTY] Откат #${state.rollbackCount}/${MAX_ROLLBACKS}: -${rollbackPercent.toFixed(1)}% (-${rollbackAmount.toFixed(0)} damage)`);
+                    }
+                }
+                
+                // Сбрасываем счётчик пропусков (даже если лимит достигнут)
+                state.skipCount = 0;
+            }
+        }
     }
     
     if (window.gameState?.gameActive) setTimeout(() => this.createMovingBlock(), 500);
@@ -239,6 +318,18 @@ hitBlock: function(block, damage) {
     this.createDamageText(hitResult.damage, block, hitResult.isCrit ? '#FFD700' : '#ff4444');
     UI.checkLocationUpgrade();
     
+    // ✅ НОВОЕ: Отслеживание серии критов (critStreak)
+    if (!window.gameMetrics) window.gameMetrics = {};
+    if (hitResult.isCrit) {
+        window.gameMetrics.currentCritStreak = (window.gameMetrics.currentCritStreak || 0) + 1;
+        const planet = window.gameState?.currentLocation;
+        if (planet && window.achievementsSystem?.updatePlanetCritStreak) {
+            window.achievementsSystem.updatePlanetCritStreak(planet, window.gameMetrics.currentCritStreak);
+        }
+    } else {
+        window.gameMetrics.currentCritStreak = 0;
+    }
+    
      // ── Логика: разрушение или обновление блока ──
     if (hitResult.destroyed || this.currentBlockHealth <= 0) {
         console.log('💥 [CORE] Block destroyed! HP:', this.currentBlockHealth);
@@ -258,7 +349,7 @@ hitBlock: function(block, damage) {
  * Обрабатывает разрушение блока
  * @param {HTMLElement} block - DOM-элемент блока
  */
-destroyBlock: function(block) {
+destroyBlock: function(block, isAuto = false) {
     if (!window.gameState) return;
     
     // ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает награду, комбо, обновляет метрики ──
@@ -288,13 +379,19 @@ if (planet && window.achievementsSystem?.incrementPlanetCrystals) {
     window.achievementsSystem.incrementPlanetCrystals(planet, destroyResult.reward || 0);
 }
 
+// ✅ НОВОЕ: Если блок уничтожен Bobo (isAuto=true) — считаем кристаллы Bobo
+if (isAuto && planet && window.achievementsSystem?.incrementPlanetBoboCrystals) {
+    window.achievementsSystem.incrementPlanetBoboCrystals(planet, destroyResult.reward || 0);
+}
+
 // ✅ НОВОЕ: Метрика speed (рекорд скорости уничтожения блока)
 if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlanetSpeed) {
     const speed = Date.now() - parseInt(block.dataset.spawnTime);
     window.achievementsSystem.updatePlanetSpeed(planet, speed);
 }
     this.showRewardText(destroyResult.reward || 0, block);
-    FEAT.createExplosion(block);
+    // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
+    if (getFeat().createExplosion) getFeat().createExplosion(block);
     
     // ── Очистка блока из DOM ──
     const ga = document.getElementById('gameArea');
@@ -310,7 +407,7 @@ if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlane
     const r = block.getBoundingClientRect();
     const t = document.createElement('div');
     t.className = 'damage-text';
-    t.textContent = `-${dmg}`;
+    t.textContent = `-${window.formatNumber ? window.formatNumber(dmg) : dmg}`;
     t.style.color = col;
     
     let l = r.left + r.width / 2;
@@ -334,7 +431,8 @@ if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlane
     const r = block.getBoundingClientRect();
     const t = document.createElement('div');
     t.className = 'combo-text';
-    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: b });
+    const fmtBonus = window.formatNumber ? window.formatNumber(b) : b;
+t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: fmtBonus });
     
     let l = r.left + r.width / 2;
     let tp = r.top;
@@ -357,7 +455,8 @@ showRewardText: function(r, block) {
     const rct = block.getBoundingClientRect();
     const t = document.createElement('div');
     t.className = 'reward-text';
-    t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: r });
+    const fmtReward = window.formatNumber ? window.formatNumber(r) : r;
+t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: fmtReward });
     
     let l = rct.left + rct.width / 2;
     let tp = rct.top + rct.height / 2;
@@ -374,6 +473,75 @@ showRewardText: function(r, block) {
     t.addEventListener('animationend', () => {
         if (t.parentNode) t.parentNode.removeChild(t);
     });
+},
+
+// ✅ НОВОЕ: Визуальная карточка отката за пропуски
+showRollbackCard: function(percent, amount, currentRollback, maxRollbacks) {
+    const card = document.createElement('div');
+    
+    const damageInAU = amount / (CFG.AU_TO_DAMAGE || 149597870.691);
+    const auText = damageInAU >= 0.001 
+        ? damageInAU.toFixed(3) + ' а.е.' 
+        : Math.floor(amount).toLocaleString() + ' урона';
+    
+    card.style.cssText = `
+        position: fixed;
+        top: 25%;
+        left: 50%;
+        transform: translateX(-50%) scale(0.8);
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.95), rgba(183, 28, 28, 0.95));
+        color: #fff;
+        padding: 20px 30px;
+        border-radius: 15px;
+        z-index: 10001;
+        text-align: center;
+        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
+        box-shadow: 0 10px 40px rgba(244, 67, 54, 0.8), 0 0 60px rgba(244, 67, 54, 0.4);
+        border: 3px solid #fff;
+        max-width: 350px;
+        width: 90%;
+        pointer-events: none;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    `;
+    
+    card.innerHTML = `
+        <div style="font-size: 3em; margin-bottom: 8px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">📉</div>
+        <div style="font-size: 1.4em; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">ОТКАТ НАЗАД!</div>
+        <div style="font-size: 0.9em; margin-bottom: 12px; opacity: 0.95;">Пропущено слишком много блоков</div>
+        <div style="font-size: 1.3em; color: #ffeb3b; margin-bottom: 6px;">-${percent.toFixed(1)}%</div>
+        <div style="font-size: 0.85em; opacity: 0.9;">Потеряно: ${auText}</div>
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.75em; opacity: 0.85;">
+            Откат ${currentRollback} из ${maxRollbacks}
+        </div>
+    `;
+    
+    document.body.appendChild(card);
+    
+    // Анимация появления
+    requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'translateX(-50%) scale(1)';
+    });
+    
+    // Анимация исчезновения
+    setTimeout(() => {
+        card.style.transition = 'all 0.5s ease-in';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(-50%) scale(0.8) translateY(-30px)';
+        setTimeout(() => {
+            if (card.parentNode) card.parentNode.removeChild(card);
+        }, 500);
+    }, 2500);
+    
+    // Тактильный и звуковой фидбек
+    if (this.playSound) this.playSound('penaltySound');
+    if (window.telegramHaptic?.error) {
+        window.telegramHaptic.error();
+    } else if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100, 50, 200]);
+    }
 },
 
     updateCracks: function(block, health) {
@@ -394,6 +562,12 @@ showRewardText: function(r, block) {
         this.moveHelperToRandomPosition();
         this.helperElement.style.opacity = '0';
         setTimeout(() => { if (this.helperElement) this.helperElement.style.opacity = '1'; }, 100);
+        
+        // ✅ НОВОЕ: Метрика bobo (активация помощника)
+        const planet = window.gameState?.currentLocation;
+        if (planet && window.achievementsSystem?.incrementPlanetBobo) {
+            window.achievementsSystem.incrementPlanetBobo(planet);
+        }
     },
 
     moveHelperToRandomPosition: function() {
@@ -523,7 +697,7 @@ if (planet && window.achievementsSystem?.incrementPlanetBoboDamage) {
     
     // ── Логика: разрушение или обновление блока ──
     if (hitResult.destroyed) {
-        this.destroyBlock(this.currentBlock);
+        this.destroyBlock(this.currentBlock, true); // ✅ Передаём isAuto=true
     } else {
         this.currentBlock.textContent = Math.floor(this.currentBlockHealth);
         this.updateCracks(this.currentBlock, this.currentBlockHealth);
@@ -535,12 +709,20 @@ setLocation: function(loc) {
     if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
     window.gameState.currentLocation = loc;
     
-    // ✅ НОВОЕ: Сброс идеальной серии при смене планеты
+    // ✅ НОВОЕ: Сброс серии критов при смене планеты
     if (window.gameMetrics) {
-        window.gameMetrics.currentPerfectStreak = 0;
+        window.gameMetrics.currentCritStreak = 0;
     }
-
-        const gameTitle = document.getElementById('gameTitle');
+    
+    // ✅ НОВОЕ: Сброс планетарного урона — прогресс-бар начнёт заполняться с нуля
+    window.gameState.planetDamageDealt = 0;
+    
+    // ✅ НОВОЕ: Сброс протокола отката (новая планета = чистый старт)
+    if (window.gameState) {
+        window.gameState.skipPenaltyState = null;
+    }
+    
+    const gameTitle = document.getElementById('gameTitle');
         const header = document.getElementById('header');
         if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
         if (header) header.style.borderColor = CFG.locations[loc].borderColor;
@@ -863,7 +1045,7 @@ window.gameFunctions = {
     createDamageText: (d, b, c) => window.GAME_CORE.createDamageText(d, b, c),
     showComboText: (c, b, bl) => window.GAME_CORE.showComboText(c, b, bl),
     showRewardText: (r, bl) => window.GAME_CORE.showRewardText(r, bl),
-    createExplosion: bl => FEAT.createExplosion(bl),
+    createExplosion: bl => { if (getFeat().createExplosion) getFeat().createExplosion(bl); },
     playSound: id => window.GAME_CORE.playSound(id),
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
@@ -871,7 +1053,7 @@ window.gameFunctions = {
     shareResult: () => {},
     updateAllTranslations: () => {},
     setLocation: loc => window.GAME_CORE.setLocation(loc),
-    applyUpgradePenalty: () => FEAT.applyUpgradePenalty(),
+    applyUpgradePenalty: () => { if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty(); },
     calculateClickPower: () => window.GAME_CORE.calculateClickPower()
 };
 

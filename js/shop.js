@@ -108,14 +108,19 @@ function createShopUI() {
     }, { passive: false });
 
     // ✅ НОВЫЙ КАРТОЧНЫЙ UI — идентично достижениям
-    panel.innerHTML = `
-        <div class="shop-header">
-            <h3 class="shop-title"> Магазин бонусов</h3>
-            <button class="shop-close-btn" id="shopCloseBtn" aria-label="Закрыть">×</button>
-        </div>
-        <div class="shop-balance">💎 Баланс: <span id="shopBalanceValue">0</span></div>
-        <div class="shop-grid" id="shopGrid"></div>
-    `;
+// ✅ НОВОЕ: Используем переводы для заголовка и баланса
+const t = window.getTranslation || ((key) => key);
+const shopTitle = t('shop.title') || '🛒 Магазин бонусов';
+const balanceLabel = t('shop.balance') || '💎 Баланс:';
+
+panel.innerHTML = `
+    <div class="shop-header">
+        <h3 class="shop-title">${shopTitle}</h3>
+        <button class="shop-close-btn" id="shopCloseBtn" aria-label="Закрыть">×</button>
+    </div>
+    <div class="shop-balance">${balanceLabel} <span id="shopBalanceValue">0</span></div>
+    <div class="shop-grid" id="shopGrid"></div>
+`;
 
     const grid = panel.querySelector('#shopGrid');
     Object.values(shopConfig).forEach((item, idx) => {
@@ -125,16 +130,21 @@ function createShopUI() {
         card.dataset.id = item.id;
         card.style.setProperty('--idx', idx);
 
-        card.innerHTML = `
-            <div class="shop-card-icon">
-                <i class="${item.icon}"></i>
-                <div class="shop-card-emoji">${item.emoji}</div>
-            </div>
-            <div class="shop-card-name">${item.name}</div>
-            <div class="shop-card-desc">${item.desc}</div>
-            <div class="shop-card-cost">${item.cost} </div>
-            <div class="shop-card-timer" hidden></div>
-        `;
+// ✅ НОВОЕ: Используем переводы для названий и описаний
+const t = window.getTranslation || ((key) => key);
+const itemName = t(`shop.items.${item.id}.name`) || item.name;
+const itemDesc = t(`shop.items.${item.id}.desc`) || item.desc;
+
+card.innerHTML = `
+    <div class="shop-card-icon">
+        <i class="${item.icon}"></i>
+        <div class="shop-card-emoji">${item.emoji}</div>
+    </div>
+    <div class="shop-card-name">${itemName}</div>
+    <div class="shop-card-desc">${itemDesc}</div>
+    <div class="shop-card-cost">${window.formatNumber ? window.formatNumber(item.cost) : item.cost} 💎</div>
+    <div class="shop-card-timer" hidden></div>
+`;
 
         card.addEventListener('click', () => purchaseItem(item.id));
         card.addEventListener('touchstart', (e) => {
@@ -284,9 +294,14 @@ function executePurchase(boostId) {
     activeBoosts[boostId] = { active: true, timeLeft: item.duration };
     startBoostTimer(boostId);
     
-    if (window.achievementsSystem) {
-        window.achievementsSystem.incrementBoosters(1);
-    }
+ if (window.achievementsSystem) {
+     window.achievementsSystem.incrementBoosters(1);
+     // ✅ НОВОЕ: Считаем покупку в магазине как "Улучшение"
+     if (window.achievementsSystem.incrementPlanetUpgrades) {
+         window.achievementsSystem.incrementPlanetUpgrades(window.gameState.currentLocation, 1);
+     }
+ }
+
     if (window.EventBus) {
         window.EventBus.emit('shop:itemPurchased', { id: boostId, item: item });
     }
@@ -457,7 +472,7 @@ function updateShopDisplay() {
             }
         } else if (!canAfford) {
             card.classList.add('disabled');
-            if (costEl) costEl.textContent = `${item.cost} 💎`;
+            if (costEl) costEl.textContent = `${window.formatNumber ? window.formatNumber(item.cost) : item.cost} 💎`;
             if (timerEl) timerEl.hidden = true;
          } else {
         // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения
@@ -470,7 +485,7 @@ function updateShopDisplay() {
 
     // Баланс в шапке
     const bal = document.getElementById('shopBalanceValue');
-    if (bal) bal.textContent = Math.floor(window.gameState?.coins || 0).toLocaleString();
+    if (bal) bal.textContent = window.formatNumber ? window.formatNumber(window.gameState?.coins || 0) : '0';
 }
 
 // === HUD АКТИВНЫХ БУСТОВ ===

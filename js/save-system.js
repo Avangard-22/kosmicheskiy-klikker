@@ -72,16 +72,9 @@ const DEFAULT_GAME_STATE = {
     boboSkin: 'default',
     dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
     
-    // ✅ НОВОЕ: Состояние системы достижений v2 (контекстные карточки)
-    achievementsV2: {
-        mercury: {
-            rank: 0,
-            totalUnlocked: 0,
-            metrics: {},
-            masterUnlocked: false
-        }
-        // Остальные планеты будут добавляться динамически по мере масштабирования
-    }
+    // ✅ НОВОЕ: Состояние системы достижений v2 (создаётся динамически в ensureAchievementsV2Structure)
+    achievementsV2: {}
+    // skipPenaltyState создаётся динамически в ensureSkipPenaltyState()
 };
 
 const DEFAULT_GAME_METRICS = {
@@ -97,25 +90,11 @@ const DEFAULT_GAME_METRICS = {
     rareBlocksDestroyed: 0,
     sessions: 0,
     visitedPlanets: [],
-    currentPerfectStreak: 0,  // ✅ НОВОЕ: Сбрасывается при пропуске блока
-    
-    // ✅ НОВОЕ: Планетарные метрики для всех 12 типов достижений
-    planetStats: {
-        mercury: {
-            blocks: 0,
-            crits: 0,
-            combo: 0,
-            rare: 0,
-            crystalsEarned: 0,    // НОВОЕ: crystals
-            boboActivations: 0,   // НОВОЕ: bobo
-            boboDamage: 0,        // НОВОЕ: boboDmg
-            timePlayed: 0,        // НОВОЕ: time (секунды)
-            fastestBlock: 0,      // НОВОЕ: speed (мс, меньше = лучше)
-            bestAccuracy: 0,      // НОВОЕ: accuracy (%)
-            maxPerfectStreak: 0   // НОВОЕ: perfect (рекорд серии)
-        }
-        // Остальные планеты будут создаваться динамически при первой игре
-    }
+    currentPerfectStreak: 0,
+    // ✅ НОВОЕ: Активная серия критов (сбрасывается при пропуске)
+    currentCritStreak: 0,
+    // ✅ НОВОЕ: Планетарные метрики создаются динамически в ensurePlanetStatsStructure()
+    planetStats: {}
 };
 
 // ============================================
@@ -135,6 +114,118 @@ function deepMerge(defaults, saved) {
         }
     }
     return result;
+}
+
+// ═══════════════════════════════════════════════════
+// 🏗️ ОБЕСПЕЧЕНИЕ СТРУКТУРЫ ДАННЫХ (автоматически для всех планет)
+// ═══════════════════════════════════════════════════
+
+/**
+ * Гарантирует наличие planetStats для всех 9 планет с актуальными полями
+ * Вызывается при загрузке и инициализации
+ */
+function ensurePlanetStatsStructure() {
+    if (!window.gameMetrics) window.gameMetrics = {};
+    if (!window.gameMetrics.planetStats) window.gameMetrics.planetStats = {};
+    
+    const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
+    
+    // ✅ Актуальный шаблон полей для каждой планеты (12 метрик)
+    const planetTemplate = {
+        blocks: 0,
+        crits: 0,
+        combo: 0,
+        rare: 0,
+        damageDealt: 0,          // ✅ НОВОЕ: планетарный урон
+        crystalsEarned: 0,
+        boboActivations: 0,
+        boboDamage: 0,
+        boboCrystalsEarned: 0,   // ✅ НОВОЕ
+        upgrades: 0,             // ✅ НОВОЕ
+        timePlayed: 0,
+        fastestBlock: 0,
+        maxCritStreak: 0         // ✅ НОВОЕ (заменяет bestAccuracy и maxPerfectStreak)
+    };
+    
+    let migrated = false;
+    
+    planetOrder.forEach(planet => {
+        if (!window.gameMetrics.planetStats[planet]) {
+            // Создаём с нуля
+            window.gameMetrics.planetStats[planet] = Object.assign({}, planetTemplate);
+        } else {
+            // Дополняем отсутствующие поля (не перезаписываем существующие!)
+            const stats = window.gameMetrics.planetStats[planet];
+            for (const key in planetTemplate) {
+                if (stats[key] === undefined) {
+                    stats[key] = planetTemplate[key];
+                }
+            }
+            
+            // 🔄 МИГРАЦИЯ: переносим устаревшие поля в новые
+            if (stats.bestAccuracy !== undefined && stats.maxCritStreak === 0) {
+                stats.maxCritStreak = Math.floor((stats.bestAccuracy || 0) / 10);
+                delete stats.bestAccuracy;
+                migrated = true;
+            }
+            if (stats.maxPerfectStreak !== undefined) {
+                if (stats.maxPerfectStreak > stats.maxCritStreak) {
+                    stats.maxCritStreak = stats.maxPerfectStreak;
+                }
+                delete stats.maxPerfectStreak;
+                migrated = true;
+            }
+        }
+    });
+    
+    if (migrated) {
+        console.log('🔄 [SAVE] Выполнена миграция planetStats (старые поля → новые)');
+    }
+}
+
+/**
+ * Гарантирует наличие achievementsV2 для всех 9 планет
+ */
+function ensureAchievementsV2Structure() {
+    if (!window.gameState) window.gameState = {};
+    if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
+    
+    const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
+    
+    const achTemplate = {
+        rank: 0,
+        totalUnlocked: 0,
+        metrics: {},
+        masterUnlocked: false
+    };
+    
+    planetOrder.forEach(planet => {
+        if (!window.gameState.achievementsV2[planet]) {
+            window.gameState.achievementsV2[planet] = Object.assign({}, achTemplate);
+        } else {
+            const ach = window.gameState.achievementsV2[planet];
+            if (ach.rank === undefined) ach.rank = 0;
+            if (ach.totalUnlocked === undefined) ach.totalUnlocked = 0;
+            if (!ach.metrics) ach.metrics = {};
+            if (ach.masterUnlocked === undefined) ach.masterUnlocked = false;
+        }
+    });
+}
+
+/**
+ * Гарантирует наличие skipPenaltyState (протокол отката)
+ */
+function ensureSkipPenaltyState() {
+    if (!window.gameState) return;
+    if (!window.gameState.skipPenaltyState) {
+        window.gameState.skipPenaltyState = {
+            activated: false,
+            skipCount: 0,
+            rollbackCount: 0,
+            activationDistance: 0,
+            totalRolledBack: 0
+        };
+    }
 }
 
 function reconstructMetricsFromAchievements() {
@@ -183,19 +274,21 @@ function reconstructMetricsFromAchievements() {
             
             const metrics = ach[planet].metrics;
             
-            // Маппинг полей planetStats → ключей метрик
+            // ✅ НОВОЕ: Актуальный маппинг (12 метрик)
             const mapping = {
-                blocks:   'blocks',
-                crits:    'crits',
-                combo:    'combo',
-                rare:     'rare',
-                crystals: 'crystalsEarned',
-                bobo:     'boboActivations',
-                boboDmg:  'boboDamage',
-                time:     'timePlayed',
-                speed:    'fastestBlock',
-                accuracy: 'bestAccuracy',
-                perfect:  'maxPerfectStreak'
+                blocks:       'blocks',
+                crits:        'crits',
+                combo:        'combo',
+                rare:         'rare',
+                damage:       'damageDealt',
+                crystals:     'crystalsEarned',
+                bobo:         'boboActivations',
+                boboDmg:      'boboDamage',
+                boboCrystals: 'boboCrystalsEarned',  // ✅ НОВОЕ
+                upgrades:     'upgrades',             // ✅ НОВОЕ
+                time:         'timePlayed',
+                speed:        'fastestBlock',
+                critStreak:   'maxCritStreak'         // ✅ НОВОЕ
             };
             
             for (const [metricKey, statField] of Object.entries(mapping)) {
@@ -220,10 +313,15 @@ function reconstructMetricsFromAchievements() {
         }
     }
     
+    // ✅ НОВОЕ: Гарантируем структуру для всех планет и метрик
+    ensurePlanetStatsStructure();
+    ensureAchievementsV2Structure();
+    ensureSkipPenaltyState();
+    
     if (healed) {
         console.warn('⚠️ [SAVE-SYSTEM] Метрики восстановлены:', gm);
     } else {
-        console.log('✅ [SAVE-SYSTEM] Метрики корректны.');
+        console.log('✅ [SAVE-SYSTEM] Метрики корректны (все структуры обеспечены).');
     }
 }
 
@@ -264,12 +362,17 @@ function applyCloudData(cloudData) {
         window.gameState.comboCount = 0;
     }
     
-    if (cloudData.full_game_metrics) {
+    if (cloudData.full_game_metric) {
         console.log('📊 [LOAD] Накатываем gameMetrics...');
         window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, cloudData.full_game_metrics);
     }
     
     reconstructMetricsFromAchievements();
+    
+    // ✅ НОВОЕ: Гарантируем полную структуру после загрузки
+    ensurePlanetStatsStructure();
+    ensureAchievementsV2Structure();
+    ensureSkipPenaltyState();
 }
 
 // ============================================
@@ -494,6 +597,12 @@ function startAutoSave() {
 function init() {
     window.gameState = deepMerge(DEFAULT_GAME_STATE, window.gameState || {});
     window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, window.gameMetrics || {});
+    
+    // ✅ НОВОЕ: Сначала обеспечиваем структуру, потом верифицируем
+    ensurePlanetStatsStructure();
+    ensureAchievementsV2Structure();
+    ensureSkipPenaltyState();
+    
     reconstructMetricsFromAchievements();
     startAutoSave();
     

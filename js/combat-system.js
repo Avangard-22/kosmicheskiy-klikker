@@ -72,13 +72,35 @@ return { finalDamage: Math.max(0, dmg), isCrit };
      };
  },
 
-    calculateBlockHealth: function() {
-        const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
-        const base = CFG.balanceConfig.baseHealth * (1 + CFG.astronomicalUnits[window.gameState.currentLocation] * 2);
-        const rnd = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
-        let hp = Math.floor(((base + target) / 2) * rnd * (window.GAME_CORE?.getBonus?.('getBlockHealthMultiplier', 1) || 1));
-        if (window.GAME_CORE?.permanentBlockHpMult && window.GAME_CORE.permanentBlockHpMult < 1) hp = Math.floor(hp * window.GAME_CORE.permanentBlockHpMult);
-        if (!window.gameState?.planetFirstBlockCleared) hp = Math.min(hp, 100);
+        calculateBlockHealth: function() {
+        const planet = window.gameState.currentLocation;
+        const au = CFG.astronomicalUnits[planet] || 0;
+        const clickPower = window.gameState.clickPower || 1;
+        const targetClicks = CFG.balanceConfig.targetClicks; // 70
+        
+        // ✅ ИСПРАВЛЕНО: Первый блок на новой планете всегда 80-110 HP
+        if (!window.gameState?.planetFirstBlockCleared) {
+            const firstBlockHP = 80 + Math.floor(Math.random() * 31); // 80-110
+            return firstBlockHP;
+        }
+        
+        // ✅ ВАРИАНТ Б: Логарифмическая формула (слабое влияние AU)
+        // Меркурий (0.387 AU) × 1.03, Плутон (39.48 AU) × 1.37
+        const auMult = 1 + Math.log(1 + au) * 0.1;
+        const base = CFG.balanceConfig.baseHealth * auMult;
+        const target = clickPower * targetClicks;
+        
+        const rnd = CFG.balanceConfig.healthRandomRange.min + 
+                    Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
+        
+        let hp = Math.floor(((base + target) / 2) * rnd * 
+                            (window.GAME_CORE?.getBonus?.('getBlockHealthMultiplier', 1) || 1));
+        
+        // Перманентное снижение HP от магазина/перков
+        if (window.GAME_CORE?.permanentBlockHpMult && window.GAME_CORE.permanentBlockHpMult < 1) {
+            hp = Math.floor(hp * window.GAME_CORE.permanentBlockHpMult);
+        }
+        
         return Math.max(1, hp);
     },
 
@@ -118,8 +140,26 @@ if (window.gameState.comboCount > 1) {
 // ✅ НОВОЕ: Применяем бафф кристаллов от кометы (random-events.js)
 // ЧТО: consumeCrystalBuff() добавляет +50-500% к награде за следующий блок
 // ЗАЧЕМ: Одноразовый бонус от кометы «Кристальный дождь»
+// ✅ НОВОЕ: Применяем бафф кристаллов от кометы (random-events.js)
+let crystalBuffBonus = 0;
 if (window.RandomEvents && typeof window.RandomEvents.consumeCrystalBuff === 'function') {
+    const rewardBefore = reward;
     reward = window.RandomEvents.consumeCrystalBuff(reward);
+    crystalBuffBonus = reward - rewardBefore; // Сколько добавил бафф
+}
+
+// ✅ НОВОЕ: Если был кристальный бафф — учитываем бонус в метриках
+if (crystalBuffBonus > 0 && window.achievementsSystem) {
+    const planet = window.gameState.currentLocation;
+    // Глобальная метрика
+    if (window.achievementsSystem.incrementCoinsEarned) {
+        window.achievementsSystem.incrementCoinsEarned(crystalBuffBonus);
+    }
+    // Планетарная метрика "Заработано кристаллов"
+    if (planet && window.achievementsSystem.incrementPlanetCrystals) {
+        window.achievementsSystem.incrementPlanetCrystals(planet, crystalBuffBonus);
+    }
+    console.log(`💫 [COMBAT] Crystal buff bonus: +${crystalBuffBonus} 💎 (tracked in metrics)`);
 }
 
 return { reward, comboCount: window.gameState.comboCount, comboBonus, isRare };

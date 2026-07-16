@@ -161,13 +161,16 @@ window.GAME_FEATURES = {
  * @returns {void}
  */    
 buyClickPower: function() {
-        const core = getCore();
-        if (!window.gameState || !core) return;
+    const core = getCore();
+    if (!window.gameState || !core) return;
 
-        if (window.gameState.clickUpgradeLevel === undefined) window.gameState.clickUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel));
+    if (window.gameState.clickUpgradeLevel === undefined) window.gameState.clickUpgradeLevel = 0;
+    // ✅ НОВОЕ: Применяем планетарный коэффициент
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    const cost = Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel) * costMult);
 
-        if (window.gameState.coins >= cost) {
+    if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.clickUpgradeLevel++;
             window.gameState.clickPower = core.calculateClickPower();
@@ -205,11 +208,14 @@ buyClickPower: function() {
             return;
         }
 
-        const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel || 0));
-        const actBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
-        const cost = Math.floor(baseCost * (1 + actBonus * 0.2));
+    // ✅ НОВОЕ: Применяем планетарный коэффициент
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel || 0));
+    const actBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
+    const cost = Math.floor(baseCost * (1 + actBonus * 0.2) * costMult);
 
-        if (window.gameState.coins >= cost) {
+    if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.helperActivations = (window.gameState.helperActivations || 0) + 1;
           
@@ -229,14 +235,17 @@ buyClickPower: function() {
         }
     },
 
-    buyCritChance: function() {
-        const core = getCore();
-        if (!window.gameState || !core) return;
+buyCritChance: function() {
+    const core = getCore();
+    if (!window.gameState || !core) return;
 
-        if (window.gameState.critChanceUpgradeLevel === undefined) window.gameState.critChanceUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel));
+    if (window.gameState.critChanceUpgradeLevel === undefined) window.gameState.critChanceUpgradeLevel = 0;
+    // ✅ НОВОЕ: Применяем планетарный коэффициент
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    const cost = Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel) * costMult);
 
-        if (window.gameState.coins >= cost) {
+    if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.critChance = Math.min(1.0, window.gameState.critChance + 0.001);
             window.gameState.critChanceUpgradeLevel++;
@@ -263,14 +272,17 @@ buyClickPower: function() {
         }
     },
 
-    buyCritMultiplier: function() {
-        const core = getCore();
-        if (!window.gameState || !core) return;
+buyCritMultiplier: function() {
+    const core = getCore();
+    if (!window.gameState || !core) return;
 
-        if (window.gameState.critMultiplierUpgradeLevel === undefined) window.gameState.critMultiplierUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel));
+    if (window.gameState.critMultiplierUpgradeLevel === undefined) window.gameState.critMultiplierUpgradeLevel = 0;
+    // ✅ НОВОЕ: Применяем планетарный коэффициент
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    const cost = Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel) * costMult);
 
-        if (window.gameState.coins >= cost) {
+    if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.critMultiplier += 0.2;
             window.gameState.critMultiplierUpgradeLevel++;
@@ -296,14 +308,17 @@ buyClickPower: function() {
         }
     },
 
-    buyHelperDamage: function() {
-        const core = getCore();
-        if (!window.gameState || !core) return;
+buyHelperDamage: function() {
+    const core = getCore();
+    if (!window.gameState || !core) return;
 
-        if (window.gameState.helperUpgradeLevel === undefined) window.gameState.helperUpgradeLevel = 0;
-        const cost = Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel));
+    if (window.gameState.helperUpgradeLevel === undefined) window.gameState.helperUpgradeLevel = 0;
+    // ✅ НОВОЕ: Применяем планетарный коэффициент
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    const cost = Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel) * costMult);
 
-        if (window.gameState.coins >= cost) {
+    if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
             window.gameState.helperUpgradeLevel++;
 

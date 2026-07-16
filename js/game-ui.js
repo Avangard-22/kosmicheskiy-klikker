@@ -16,6 +16,34 @@ const TEXT_POOL_SIZE = 30;
 const textPool = [];
 let textPoolIndex = 0;
 
+// ═══════════════════════════════════════════════════
+// 🔢 УНИВЕРСАЛЬНОЕ ФОРМАТИРОВАНИЕ ЧИСЕЛ (1K, 1M, 1B)
+// ═══════════════════════════════════════════════════
+/**
+ * Форматирует число в компактный вид
+ * @param {number} num - Число для форматирования
+ * @param {number} decimals - Кол-во знаков после запятой (по умолчанию 1)
+ * @returns {string} - Отформатированная строка (например, "1.5M")
+ */
+function formatNumber(num, decimals = 1) {
+    if (num === undefined || num === null || isNaN(num)) return '0';
+    num = Number(num);
+    
+    const absNum = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+    
+    if (absNum >= 1e12) return sign + (absNum / 1e12).toFixed(decimals) + 'T';
+    if (absNum >= 1e9)  return sign + (absNum / 1e9).toFixed(decimals) + 'B';
+    if (absNum >= 1e6)  return sign + (absNum / 1e6).toFixed(decimals) + 'M';
+    if (absNum >= 1e3)  return sign + (absNum / 1e3).toFixed(decimals) + 'K';
+    
+    // Маленькие числа — показываем как есть
+    return sign + Math.floor(absNum).toLocaleString();
+}
+
+// ✅ Экспортируем глобально, чтобы другие модули могли использовать
+window.formatNumber = formatNumber;
+
 /**
  * Инициализация пула текстовых элементов
  */
@@ -88,107 +116,103 @@ window.GAME_UI = {
     // HUD И КНОПКИ
     // ==========================================
     
-    updateHUD: function() {
-        if (!window.gameState) return;
-        
-        const el = (id) => document.getElementById(id);
-        
-        const coinsEl = el('coins-value');
-        if (coinsEl) coinsEl.textContent = Math.floor(window.gameState.coins).toLocaleString();
-        
-        const powerEl = el('clickPower-value');
-        if (powerEl) powerEl.textContent = Math.round(window.gameState.clickPower);
-        
-        const critChanceEl = el('critChance-value');
-        if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
-        
-        const critMultEl = el('critMultiplier-value');
-        if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
-    },
+updateHUD: function() {
+    if (!window.gameState) return;
+    const el = (id) => document.getElementById(id);
+    const coinsEl = el('coins-value');
+    if (coinsEl) coinsEl.textContent = formatNumber(window.gameState.coins); // ✅
+    const powerEl = el('clickPower-value');
+    if (powerEl) powerEl.textContent = formatNumber(window.gameState.clickPower); // ✅
+    const critChanceEl = el('critChance-value');
+    if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
+    const critMultEl = el('critMultiplier-value');
+    if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
+},
 
-    updateUpgradeButtons: function() {
-        if (!window.gameState) return;
+updateUpgradeButtons: function() {
+    if (!window.gameState) return;
+    
+    // ✅ НОВОЕ: Получаем планетарный коэффициент стоимости
+    const planet = window.gameState.currentLocation || 'mercury';
+    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+    
+    const setBtn = (id, baseCost, title) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
         
-        const setBtn = (id, cost, title) => {
-            const btn = document.getElementById(id);
-            if (!btn) return;
-            
-            const costEl = btn.querySelector('.upgrade-cost');
-            if (costEl) costEl.textContent = cost.toLocaleString();
-            
-            const avail = window.gameState.coins >= cost;
-            btn.className = `upgrade-btn ${avail ? 'btn-available' : 'btn-unavailable'}`;
-            btn.title = title;
-            btn.style.opacity = avail ? '1' : '0.7';
-        };
+        // ✅ Применяем планетарный коэффициент
+        const cost = Math.floor(baseCost * costMult);
         
-        // Сила удара
-        setBtn(
-            'upgradeClickBtn',
-            Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel)),
-            'Увеличить силу удара'
-        );
-        
-        // ✅ BOBO (с блокировкой во время активности + таймер)
-        const baseHelperCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel));
-        const activationBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
-        const helperCost = Math.floor(baseHelperCost * (1 + activationBonus * 0.2));
-        
-        const helperBtn = document.getElementById('upgradeHelperBtn');
-        if (helperBtn) {
-            const costEl = helperBtn.querySelector('.upgrade-cost');
-            
-            // ✅ Если Bobo активен — блокируем кнопку и показываем таймер
-            if (window.gameState.helperActive && window.gameState.helperTimeLeft > 0) {
-                const seconds = Math.ceil(window.gameState.helperTimeLeft / 1000);
-                if (costEl) costEl.textContent = seconds + 'с';
-                helperBtn.className = 'upgrade-btn btn-unavailable';
-                helperBtn.title = 'Bobo активен: ' + seconds + 'с';
-                helperBtn.style.opacity = '0.6';
-            } else {
-                // Обычная логика: проверяем наличие кристаллов
-                const avail = window.gameState.coins >= helperCost;
-                if (costEl) costEl.textContent = helperCost.toLocaleString();
-                helperBtn.className = 'upgrade-btn ' + (avail ? 'btn-available' : 'btn-unavailable');
-                helperBtn.title = 'Активировать Bobo';
-                helperBtn.style.opacity = avail ? '1' : '0.7';
-            }
+        const costEl = btn.querySelector('.upgrade-cost');
+        if (costEl) costEl.textContent = formatNumber(cost); // ✅
+        const avail = window.gameState.coins >= cost;
+        btn.className = `upgrade-btn ${avail ? 'btn-available' : 'btn-unavailable'}`;
+        btn.title = title;
+        btn.style.opacity = avail ? '1' : '0.7';
+    };
+    
+    // Сила удара
+    setBtn(
+        'upgradeClickBtn',
+        Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel)),
+        'Увеличить силу удара'
+    );
+    
+    // ✅ BOBO (с блокировкой во время активности + таймер)
+    const baseHelperCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel));
+    const activationBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
+    const helperCost = Math.floor(baseHelperCost * (1 + activationBonus * 0.2) * costMult);
+    const helperBtn = document.getElementById('upgradeHelperBtn');
+    if (helperBtn) {
+        const costEl = helperBtn.querySelector('.upgrade-cost');
+        if (window.gameState.helperActive && window.gameState.helperTimeLeft > 0) {
+            const seconds = Math.ceil(window.gameState.helperTimeLeft / 1000);
+            if (costEl) costEl.textContent = seconds + 'с';
+            helperBtn.className = 'upgrade-btn btn-unavailable';
+            helperBtn.title = 'Bobo активен: ' + seconds + 'с';
+            helperBtn.style.opacity = '0.6';
+        } else {
+            const avail = window.gameState.coins >= helperCost;
+            if (costEl) costEl.textContent = formatNumber(helperCost); // ✅
+            helperBtn.className = 'upgrade-btn ' + (avail ? 'btn-available' : 'btn-unavailable');
+            helperBtn.title = 'Активировать Bobo';
+            helperBtn.style.opacity = avail ? '1' : '0.7';
         }
-        
-        // Шанс крита
-        setBtn(
-            'upgradeCritChanceBtn',
-            Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel)),
-            'Увеличить шанс крита'
-        );
-        
-        // Множитель крита
-        setBtn(
-            'upgradeCritMultBtn',
-            Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel)),
-            'Увеличить множитель крита'
-        );
-        
-        // Урон Bobo
-        setBtn(
-            'upgradeHelperDmgBtn',
-            Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel)),
-            'Увеличить урон Bobo'
-        );
-    },
+    }
+    
+    // Шанс крита
+    setBtn(
+        'upgradeCritChanceBtn',
+        Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel)),
+        'Увеличить шанс крита'
+    );
+    
+    // Множитель крита
+    setBtn(
+        'upgradeCritMultBtn',
+        Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel)),
+        'Увеличить множитель крита'
+    );
+    
+    // Урон Bobo
+    setBtn(
+        'upgradeHelperDmgBtn',
+        Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel)),
+        'Увеличить урон Bobo'
+    );
+},
 
     // ==========================================
     // ПРОГРЕСС-БАР И ЛОКАЦИИ
     // ==========================================
     
-    updateProgressBar: function() {
-        if (!window.gameState) return;
-        
-        const req = LOC_REQ[window.gameState.currentLocation];
-        if (!req) return;
-        
-        const cur = window.gameState.totalDamageDealt / CFG.AU_TO_DAMAGE;
-        const pct = Math.min(100, (cur / req.targetAU) * 100);
+updateProgressBar: function() {
+    if (!window.gameState) return;
+    const req = LOC_REQ[window.gameState.currentLocation];
+    if (!req) return;
+    // ✅ ИСПРАВЛЕНО: Используем планетарный урон вместо глобального
+    const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
+    const pct = Math.min(100, (cur / req.targetAU) * 100);
         
         const bar = document.getElementById('progressBar');
         const txt = document.getElementById('progressText');
@@ -206,15 +230,13 @@ window.GAME_UI = {
         }
     },
 
-    checkLocationUpgrade: function() {
-        if (!window.gameState) return;
-        
-        const req = LOC_REQ[window.gameState.currentLocation];
-        if (!req || !req.nextLocation) return;
-        
-        const cur = window.gameState.totalDamageDealt / CFG.AU_TO_DAMAGE;
-        
-        if (cur >= req.targetAU) {
+checkLocationUpgrade: function() {
+    if (!window.gameState) return;
+    const req = LOC_REQ[window.gameState.currentLocation];
+    if (!req || !req.nextLocation) return;
+    // ✅ ИСПРАВЛЕНО: Используем планетарный урон вместо глобального
+    const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
+    if (cur >= req.targetAU) {
             if (window.GAME_CORE && window.GAME_CORE.setLocation) {
                 window.GAME_CORE.setLocation(req.nextLocation);
             }

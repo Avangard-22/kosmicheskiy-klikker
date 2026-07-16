@@ -28,35 +28,35 @@
 
     <!-- Заголовок с названием планеты -->
     <div id="header">
-        <h1 id="gameTitle">☿ Меркурий</h1>
+        <h1 id="gameTitle" data-i18n="gameTitle.mercury">☿ Меркурий</h1>
     </div>
 
     <!-- Прогресс-бар полёта к следующей планете -->
     <div id="progressContainer">
         <div id="progressBar"></div>
     </div>
-    <div id="progressText">Прогресс: 0.00000 / 0.38710 а.е. (0%)</div>
+    <div id="progressText" data-i18n="progressText">Прогресс: 0.00000 / 0.38710 а.е. (0%)</div>
 
     <!-- HUD слева: ресурсы и характеристики -->
     <div id="hud-left">
         <div class="hud-item">
             <i class="fas fa-coins" style="color: #FFD54F;"></i>
-            <span>Кристаллы: </span>
+            <span data-i18n="hud.crystals">Кристаллы: </span>
             <span id="coins-value">0</span>
         </div>
         <div class="hud-item">
             <i class="fas fa-fist-raised" style="color: #4FC3F7;"></i>
-            <span>Сила: </span>
+            <span data-i18n="hud.power">Сила: </span>
             <span id="clickPower-value">1</span>
         </div>
         <div class="hud-item">
             <i class="fas fa-star" style="color: #FFD700;"></i>
-            <span>Крит: </span>
+            <span data-i18n="hud.crit">Крит: </span>
             <span id="critChance-value">0.1%</span>
         </div>
         <div class="hud-item">
             <i class="fas fa-bolt" style="color: #FFD700;"></i>
-            <span>Множ.крита: </span>
+            <span data-i18n="hud.critMult">Множ.крита: </span>
             <span id="critMultiplier-value">x2.0</span>
         </div>
     </div>
@@ -73,23 +73,23 @@
 
     <!-- Кнопки улучшений -->
     <div id="upgrades-container">
-        <div class="upgrade-btn btn-available" id="upgradeClickBtn" title="Увеличить силу удара">
+        <div class="upgrade-btn btn-available" id="upgradeClickBtn" data-i18n-attr="title" data-i18n="tooltips.upgradeClick" title="Увеличить силу удара">
             <i class="fas fa-fist-raised"></i>
             <div class="upgrade-cost">80</div>
         </div>
-        <div class="upgrade-btn btn-available" id="upgradeHelperBtn" title="Активировать Bobo">
+        <div class="upgrade-btn btn-available" id="upgradeHelperBtn" data-i18n-attr="title" data-i18n="tooltips.upgradeHelper" title="Активировать Bobo">
             <i class="fas fa-robot"></i>
             <div class="upgrade-cost">1500</div>
         </div>
-        <div class="upgrade-btn btn-available" id="upgradeCritChanceBtn" title="Увеличить шанс крита">
+        <div class="upgrade-btn btn-available" id="upgradeCritChanceBtn" data-i18n-attr="title" data-i18n="tooltips.upgradeCritChance" title="Увеличить шанс крита">
             <i class="fas fa-star"></i>
             <div class="upgrade-cost">500</div>
         </div>
-        <div class="upgrade-btn btn-available" id="upgradeCritMultBtn" title="Увеличить множитель крита">
+        <div class="upgrade-btn btn-available" id="upgradeCritMultBtn" data-i18n-attr="title" data-i18n="tooltips.upgradeCritMult" title="Увеличить множитель крита">
             <i class="fas fa-bolt"></i>
             <div class="upgrade-cost">800</div>
         </div>
-        <div class="upgrade-btn btn-available" id="upgradeHelperDmgBtn" title="Увеличить урон Bobo">
+        <div class="upgrade-btn btn-available" id="upgradeHelperDmgBtn" data-i18n-attr="title" data-i18n="tooltips.upgradeHelperDmg" title="Увеличить урон Bobo">
             <i class="fas fa-chart-line"></i>
             <div class="upgrade-cost">1000</div>
         </div>
@@ -97,20 +97,20 @@
 
     <!-- Магазин бонусов -->
     <div class="shop-container">
-        <button id="shopBtn" class="shop-btn" title="Магазин бонусов">🛒</button>
+        <button id="shopBtn" class="shop-btn" data-i18n-attr="title" data-i18n="ui.shop" title="Магазин бонусов">🛒</button>
         <div id="shopPanel" class="shop-panel"></div>
     </div>
 
     <!-- Достижения -->
     <div class="achievements-container">
-        <button id="achievementsBtn" class="achievements-btn" title="Достижения">
+        <button id="achievementsBtn" class="achievements-btn" data-i18n-attr="title" data-i18n="ui.achievements" title="Достижения">
             <i class="fas fa-trophy"></i>
             <span id="achievementsCount" style="font-size: 0.55em; margin-left: 3px; position: absolute; bottom: 2px; right: 8px; font-weight: bold;">0/0</span>
         </button>
     </div>
 
      <!-- Кнопка ручного сохранения -->
-    <button id="saveBtn" title="Сохранить игру">
+    <button id="saveBtn" data-i18n-attr="title" data-i18n="ui.save" title="Сохранить игру">
         <i class="fas fa-save"></i>
     </button>
 
@@ -124,17 +124,17 @@
     <!-- Экран приветствия -->
     <div id="welcomeScreen">
         <button id="langBtn-welcome">🇷🇺</button>
-        <h2>🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
-        <p>Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
-        <p>Каждый блок требует определённого количества ударов для разрушения.</p>
-        <p>Реалистичная система прогресса:</p>
-        <p>🌌 Астрономические единицы — перемещайтесь по Солнечной системе</p>
-        <p>🪐 9 реальных планет — от Меркурия до Плутона</p>
-        <p>🚀 Улучшения — увеличивайте силу, криты и активируйте помощника</p>
-        <p>✨ Редкие блоки — дают бонусы и огромные награды!</p>
+        <h2 data-i18n="welcome.title">🚀 КОСМИЧЕСКИЙ КЛИКЕР</h2>
+        <p data-i18n="welcome.subtitle">Разрушайте восходящие блоки и собирайте космические Кристаллы!</p>
+        <p data-i18n="welcome.description">Каждый блок требует определённого количества ударов для разрушения.</p>
+        <p data-i18n="welcome.progressionTitle">Реалистичная система прогресса:</p>
+        <p data-i18n="welcome.features.0">🌌 Астрономические единицы — перемещайтесь по Солнечной системе</p>
+        <p data-i18n="welcome.features.1">🪐 9 реальных планет — от Меркурия до Плутона</p>
+        <p data-i18n="welcome.features.2">🚀 Улучшения — увеличивайте силу, криты и активируйте помощника</p>
+        <p data-i18n="welcome.features.3">✨ Редкие блоки — дают бонусы и огромные награды!</p>
 
-        <button id="continueBtn" class="btn">Продолжить</button>
-        <button id="startBtn" class="btn">Новая игра</button>
+        <button id="continueBtn" class="btn" data-i18n="ui.continue">Продолжить</button>
+        <button id="startBtn" class="btn" data-i18n="welcome.newGameBtn">Новая игра</button>
     </div>
 
     <!-- Панель достижений -->
@@ -170,12 +170,24 @@
 
 <!-- 5. Дополнительные системы -->
 <!-- <script src="js/achievements.js"></script> -->  <!-- ❌ ОТКЛЮЧЁН: tracker.js полностью заменяет его -->
+<script src="js/achievements-v2/planet-factory.js"></script> <!--фабрика планет -->
 <script src="js/achievements-v2/mercury.js"></script>
+<script src="js/achievements-v2/venus.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/earth.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/mars.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/jupiter.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/saturn.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/uranus.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/neptune.js"></script>  <!-- ✅ НОВОЕ -->
+<script src="js/achievements-v2/pluto.js"></script> 
 <script src="js/achievements-v2/tracker.js"></script>
 <script src="js/achievements-v2/ui.js"></script> <!-- Должен быть ПОСЛЕДНИМ -->
 <script src="js/daily-bonus.js?v=28"></script>
 <script src="js/voyager-tracker.js"></script>
 <script src="js/random-events.js"></script>  <!-- ✅ НОВОЕ: Случайные события (астероиды/кометы) -->
-  
+
+<!-- 🛠️ DEV TOOLS (только для разработки!) -->
+<script src="js/dev-tools.js"></script>  
+
 </body>
 </html>
