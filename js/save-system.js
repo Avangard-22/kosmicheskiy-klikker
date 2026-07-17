@@ -52,6 +52,7 @@ const DEFAULT_GAME_STATE = {
     critMultiplier: 2.0,
     currentLocation: 'mercury',
     totalDamageDealt: 0,
+planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей планете (для прогресс-бара)
     clickUpgradeLevel: 0,
     critChanceUpgradeLevel: 0,
     critMultiplierUpgradeLevel: 0,

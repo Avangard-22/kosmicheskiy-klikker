@@ -210,7 +210,7 @@ updateProgressBar: function() {
     if (!window.gameState) return;
     const req = LOC_REQ[window.gameState.currentLocation];
     if (!req) return;
-    // ✅ ИСПРАВЛЕНО: Используем планетарный урон вместо глобального
+    // ✅ ИСПРАВЛЕНО: Используем планетарный урон (сохраняется в облако)
     const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
     const pct = Math.min(100, (cur / req.targetAU) * 100);
         
@@ -234,12 +234,14 @@ checkLocationUpgrade: function() {
     if (!window.gameState) return;
     const req = LOC_REQ[window.gameState.currentLocation];
     if (!req || !req.nextLocation) return;
-    // ✅ ИСПРАВЛЕНО: Используем планетарный урон вместо глобального
+    // ✅ ИСПРАВЛЕНО: Используем планетарный урон
     const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
     if (cur >= req.targetAU) {
-            if (window.GAME_CORE && window.GAME_CORE.setLocation) {
-                window.GAME_CORE.setLocation(req.nextLocation);
-            }
+if (window.GAME_CORE && window.GAME_CORE.setLocation) {
+    // ✅ Устанавливаем флаг перехода ПЕРЕД setLocation
+    if (window.gameState) window.gameState._isLocationChange = true;
+    window.GAME_CORE.setLocation(req.nextLocation);
+}
             
             if (window.showTooltip && window.translations && window.formatString) {
                 const tooltipText = window.formatString(

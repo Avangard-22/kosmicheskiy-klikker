@@ -714,8 +714,13 @@ setLocation: function(loc) {
         window.gameMetrics.currentCritStreak = 0;
     }
     
-    // ✅ НОВОЕ: Сброс планетарного урона — прогресс-бар начнёт заполняться с нуля
-    window.gameState.planetDamageDealt = 0;
+    // ✅ ИСПРАВЛЕНО: Сбрасываем ТОЛЬКО при переходе на НОВУЮ планету
+    // При загрузке сохранения текущая планета та же — прогресс НЕ сбрасываем
+    // Флаг _isLocationChange устанавливается только при реальном переходе
+    if (window.gameState._isLocationChange) {
+        window.gameState.planetDamageDealt = 0;
+        window.gameState._isLocationChange = false;
+    }
     
     // ✅ НОВОЕ: Сброс протокола отката (новая планета = чистый старт)
     if (window.gameState) {
@@ -831,6 +836,7 @@ setTimeout(() => this.createMovingBlock(), 500);
              critMultiplier: 2.0,
              currentLocation: 'mercury',
              totalDamageDealt: 0,
+         planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей планете
              clickUpgradeLevel: 0,
              critChanceUpgradeLevel: 0,
              critMultiplierUpgradeLevel: 0,
