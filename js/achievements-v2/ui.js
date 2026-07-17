@@ -213,11 +213,12 @@ function renderGridView() {
         `;
     });
     
-    const masterState = achState.masterUnlocked;
-    html += `
-        <div class="ach-v2-card master" data-metric="master" style="border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.1));">
-            <div class="ach-v2-card-emoji">👑</div>
-            <div class="ach-v2-card-name">${t('achievements.mercury.levels.m_complete', 'Меркурий покорён!')}</div>
+ const masterState = achState.masterUnlocked;
+ const masterName = t(`achievements.${info.id}.levels.m_complete`, `${info.emoji} ${info.nameFallback || info.id.toUpperCase()} покорён!`);
+ html += `
+     <div class="ach-v2-card master" data-metric="master" style="border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.1));">
+         <div class="ach-v2-card-emoji">👑</div>
+         <div class="ach-v2-card-name">${masterName}</div>
             <div class="ach-v2-card-level">${masterState ? '✅' : '🔒'}</div>
             <div class="ach-v2-card-progress">
                 <div class="ach-v2-card-progress-fill" style="width: ${masterState ? 100 : 0}%"></div>
@@ -324,13 +325,13 @@ function renderDetailView() {
 }
 
 function showMasterDetail() {
-    const panel = document.getElementById('achievementsPanel');
-    if (!panel) return;
-    const module = getCurrentPlanetModule();
-    if (!module) return;
-    
-    const master = module.getMasterAchievement();
-    const masterState = window.gameState?.achievementsV2?.mercury?.masterUnlocked || false;
+const panel = document.getElementById('achievementsPanel');
+if (!panel) return;
+const module = getCurrentPlanetModule();
+if (!module) return;
+const master = module.getMasterAchievement();
+const planetInfo = module.getPlanetInfo();
+const masterState = window.gameState?.achievementsV2?.[planetInfo.id]?.masterUnlocked || false;  // ✅ ДИНАМИЧЕСКИ
     
     let html = `
         <button class="ach-v2-back-btn" id="achV2BackBtn">← Назад</button>
@@ -343,7 +344,7 @@ function showMasterDetail() {
         </div>
         <div style="padding:20px;text-align:center;color:#aaa;">
             <p>Финальное достижение планеты.</p>
-            <p>Разблокируется при достижении 99.9% прогресса AU.</p>
+            <p>Разблокируется при достижении <strong>99.99%</strong> прогресса AU.</p>
             <p style="color:#FFD700;font-size:1.2em;margin-top:20px;">Награда: +${formatNumber(master.reward)} 💎</p>
         </div>
     `;

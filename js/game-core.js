@@ -57,11 +57,18 @@ window.GAME_CORE = {
      if (window.EventBus) window.EventBus.emit('game:resumed');
  },
 
-    calculateClickPower: function() {
-        const lvl = window.gameState.clickUpgradeLevel || 0;
-        const prog = CFG.balanceConfig.damageProgression;
-        return 1 + (lvl * Math.pow(prog.diminishingReturns, Math.min(lvl, prog.maxLevelEffect)) * Math.sqrt(lvl + 1) * prog.baseMultiplier);
-    },
+// ✅ ИСПРАВЛЕНО: Ступенчатая прогрессия силы удара
+// lvl 0:       1          (базовый урон)
+// lvl 1-25:    +2 за уровень  (1 → 51)
+// lvl 26-74:   +1 за уровень  (51 → 100)
+// lvl 75+:     +0.5 за уровень (100 → ∞)
+calculateClickPower: function() {
+    const lvl = window.gameState.clickUpgradeLevel || 0;
+    if (lvl <= 0) return 1;
+    if (lvl <= 25) return 1 + lvl * 2;
+    if (lvl <= 74) return 51 + (lvl - 25);
+    return 100 + (lvl - 74) * 0.5;
+},
 
     getCurrentSpeed: function() {
         if (!window.gameState) return this.blockSpeed;
@@ -707,48 +714,103 @@ if (planet && window.achievementsSystem?.incrementPlanetBoboDamage) {
 setLocation: function(loc) {
     if (!window.gameState) return;
     if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
+    
+    const oldPlanet = window.gameState.currentLocation;
+    const isNewPlanet = oldPlanet !== loc;
+    
     window.gameState.currentLocation = loc;
     
-    // ✅ НОВОЕ: Сброс серии критов при смене планеты
+    // ✅ Сброс серии критов при смене планеты
     if (window.gameMetrics) {
         window.gameMetrics.currentCritStreak = 0;
     }
     
-    // ✅ ИСПРАВЛЕНО: Сбрасываем ТОЛЬКО при переходе на НОВУЮ планету
-    // При загрузке сохранения текущая планета та же — прогресс НЕ сбрасываем
-    // Флаг _isLocationChange устанавливается только при реальном переходе
-    if (window.gameState._isLocationChange) {
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: planetDamageDealt ВСЕГДА сбрасывается при смене планеты
+    // Это прогресс именно ТЕКУЩЕЙ планеты, он не может переноситься между локациями.
+    // Раньше сбрасывался только при _isLocationChange=true, что приводило к багу:
+    // на новой планете оставалось огромное значение от предыдущей → master-ачивка срабатывала мгновенно
+    if (isNewPlanet) {
         window.gameState.planetDamageDealt = 0;
+        console.log(`🔄 [CORE] planetDamageDealt сброшен в 0 для новой планеты`);
+    }
+    
+    // Флаг _isLocationChange сбрасываем в любом случае (защита от повторного использования)
+    if (window.gameState._isLocationChange) {
         window.gameState._isLocationChange = false;
     }
     
-    // ✅ НОВОЕ: Сброс протокола отката (новая планета = чистый старт)
+    // ✅ Сброс протокола отката (новая планета = чистый старт)
     if (window.gameState) {
         window.gameState.skipPenaltyState = null;
     }
     
-    const gameTitle = document.getElementById('gameTitle');
-        const header = document.getElementById('header');
-        if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
-        if (header) header.style.borderColor = CFG.locations[loc].borderColor;
-
-        if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
-
-        const ann = document.getElementById('levelAnnounce');
-        if (ann) {
-            ann.textContent = CFG.locations[loc].name;
-            ann.style.color = CFG.locations[loc].color;
-            ann.style.opacity = "1";
-            setTimeout(() => { ann.style.opacity = "0"; }, 2000);
+    // ═══════════════════════════════════════════════════
+    // 🔄 СБРОС МЕТРИК ДОСТИЖЕНИЙ v2 ПРИ РЕАЛЬНОМ ПЕРЕХОДЕ
+    // ═══════════════════════════════════════════════════
+    if (isNewPlanet && window.gameState.achievementsV2) {
+        console.log(`🔄 [CORE] Переход: ${oldPlanet} → ${loc}. Сбрасываем метрики достижений.`);
+        
+        // Сбрасываем метрики старой планеты (кроме masterUnlocked)
+        if (window.gameState.achievementsV2[oldPlanet]) {
+            const oldAch = window.gameState.achievementsV2[oldPlanet];
+            const wasMasterUnlocked = oldAch.masterUnlocked || false;
+            
+            // Сбрасываем все метрики
+            oldAch.metrics = {};
+            oldAch.rank = wasMasterUnlocked ? 1 : 0;
+            oldAch.totalUnlocked = wasMasterUnlocked ? 1 : 0;
+            oldAch.masterUnlocked = wasMasterUnlocked; // Сохраняем мастер-достижение!
+            
+            console.log(`   ✓ achievementsV2.${oldPlanet} сброшен (мастер: ${wasMasterUnlocked})`);
         }
-
-        // ✅ Передаём имя планеты, а не номер
-if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
-      // ✅ Отправляем событие смены планеты для музыки
+        
+        // Сбрасываем gameMetrics.planetStats старой планеты
+        if (window.gameMetrics?.planetStats?.[oldPlanet]) {
+            const stats = window.gameMetrics.planetStats[oldPlanet];
+            for (const key in stats) {
+                if (typeof stats[key] === 'number') stats[key] = 0;
+            }
+            console.log(`   ✓ gameMetrics.planetStats.${oldPlanet} сброшен`);
+        }
+        
+        // Инициализируем новую планету (если её нет)
+        if (!window.gameState.achievementsV2[loc]) {
+            window.gameState.achievementsV2[loc] = {
+                rank: 0,
+                totalUnlocked: 0,
+                metrics: {},
+                masterUnlocked: false
+            };
+            console.log(`   ✓ achievementsV2.${loc} инициализирован`);
+        }
+        
+        // Обновляем UI
+        if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+        if (window.AchievementsV2?.UI?.updateAchievementsButton) {
+            window.AchievementsV2.UI.updateAchievementsButton();
+        }
+        
+        // Сохраняем
+        if (typeof window.saveGame === 'function') window.saveGame();
+    }
+    
+    const gameTitle = document.getElementById('gameTitle');
+    const header = document.getElementById('header');
+    if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
+    if (header) header.style.borderColor = CFG.locations[loc].borderColor;
+    if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
+    const ann = document.getElementById('levelAnnounce');
+    if (ann) {
+        ann.textContent = CFG.locations[loc].name;
+        ann.style.color = CFG.locations[loc].color;
+        ann.style.opacity = "1";
+        setTimeout(() => { ann.style.opacity = "0"; }, 2000);
+    }
+    
+    if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
     if (window.EventBus) {
         window.EventBus.emit('game:planetChanged', loc);
     }
-    
     UI.updateProgressBar();
 },
 

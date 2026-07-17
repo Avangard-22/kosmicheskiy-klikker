@@ -143,9 +143,9 @@ function createPlanetModule(config, nameTemplates) {
     // 🏆 Мастер-достижение
     function getMasterAchievement() {
         const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
-        const masterTarget = Math.round(config.masterAU * AU_TO_DAMAGE * 0.999);
+        const masterTarget = Math.round(config.masterAU * AU_TO_DAMAGE * 0.9999);
         return {
-            id: `${config.prefix}_master`, tier: -1, target: masterTarget, reward: 5000,
+            id: `${config.prefix}_master`, tier: -1, target: masterTarget, reward: 500000,
             nameKey: `ach.${config.id}.master`,
             nameFallback: `${config.emoji} ${config.id.toUpperCase()} покорён!`,
             metric: 'planetDamage', metricType: 'cumulative', isMaster: true, emoji: '👑'
@@ -211,6 +211,11 @@ function createPlanetModule(config, nameTemplates) {
         if (!window.gameState?.achievementsV2?.[config.id]) return;
         const planet = window.gameState.achievementsV2[config.id];
         if (planet.masterUnlocked) return;
+        
+        // ✅ КРИТИЧЕСКАЯ ЗАЩИТА: не разблокируем мастер-достижение при нулевом прогрессе
+        // Это защищает от бага, когда planetDamageDealt случайно остался огромным
+        // от предыдущей планеты при переходе на новую локацию
+        if (!currentPlanetDamage || currentPlanetDamage <= 0) return;
         
         const master = getMasterAchievement();
         if (currentPlanetDamage >= master.target) {
