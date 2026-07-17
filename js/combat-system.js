@@ -115,8 +115,14 @@ return { finalDamage: Math.max(0, dmg), isCrit };
             window.gameState.lastDestroyTime = now;
         }
 
+        // ✅ НОВАЯ ФОРМУЛА: Логарифмическая прогрессия наград
+        // ЧТО: Плавный рост вместо линейного скачка на Юпитере
+        // ЗАЧЕМ: Предотвращает спидран, даёт положительный баланс на всех планетах
+        // РЕЗУЛЬТАТ: Меркурий x1.26 → Плутон x3.96 (максимум +41% на Юпитере, далее 6-18%)
         const au = CFG.astronomicalUnits[window.gameState.currentLocation] || 0;
-        let reward = Math.floor((25 + au * 100) * CFG.balanceConfig.rewardMultiplier);
+        const auMult = 1 + Math.log(1 + au) * 0.8;  // Плавный логарифмический рост
+        const baseReward = 150;  // Базовая награда
+        let reward = Math.floor(baseReward * auMult * CFG.balanceConfig.rewardMultiplier);
         const rng = CFG.balanceConfig.randomBonusRange;
         reward = Math.floor(reward * (rng.min + Math.random() * (rng.max - rng.min)));
         if (window.gameState.boboCoinBonus > 0) reward = Math.floor(reward * (1 + window.gameState.boboCoinBonus));
