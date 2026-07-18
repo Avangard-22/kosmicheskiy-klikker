@@ -1,4 +1,4 @@
-// js/achievements-v2/ui.js (v2.3 — с фиксами от Kimi)
+ // js/achievements-v2/ui.js (v2.3 — с фиксами от Kimi)
 (function() {
 'use strict';
 
