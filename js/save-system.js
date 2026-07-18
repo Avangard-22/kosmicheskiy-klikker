@@ -300,18 +300,11 @@ function reconstructMetricsFromAchievements() {
                 const realValue = planetStats[statField] || 0;
                 const savedProgress = metrics[metricKey].progress || 0;
                 
-                // ✅ ДВУСТОРОННЯЯ СИНХРОНИЗАЦИЯ: берём МАКСИМУМ
-                // - Если planetStats больше → обновляем achievementsV2
-                // - Если achievementsV2 больше → обновляем planetStats (восстанавливаем из сейва!)
-                const maxProgress = Math.max(realValue, savedProgress);
-                
-                if (maxProgress > realValue) {
-                    planetStats[statField] = maxProgress;
-                    v2Healed = true;
-                    healed = true;
-                }
-                if (maxProgress > savedProgress) {
-                    metrics[metricKey].progress = maxProgress;
+                // ✅ ОДНОСТОРОННЯЯ СИНХРОНИЗАЦИЯ:
+                // Только если planetStats больше → обновляем achievementsV2
+                // (НЕ восстанавливаем planetStats из achievementsV2, чтобы не мешать сбросу при переходе)
+                if (realValue > savedProgress) {
+                    metrics[metricKey].progress = realValue;
                     v2Healed = true;
                     healed = true;
                 }
