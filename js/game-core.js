@@ -764,13 +764,18 @@ setLocation: function(loc) {
             console.log(`   ✓ achievementsV2.${oldPlanet} сброшен (мастер: ${wasMasterUnlocked})`);
         }
         
-        // Сбрасываем gameMetrics.planetStats старой планеты
+        // ✅ ИСПРАВЛЕНО: Полностью сбрасываем gameMetrics.planetStats старой планеты
+        // Это предотвращает восстановление прогресса через верификацию save-system
         if (window.gameMetrics?.planetStats?.[oldPlanet]) {
             const stats = window.gameMetrics.planetStats[oldPlanet];
             for (const key in stats) {
                 if (typeof stats[key] === 'number') stats[key] = 0;
+                else if (Array.isArray(stats[key])) stats[key] = [];
+                else if (typeof stats[key] === 'object' && stats[key] !== null) {
+                    for (const subKey in stats[key]) stats[key][subKey] = 0;
+                }
             }
-            console.log(`   ✓ gameMetrics.planetStats.${oldPlanet} сброшен`);
+            console.log(`   ✓ gameMetrics.planetStats.${oldPlanet} сброшен (все поля)`);
         }
         
         // Инициализируем новую планету (если её нет)
