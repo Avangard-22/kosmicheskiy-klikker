@@ -300,9 +300,18 @@ function reconstructMetricsFromAchievements() {
                 const realValue = planetStats[statField] || 0;
                 const savedProgress = metrics[metricKey].progress || 0;
                 
-                // Если реальное значение больше сохранённого — восстанавливаем
-                if (realValue > savedProgress) {
-                    metrics[metricKey].progress = realValue;
+                // ✅ ДВУСТОРОННЯЯ СИНХРОНИЗАЦИЯ: берём МАКСИМУМ
+                // - Если planetStats больше → обновляем achievementsV2
+                // - Если achievementsV2 больше → обновляем planetStats (восстанавливаем из сейва!)
+                const maxProgress = Math.max(realValue, savedProgress);
+                
+                if (maxProgress > realValue) {
+                    planetStats[statField] = maxProgress;
+                    v2Healed = true;
+                    healed = true;
+                }
+                if (maxProgress > savedProgress) {
+                    metrics[metricKey].progress = maxProgress;
                     v2Healed = true;
                     healed = true;
                 }
@@ -361,11 +370,25 @@ function applyCloudData(cloudData) {
         window.gameState.helperActive = false;
         window.gameState.helperTimeLeft = 0;
         window.gameState.comboCount = 0;
+        
+        // ✅ Лог для отладки: проверяем, загрузились ли достижения v2
+        const achV2 = window.gameState.achievementsV2 || {};
+        const planetCount = Object.keys(achV2).length;
+        console.log(`☁️ [LOAD] achievementsV2 загружен: ${planetCount} планет`);
+        for (const planet in achV2) {
+            const ach = achV2[planet];
+            const metricsCount = Object.keys(ach.metrics || {}).length;
+            console.log(`   ${planet}: rank=${ach.rank}, unlocked=${ach.totalUnlocked}, metrics=${metricsCount}, master=${ach.masterUnlocked}`);
+        }
     }
     
-    if (cloudData.full_game_metric) {
+    // ✅ ИСПРАВЛЕНО: full_game_metrics (с 's') — было full_game_metric (опечатка)
+    if (cloudData.full_game_metrics) {
         console.log('📊 [LOAD] Накатываем gameMetrics...');
         window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, cloudData.full_game_metrics);
+        console.log('📊 [LOAD] planetStats загружен:', Object.keys(window.gameMetrics.planetStats || {}).length, 'планет');
+    } else {
+        console.warn('⚠️ [LOAD] full_game_metrics отсутствует в облачных данных');
     }
     
     reconstructMetricsFromAchievements();
