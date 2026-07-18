@@ -1,4 +1,4 @@
-// js/save-system.js (v4.1 — Гарантированная целостность данных для Yandex Cloud)
+// js/save-system.js (v4.1 — Гарантированная целостность данных и синхронизация достижений)
 (function() {
 'use strict';
 
@@ -47,13 +47,12 @@ window.isSyncLocked = function() { return isOperationLocked; };
 // ============================================
 const DEFAULT_GAME_STATE = {
     coins: 0,
-    clickPower: 1,
-    critChance: 0.001,
+    clickPower: 1,    critChance: 0.001,
     critMultiplier: 2.0,
     currentLocation: 'mercury',
     totalDamageDealt: 0,
     planetDamageDealt: 0,
-    darkMatter: 0,          // ✅ ДОБАВЛЕНО: критично для сохранения
+    darkMatter: 0,          // ✅ Критично для сохранения
     clickUpgradeLevel: 0,
     critChanceUpgradeLevel: 0,
     critMultiplierUpgradeLevel: 0,
@@ -97,8 +96,7 @@ const DEFAULT_GAME_METRICS = {
 
 // ============================================
 // УТИЛИТЫ
-// ============================================
-function deepMerge(defaults, saved) {
+// ============================================function deepMerge(defaults, saved) {
     if (typeof saved !== 'object' || saved === null) return saved;
     if (Array.isArray(saved)) return [...saved];
     const result = Object.assign({}, defaults || {});
@@ -147,8 +145,7 @@ function ensureAchievementsV2Structure() {
     if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
-    const achTemplate = { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };
-    
+    const achTemplate = { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };    
     planetOrder.forEach(planet => {
         if (!window.gameState.achievementsV2[planet]) {
             window.gameState.achievementsV2[planet] = Object.assign({}, achTemplate);
@@ -169,36 +166,63 @@ function ensureSkipPenaltyState() {
     }
 }
 
+/**
+ * 🛡️ ЖЁСТКАЯ синхронизация достижений с реальными игровыми метриками.
+ * Гарантирует, что прогресс в ачивках не может быть меньше реального прогресса в игре.
+ */
 function reconstructMetricsFromAchievements() {
     if (!window.gameState || !window.gameMetrics) return;
-    
+
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
-    
+
     const gm = window.gameMetrics;
     const ach = window.gameState.achievementsV2;
-    if (!ach || !gm.planetStats) return;
-    
-    const mapping = {
+    if (!ach) return;
+
+    console.log('🔄 [SAVE-SYSTEM] Принудительная синхронизация достижений с игровыми метриками...');
+    let syncCount = 0;
+
+    const planetMapping = {
         blocks: 'blocks', crits: 'crits', combo: 'combo', rare: 'rare',
         damage: 'damageDealt', crystals: 'crystalsEarned', bobo: 'boboActivations',
         boboDmg: 'boboDamage', boboCrystals: 'boboCrystalsEarned',
         upgrades: 'upgrades', time: 'timePlayed', speed: 'fastestBlock', critStreak: 'maxCritStreak'
     };
-    
+
     for (const planet in ach) {
-        const planetStats = gm.planetStats[planet];
-        if (!planetStats || !ach[planet].metrics) continue;
-        
-        for (const [metricKey, statField] of Object.entries(mapping)) {
-            if (!ach[planet].metrics[metricKey]) ach[planet].metrics[metricKey] = { level: 0, progress: 0 };
-            
+        const planetStats = gm.planetStats?.[planet];
+        if (!planetStats || !ach[planet]?.metrics) continue;
+        for (const [metricKey, statField] of Object.entries(planetMapping)) {
+            if (!ach[planet].metrics[metricKey]) {
+                ach[planet].metrics[metricKey] = { level: 0, progress: 0 };
+            }
+
             const realValue = planetStats[statField] || 0;
-            if (realValue > (ach[planet].metrics[metricKey].progress || 0)) {
+            const savedProgress = ach[planet].metrics[metricKey].progress || 0;
+
+            // Если реальный прогресс в игре ВЫШЕ сохранённого в ачивках, перезаписываем
+            if (realValue > savedProgress) {
+                console.log(`   🛠️ Исправлено: [${planet}] ${metricKey} было ${savedProgress}, стало ${realValue}`);
                 ach[planet].metrics[metricKey].progress = realValue;
+                syncCount++;
+
+                // Просим систему достижений пересчитать уровень
+                if (window.achievementsSystem && typeof window.achievementsSystem.recalculateMetricLevel === 'function') {
+                    window.achievementsSystem.recalculateMetricLevel(planet, metricKey, realValue);
+                }
             }
         }
+    }
+
+    if (syncCount > 0) {
+        console.warn(`⚠️ [SAVE-SYSTEM] Успешно восстановлено ${syncCount} значений прогресса достижений.`);
+        if (window.gameState.gameActive && window.achievementsSystem?.updateAchievementsDisplay) {
+            setTimeout(() => window.achievementsSystem.updateAchievementsDisplay(), 100);
+        }
+    } else {
+        console.log('✅ [SAVE-SYSTEM] Прогресс достижений полностью синхронизирован с игрой.');
     }
 }
 
@@ -208,11 +232,10 @@ function reconstructMetricsFromAchievements() {
 function extractCloudData() {
     if (!window.gameState) return null;
     
-    // ✅ Глубокая очистка: удаляем функции, undefined и служебные поля перед отправкой
+    // Глубокая очистка: удаляем функции и служебные поля перед отправкой
     const cleanState = JSON.parse(JSON.stringify(window.gameState));
     const cleanMetrics = JSON.parse(JSON.stringify(window.gameMetrics || {}));
     
-    // Удаляем временные флаги, которые не нужно сохранять
     delete cleanState._isNewGame;
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
@@ -220,14 +243,13 @@ function extractCloudData() {
     const currentLevel = planetOrder.indexOf(currentLocation) + 1;
     
     const username = (typeof window.getTelegramUsername === 'function') 
-        ? window.getTelegramUsername()
-        : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
+        ? window.getTelegramUsername()        : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
         
     const payload = {
         crystals: Math.floor(cleanState.coins || 0),
         level: currentLevel,
         score: Math.floor(cleanState.totalDamageDealt || 0),
-        dark_matter: Math.floor(cleanState.darkMatter || 0), // ✅ Явно добавляем для бэкенда
+        dark_matter: Math.floor(cleanState.darkMatter || 0),
         bobo_skin: cleanState.boboSkin || 'default',
         username: username,
         timestamp: Date.now(),
@@ -238,9 +260,7 @@ function extractCloudData() {
     console.log('☁️ [SAVE] Payload готов к отправке:', {
         crystals: payload.crystals,
         dark_matter: payload.dark_matter,
-        level: payload.level,
-        stateKeys: Object.keys(cleanState).length,
-        metricsKeys: Object.keys(cleanMetrics).length
+        level: payload.level
     });
     
     return payload;
@@ -258,8 +278,7 @@ function applyCloudData(cloudData) {
     console.log('☁️ [LOAD] Получены данные из облака:', {
         hasState: !!cloudData.full_game_state,
         hasMetrics: !!cloudData.full_game_metrics,
-        darkMatter: cloudData.full_game_state?.darkMatter,
-        achievementsV2: !!cloudData.full_game_state?.achievementsV2
+        darkMatter: cloudData.full_game_state?.darkMatter
     });
 
     if (cloudData.full_game_state) {
@@ -269,39 +288,32 @@ function applyCloudData(cloudData) {
         
         window.gameState = deepMerge(DEFAULT_GAME_STATE, cloudData.full_game_state);
         
-        // Восстанавливаем флаги, которые не должны перезаписываться при загрузке
         window.gameState.gameActive = currentGameActive;
         window.gameState.gamePaused = currentGamePaused;
         window.gameState.helperActive = false;
         window.gameState.helperTimeLeft = 0;
-        window.gameState.comboCount = 0;
-        
-        // ✅ Явная гарантия наличия критичных новых полей (защита от старых сейвов)
+        window.gameState.comboCount = 0;        
+        // Явная гарантия наличия критичных новых полей
         if (window.gameState.darkMatter === undefined) window.gameState.darkMatter = 0;
         if (window.gameState.planetDamageDealt === undefined) window.gameState.planetDamageDealt = 0;
         if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
         if (!window.gameState.skipPenaltyState) window.gameState.skipPenaltyState = { activated: false, skipCount: 0, rollbackCount: 0, activationDistance: 0, totalRolledBack: 0 };
-        
-        console.log('☁️ [LOAD] gameState восстановлен. darkMatter:', window.gameState.darkMatter, 'планет в achievementsV2:', Object.keys(window.gameState.achievementsV2).length);
     }
     
     if (cloudData.full_game_metrics) {
         console.log('📊 [LOAD] Накатываем gameMetrics...');
         window.gameMetrics = deepMerge(DEFAULT_GAME_METRICS, cloudData.full_game_metrics);
-        
         if (!window.gameMetrics.planetStats) window.gameMetrics.planetStats = {};
-        
-        console.log('📊 [LOAD] planetStats загружен:', Object.keys(window.gameMetrics.planetStats).length, 'планет');
     } else {
         console.warn('⚠️ [LOAD] full_game_metrics отсутствует, создаём заново');
         window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
     }
     
-    // ✅ Перестраиваем и гарантируем структуры
+    // Перестраиваем и гарантируем структуры
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
-    reconstructMetricsFromAchievements();
+    reconstructMetricsFromAchievements(); // 🛡️ ГЛАВНОЕ ИСПРАВЛЕНИЕ
     
     console.log('✅ [LOAD] Загрузка завершена успешно');
 }
@@ -329,7 +341,6 @@ window.saveGame = function() {
         return false;
     }
 };
-
 function debouncedCloudSave() {
     if (cloudSaveTimeout) clearTimeout(cloudSaveTimeout);
     cloudSaveTimeout = setTimeout(() => {
@@ -358,7 +369,7 @@ async function cloudSaveAsync() {
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
-    // ✅ ИСПРАВЛЕНО: добавлена проверка darkMatter, чтобы не пропускать сохранение, если кристаллы потрачены на него
+    // ✅ ИСПРАВЛЕНО: добавлена проверка darkMatter
     const hasRealData = (gs?.coins || 0) > 0 || 
                         (gs?.totalDamageDealt || 0) > 0 || 
                         (gs?.clickUpgradeLevel || 0) > 0 || 
@@ -379,8 +390,7 @@ async function cloudSaveAsync() {
             if (result?.success) {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
-            } else {
-                showSaveIndicator('⚠️', 'Ошибка', '#ff9800');
+            } else {                showSaveIndicator('⚠️', 'Ошибка', '#ff9800');
             }
         }
     } catch (e) {
@@ -429,8 +439,7 @@ window.cloudInit = async function() {
         } else {
             await cloudSaveAsync();
         }
-        
-        if (window.EventBus) {
+                if (window.EventBus) {
             window.EventBus.emit('save:ready');
             console.log('📡 [SAVE] Эмитировано событие save:ready');
         }
@@ -479,8 +488,7 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
         saveBtn.classList.add(color === '#4CAF50' ? 'save-pulse-success' : 'save-pulse-error');
         setTimeout(() => saveBtn.classList.remove('save-pulse-success', 'save-pulse-error'), 1000);
     }
-    
-    let indicator = document.getElementById('saveIndicator');
+        let indicator = document.getElementById('saveIndicator');
     if (!indicator) {
         indicator = document.createElement('div');
         indicator.id = 'saveIndicator';
