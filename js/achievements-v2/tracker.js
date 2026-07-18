@@ -162,9 +162,20 @@ function incrementTotalDamage(d) {
     var gs = window.gameState || (window.gameState = {});
     gs.totalDamageDealt = (gs.totalDamageDealt || 0) + d;
     
+    // ✅ ИСПРАВЛЕНО: Обновляем planetStats[planet].damageDealt (планетарный урон)
+    var gm = window.gameMetrics || (window.gameMetrics = {});
+    if (!gm.planetStats) gm.planetStats = {};
     const currentPlanet = gs.currentLocation;
+    if (!gm.planetStats[currentPlanet]) gm.planetStats[currentPlanet] = {};
+    gm.planetStats[currentPlanet].damageDealt = (gm.planetStats[currentPlanet].damageDealt || 0) + d;
+    
     const module = getPlanetModule(currentPlanet);
-    if (module) module.checkMasterAchievement(gs.planetDamageDealt || 0);
+    if (module) {
+        // ✅ Обновляем метрику damage через planetStats (планетарный урон)
+        module.updateMetricProgress('damage', gm.planetStats[currentPlanet].damageDealt);
+        // ✅ Проверяем мастер-достижение через planetDamageDealt (прогресс-бар)
+        module.checkMasterAchievement(gs.planetDamageDealt || 0);
+    }
 }
 
 function incrementCoinsEarned(a) {
