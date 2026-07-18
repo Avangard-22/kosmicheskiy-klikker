@@ -1,4 +1,4 @@
-// js/achievements-v2/tracker.js (v3.1 — с фиксами от Kimi)
+ // js/achievements-v2/tracker.js (v3.1 — с фиксами от Kimi)
 (function() {
 'use strict';
 
