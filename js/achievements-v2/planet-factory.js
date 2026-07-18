@@ -3,7 +3,7 @@
 // 🏭 ФАБРИКА ПЛАНЕТ — Универсальный движок достижений v2
 // ЧТО: Создаёт полноценный модуль достижений из конфига.
 // ЗАЧЕМ: Чтобы добавить новую планету, нужен ТОЛЬКО конфиг (~20 строк).
-// Вся логика (генерация, ранги, сохранение) едина для всех.
+//        Вся логика (генерация, ранги, сохранение) едина для всех.
 // ═══════════════════════════════════════════════════
 (function() {
 'use strict';
@@ -84,6 +84,7 @@ function createPlanetModule(config, nameTemplates) {
     function generateLevel(metric, tier) {
         const cfg = config.metrics[metric];
         if (!cfg) return null;
+        
         const seed = `${config.id}:${metric}:${tier}`;
         let target;
         if (cfg.type === 'record_min') {
@@ -91,6 +92,7 @@ function createPlanetModule(config, nameTemplates) {
         } else {
             target = Math.max(1, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
         }
+        
         const reward = Math.max(1, Math.round(cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier) * jit(seed + ':r', 0.05)));
         const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
         
@@ -112,56 +114,29 @@ function createPlanetModule(config, nameTemplates) {
         return levels;
     }
     
-    // ✅ ФИКС 4: Исправлена логика для record_min
     function isLevelComplete(metric, tier, currentValue) {
         const level = generateLevel(metric, tier);
         if (!level) return false;
-        if (level.metricType === 'record_min') {
-            // Для record_min — currentValue ДОЛЖЕН быть <= target
-            // Но currentValue > 0 (защита от нулевого прогресса)
-            return currentValue > 0 && currentValue <= level.target;
-        }
+        if (level.metricType === 'record_min') return currentValue > 0 && currentValue <= level.target;
         return currentValue >= level.target;
     }
     
-    // ✅ ФИКС 3: Исправлена логика прогресса для record_min
-    // ✅ ФИКС 7: Защита от infinite loop (tier < MAX_TIER)
     function getCardProgress(metric, currentValue) {
         let tier = 0, totalUnlocked = 0;
-        const MAX_TIER = 10000;
-        
-        while (tier < MAX_TIER) {  // ✅ ФИКС 7: явное условие вместо true
-            if (isLevelComplete(metric, tier, currentValue)) { 
-                totalUnlocked++; 
-                tier++; 
-            } else break;
+        while (true) {
+            if (isLevelComplete(metric, tier, currentValue)) { totalUnlocked++; tier++; }
+            else break;
+            if (tier > 10000) break;
         }
-        
         const currentLevel = generateLevel(metric, tier);
         const prevLevel = tier > 0 ? generateLevel(metric, tier - 1) : null;
         let percent = 0;
-        
         if (currentLevel) {
-            const cfg = config.metrics[metric];
-            if (cfg.type === 'record_min') {
-                // ✅ ФИКС 3: Обратная логика для record_min
-                // Цель: currentValue должно быть МЕНЬШЕ target
-                // Прогресс: 100% когда currentValue = 0, 0% когда currentValue = prevTarget
-                const prevTarget = prevLevel ? prevLevel.target : currentLevel.target * 2;
-                const range = prevTarget - currentLevel.target;  // Положительный range
-                const progress = prevTarget - currentValue;       // Чем меньше current, тем больше progress
-                percent = Math.min(100, Math.max(0, (progress / range) * 100));
-            } else {
-                // Стандартная логика для cumulative/record_max
-                const prevTarget = prevLevel ? prevLevel.target : 0;
-                const range = currentLevel.target - prevTarget;
-                const progress = currentValue - prevTarget;
-                percent = Math.min(100, Math.max(0, (progress / range) * 100));
-            }
-        } else { 
-            percent = 100; 
-        }
-        
+            const prevTarget = prevLevel ? prevLevel.target : 0;
+            const range = currentLevel.target - prevTarget;
+            const progress = currentValue - prevTarget;
+            percent = Math.min(100, Math.max(0, (progress / range) * 100));
+        } else { percent = 100; }
         return { currentTier: tier, currentLevel, percent, totalUnlocked };
     }
     
@@ -238,6 +213,8 @@ function createPlanetModule(config, nameTemplates) {
         if (planet.masterUnlocked) return;
         
         // ✅ КРИТИЧЕСКАЯ ЗАЩИТА: не разблокируем мастер-достижение при нулевом прогрессе
+        // Это защищает от бага, когда planetDamageDealt случайно остался огромным
+        // от предыдущей планеты при переходе на новую локацию
         if (!currentPlanetDamage || currentPlanetDamage <= 0) return;
         
         const master = getMasterAchievement();

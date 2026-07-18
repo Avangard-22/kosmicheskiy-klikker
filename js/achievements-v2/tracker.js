@@ -1,17 +1,11 @@
- // js/achievements-v2/tracker.js (v3.1 — с фиксами от Kimi)
+// js/achievements-v2/tracker.js (УНИВЕРСАЛЬНЫЙ ЧЕРЕЗ ФАБРИКУ)
 (function() {
 'use strict';
 
 let saveDebounceTimer = null;
-
-// ✅ ФИКС 10: Очистка таймера для предотвращения утечек
 function debouncedSave() {
-    if (saveDebounceTimer) {
-        clearTimeout(saveDebounceTimer);
-        saveDebounceTimer = null;
-    }
+    if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
     saveDebounceTimer = setTimeout(function() {
-        saveDebounceTimer = null;
         if (typeof window.saveGame === 'function') window.saveGame();
     }, 10000);
 }
@@ -164,26 +158,23 @@ function updatePlanetCritStreak(planet, streak) {
 // ═══════════════════════════════════════════════════
 // 🏆 ГЛОБАЛЬНЫЕ МЕТРИКИ
 // ═══════════════════════════════════════════════════
-
-// ✅ ФИКС 1: Синхронизация planetDamageDealt с planetStats
 function incrementTotalDamage(d) {
     var gs = window.gameState || (window.gameState = {});
     gs.totalDamageDealt = (gs.totalDamageDealt || 0) + d;
     
+    // ✅ ИСПРАВЛЕНО: Обновляем planetStats[planet].damageDealt (планетарный урон)
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     const currentPlanet = gs.currentLocation;
     if (!gm.planetStats[currentPlanet]) gm.planetStats[currentPlanet] = {};
     gm.planetStats[currentPlanet].damageDealt = (gm.planetStats[currentPlanet].damageDealt || 0) + d;
     
-    // ✅ ФИКС 1: Синхронизируем planetDamageDealt с planetStats
-    gs.planetDamageDealt = gm.planetStats[currentPlanet].damageDealt;
-    
     const module = getPlanetModule(currentPlanet);
     if (module) {
+        // ✅ Обновляем метрику damage через planetStats (планетарный урон)
         module.updateMetricProgress('damage', gm.planetStats[currentPlanet].damageDealt);
-        // ✅ Теперь gs.planetDamageDealt актуален
-        module.checkMasterAchievement(gs.planetDamageDealt);
+        // ✅ Проверяем мастер-достижение через planetDamageDealt (прогресс-бар)
+        module.checkMasterAchievement(gs.planetDamageDealt || 0);
     }
 }
 
@@ -252,17 +243,4 @@ window.achievementsSystem = {
 };
 
 console.log('🔗 [ACH-V2] Tracker shim initialized (UNIVERSAL)');
-
-// ✅ ФИКС 6: Добавление saveGame при закрытии
-window.addEventListener('beforeunload', function() {
-    if (saveDebounceTimer) {
-        clearTimeout(saveDebounceTimer);
-        saveDebounceTimer = null;
-    }
-    // Форсированное сохранение перед закрытием
-    if (typeof window.saveGame === 'function') {
-        window.saveGame();
-    }
-});
-
 })();
