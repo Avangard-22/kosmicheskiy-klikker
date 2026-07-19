@@ -1,4 +1,4 @@
-// js/device-detector.js
+//  js/device-detector.js
 (function() {
 'use strict';
 
