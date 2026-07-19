@@ -230,101 +230,72 @@ function ensureSkipPenaltyState() {
 }
 
 function reconstructMetricsFromAchievements() {
-    if (!window.gameState) return;
-    if (!window.gameMetrics) window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
-    const gm = window.gameMetrics;
-    const ach = window.gameState.achievements || {};
-    let healed = false;
-    console.log('⚙️ [SAVE-SYSTEM] Верификация корректности игровых метрик...');
-    
-    if (ach.clickMaster && typeof ach.clickMaster.progress === 'number') {
-        if ((gm.totalClicks || 0) < ach.clickMaster.progress) {
-            gm.totalClicks = ach.clickMaster.progress;
-            healed = true;
-        }
-    }
-    
-    if (ach.timeInvestor && typeof ach.timeInvestor.progress === 'number') {
-        if ((gm.totalTimePlayed || 0) < ach.timeInvestor.progress) {
-            gm.totalTimePlayed = ach.timeInvestor.progress;
-            healed = true;
-        }
-    }
-    
-    const currentUpgradesCount = 
-        (window.gameState.clickUpgradeLevel || 0) + 
-        (window.gameState.critChanceUpgradeLevel || 0) + 
-        (window.gameState.critMultiplierUpgradeLevel || 0) + 
-        (window.gameState.helperUpgradeLevel || 0);
-    if ((gm.upgradesBought || 0) < currentUpgradesCount) {
-        gm.upgradesBought = currentUpgradesCount;
-        healed = true;
-    }
-    
-    // ✅ НОВОЕ: Верификация achievementsV2
-    // Синхронизируем прогресс метрик с реальными значениями из planetStats
-    if (window.gameState?.achievementsV2 && gm.planetStats) {
-        let v2Healed = false;
+    try {
+        if (!window.gameState || !window.gameMetrics) return;
+
+        ensurePlanetStatsStructure();
+        ensureAchievementsV2Structure();
+        ensureSkipPenaltyState();
+
+        const gm = window.gameMetrics;
         const ach = window.gameState.achievementsV2;
-        
-        // Для каждой планеты в достижениях
+        if (!ach) return;
+
+        console.log('🔄 [SAVE-SYSTEM] Принудительная синхронизация достижений...');
+        let syncCount = 0;
+
+        const planetMapping = {
+            blocks: 'blocks', crits: 'crits', combo: 'combo', rare: 'rare',
+            damage: 'damageDealt', crystals: 'crystalsEarned', bobo: 'boboActivations',
+            boboDmg: 'boboDamage', boboCrystals: 'boboCrystalsEarned',
+            upgrades: 'upgrades', time: 'timePlayed', speed: 'fastestBlock', critStreak: 'maxCritStreak'
+        };
+
         for (const planet in ach) {
-            if (!ach[planet] || !ach[planet].metrics) continue;
-            const planetStats = gm.planetStats[planet];
-            if (!planetStats) continue;
-            
-            const metrics = ach[planet].metrics;
-            
-            // ✅ НОВОЕ: Актуальный маппинг (12 метрик)
-            const mapping = {
-                blocks:       'blocks',
-                crits:        'crits',
-                combo:        'combo',
-                rare:         'rare',
-                damage:       'damageDealt',
-                crystals:     'crystalsEarned',
-                bobo:         'boboActivations',
-                boboDmg:      'boboDamage',
-                boboCrystals: 'boboCrystalsEarned',  // ✅ НОВОЕ
-                upgrades:     'upgrades',             // ✅ НОВОЕ
-                time:         'timePlayed',
-                speed:        'fastestBlock',
-                critStreak:   'maxCritStreak'         // ✅ НОВОЕ
-            };
-            
-            for (const [metricKey, statField] of Object.entries(mapping)) {
-                if (!metrics[metricKey]) {
-                    metrics[metricKey] = { level: 0, progress: 0 };
+            const planetStats = gm.planetStats?.[planet];
+            if (!planetStats || !ach[planet]?.metrics) continue;
+
+            for (const [metricKey, statField] of Object.entries(planetMapping)) {
+                if (!ach[planet].metrics[metricKey]) {
+                    ach[planet].metrics[metricKey] = { level: 0, progress: 0 };
                 }
-                
+
                 const realValue = planetStats[statField] || 0;
-                const savedProgress = metrics[metricKey].progress || 0;
-                
-                // ✅ ОДНОСТОРОННЯЯ СИНХРОНИЗАЦИЯ:
-                // Только если planetStats больше → обновляем achievementsV2
-                // (НЕ восстанавливаем planetStats из achievementsV2, чтобы не мешать сбросу при переходе)
+                const savedProgress = ach[planet].metrics[metricKey].progress || 0;
+
+                // 🛡️ ЖЕСТКОЕ ПРАВИЛО: Если реальный прогресс в игре ВЫШЕ сохранённого в ачивках, перезаписываем
                 if (realValue > savedProgress) {
-                    metrics[metricKey].progress = realValue;
-                    v2Healed = true;
-                    healed = true;
+                    console.log(`   🛠️ Исправлено: [${planet}] ${metricKey} было ${savedProgress}, стало ${realValue}`);
+                    ach[planet].metrics[metricKey].progress = realValue;
+                    syncCount++;
+
+                    // Просим систему достижений пересчитать уровень на основе нового прогресса
+                    try {
+                        const module = window.AchievementsV2?.PlanetFactory?.get(planet);
+                        if (module && typeof module.updateMetric === 'function') {
+                            module.updateMetric(metricKey, realValue, 'set');
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ Ошибка пересчета уровня ачивки (не критично):', err);
+                    }
                 }
             }
         }
-        
-        if (v2Healed) {
-            console.warn('⚠️ [SAVE-SYSTEM] achievementsV2 синхронизированы с planetStats');
+
+        if (syncCount > 0) {
+            console.warn(`⚠️ [SAVE-SYSTEM] Успешно восстановлено ${syncCount} значений прогресса.`);
+            try {
+                if (window.gameState.gameActive && window.AchievementsV2?.UI?.updateAchievementsButton) {
+                    setTimeout(() => window.AchievementsV2.UI.updateAchievementsButton(), 100);
+                }
+            } catch (err) {
+                console.warn('⚠️ Ошибка обновления UI достижений (не критично):', err);
+            }
+        } else {
+            console.log('✅ [SAVE-SYSTEM] Прогресс достижений полностью синхронизирован с игрой.');
         }
-    }
-    
-    // ✅ НОВОЕ: Гарантируем структуру для всех планет и метрик
-    ensurePlanetStatsStructure();
-    ensureAchievementsV2Structure();
-    ensureSkipPenaltyState();
-    
-    if (healed) {
-        console.warn('⚠️ [SAVE-SYSTEM] Метрики восстановлены:', gm);
-    } else {
-        console.log('✅ [SAVE-SYSTEM] Метрики корректны (все структуры обеспечены).');
+    } catch (error) {
+        console.error('❌ [SAVE-SYSTEM] Критическая ошибка синхронизации достижений:', error);
     }
 }
 
