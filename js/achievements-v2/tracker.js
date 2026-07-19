@@ -1,8 +1,9 @@
-// js/achievements-v2/tracker.js (УНИВЕРСАЛЬНЫЙ ЧЕРЕЗ ФАБРИКУ)
+// js/achievements-v2/tracker.js (УНИВЕРСАЛЬНЫЙ ЧЕРЕЗ ФАБРИКУ — Delta Mode)
 (function() {
 'use strict';
 
 let saveDebounceTimer = null;
+
 function debouncedSave() {
     if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
     saveDebounceTimer = setTimeout(function() {
@@ -21,6 +22,7 @@ function getPlanetModule(planet) {
 // ═══════════════════════════════════════════════════
 // 🌍 ПЛАНЕТАРНЫЕ МЕТРИКИ (работают с ЛЮБОЙ планетой)
 // ═══════════════════════════════════════════════════
+
 function incrementPlanetBlocks(planet, c) {
     if (!c) c = 1;
     var gm = window.gameMetrics || (window.gameMetrics = {});
@@ -29,7 +31,7 @@ function incrementPlanetBlocks(planet, c) {
     gm.planetStats[planet].blocks = (gm.planetStats[planet].blocks || 0) + c;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('blocks', gm.planetStats[planet].blocks);
+    if (module) module.updateMetric('blocks', c, 'add'); // ✅ Передаем дельту (c) и режим 'add'
     debouncedSave();
 }
 
@@ -41,7 +43,7 @@ function incrementPlanetCrits(planet, c) {
     gm.planetStats[planet].crits = (gm.planetStats[planet].crits || 0) + c;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('crits', gm.planetStats[planet].crits);
+    if (module) module.updateMetric('crits', c, 'add');
     debouncedSave();
 }
 
@@ -49,10 +51,11 @@ function updatePlanetCombo(planet, combo) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    
     if (combo > (gm.planetStats[planet].combo || 0)) {
         gm.planetStats[planet].combo = combo;
         const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('combo', combo);
+        if (module) module.updateMetric('combo', combo, 'max'); // ✅ Передаем абсолютное значение и режим 'max' (рекорд)
     }
 }
 
@@ -64,7 +67,7 @@ function incrementPlanetRareBlocks(planet, c) {
     gm.planetStats[planet].rare = (gm.planetStats[planet].rare || 0) + c;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('rare', gm.planetStats[planet].rare);
+    if (module) module.updateMetric('rare', c, 'add');
     debouncedSave();
 }
 
@@ -76,7 +79,7 @@ function incrementPlanetCrystals(planet, amount) {
     gm.planetStats[planet].crystalsEarned = (gm.planetStats[planet].crystalsEarned || 0) + amount;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('crystals', gm.planetStats[planet].crystalsEarned);
+    if (module) module.updateMetric('crystals', amount, 'add');
     debouncedSave();
 }
 
@@ -87,7 +90,7 @@ function incrementPlanetBobo(planet) {
     gm.planetStats[planet].boboActivations = (gm.planetStats[planet].boboActivations || 0) + 1;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('bobo', gm.planetStats[planet].boboActivations);
+    if (module) module.updateMetric('bobo', 1, 'add');
     debouncedSave();
 }
 
@@ -99,7 +102,7 @@ function incrementPlanetBoboDamage(planet, damage) {
     gm.planetStats[planet].boboDamage = (gm.planetStats[planet].boboDamage || 0) + damage;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('boboDmg', gm.planetStats[planet].boboDamage);
+    if (module) module.updateMetric('boboDmg', damage, 'add');
     debouncedSave();
 }
 
@@ -111,7 +114,7 @@ function incrementPlanetUpgrades(planet, c) {
     gm.planetStats[planet].upgrades = (gm.planetStats[planet].upgrades || 0) + c;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('upgrades', gm.planetStats[planet].upgrades);
+    if (module) module.updateMetric('upgrades', c, 'add');
     debouncedSave();
 }
 
@@ -123,7 +126,7 @@ function updatePlanetTime(planet, seconds) {
     gm.planetStats[planet].timePlayed = (gm.planetStats[planet].timePlayed || 0) + seconds;
     
     const module = getPlanetModule(planet);
-    if (module) module.updateMetricProgress('time', gm.planetStats[planet].timePlayed);
+    if (module) module.updateMetric('time', seconds, 'add');
     debouncedSave();
 }
 
@@ -132,11 +135,12 @@ function updatePlanetSpeed(planet, milliseconds) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    
     const current = gm.planetStats[planet].fastestBlock || 0;
     if (current === 0 || milliseconds < current) {
         gm.planetStats[planet].fastestBlock = milliseconds;
         const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('speed', milliseconds);
+        if (module) module.updateMetric('speed', milliseconds, 'min'); // ✅ Режим 'min' для рекорда времени
         debouncedSave();
     }
 }
@@ -146,11 +150,12 @@ function updatePlanetCritStreak(planet, streak) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    
     const current = gm.planetStats[planet].maxCritStreak || 0;
     if (streak > current) {
         gm.planetStats[planet].maxCritStreak = streak;
         const module = getPlanetModule(planet);
-        if (module) module.updateMetricProgress('critStreak', streak);
+        if (module) module.updateMetric('critStreak', streak, 'max'); // ✅ Режим 'max' для рекорда серии
         debouncedSave();
     }
 }
@@ -158,11 +163,12 @@ function updatePlanetCritStreak(planet, streak) {
 // ═══════════════════════════════════════════════════
 // 🏆 ГЛОБАЛЬНЫЕ МЕТРИКИ
 // ═══════════════════════════════════════════════════
+
 function incrementTotalDamage(d) {
     var gs = window.gameState || (window.gameState = {});
     gs.totalDamageDealt = (gs.totalDamageDealt || 0) + d;
     
-    // ✅ ИСПРАВЛЕНО: Обновляем planetStats[planet].damageDealt (планетарный урон)
+    // ✅ ИСПРАВЛЕНО: Обновляем планетарный урон
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     const currentPlanet = gs.currentLocation;
@@ -171,8 +177,8 @@ function incrementTotalDamage(d) {
     
     const module = getPlanetModule(currentPlanet);
     if (module) {
-        // ✅ Обновляем метрику damage через planetStats (планетарный урон)
-        module.updateMetricProgress('damage', gm.planetStats[currentPlanet].damageDealt);
+        // ✅ Передаем дельту урона (d), а не абсолютное значение сессии
+        module.updateMetric('damage', d, 'add');
         // ✅ Проверяем мастер-достижение через planetDamageDealt (прогресс-бар)
         module.checkMasterAchievement(gs.planetDamageDealt || 0);
     }
@@ -209,7 +215,7 @@ function updateTimePlayed() {}
 // 🌐 ЭКСПОРТ API
 // ═══════════════════════════════════════════════════
 window.achievementsSystem = {
-    init: function() { console.log('🔗 [ACH-V2] Tracker initialized (UNIVERSAL via Factory)'); },
+    init: function() { console.log('🔗 [ACH-V2] Tracker initialized (UNIVERSAL via Factory - Delta Mode)'); },
     toggleAchievementsPanel: function() { if (window.AchievementsV2?.UI?.togglePanel) window.AchievementsV2.UI.togglePanel(); },
     showAchievementsPanel: function() { if (window.AchievementsV2?.UI?.showPanel) window.AchievementsV2.UI.showPanel(); },
     hideAchievementsPanel: function() { if (window.AchievementsV2?.UI?.hidePanel) window.AchievementsV2.UI.hidePanel(); },
@@ -217,7 +223,6 @@ window.achievementsSystem = {
     updateTimePlayed: updateTimePlayed,
     getUnlockedCount: function() { return 0; },
     getTotalCount: function() { return 0; },
-    
     incrementPlanetBlocks: incrementPlanetBlocks,
     incrementPlanetCrits: incrementPlanetCrits,
     updatePlanetCombo: updatePlanetCombo,
@@ -229,7 +234,6 @@ window.achievementsSystem = {
     updatePlanetTime: updatePlanetTime,
     updatePlanetSpeed: updatePlanetSpeed,
     updatePlanetCritStreak: updatePlanetCritStreak,
-    
     incrementTotalDamage: incrementTotalDamage,
     incrementCoinsEarned: incrementCoinsEarned,
     updatePlanetProgress: updatePlanetProgress,
@@ -242,5 +246,5 @@ window.achievementsSystem = {
     incrementTotalClicks: incrementTotalClicks
 };
 
-console.log('🔗 [ACH-V2] Tracker shim initialized (UNIVERSAL)');
+console.log('🔗 [ACH-V2] Tracker shim initialized (UNIVERSAL - Delta Mode)');
 })();

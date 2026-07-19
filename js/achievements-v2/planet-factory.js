@@ -1,15 +1,16 @@
-// js/achievements-v2/planet-factory.js
+// js/achievements-v2/planet-factory.js (v2.1 — Delta Mode)
 // ═══════════════════════════════════════════════════
-// 🏭 ФАБРИКА ПЛАНЕТ — Универсальный движок достижений v2
+// 🏭 ФАБРИКА ПЛАНЕТ — Универсальный движок достижений v2.1
 // ЧТО: Создаёт полноценный модуль достижений из конфига.
 // ЗАЧЕМ: Чтобы добавить новую планету, нужен ТОЛЬКО конфиг (~20 строк).
 //        Вся логика (генерация, ранги, сохранение) едина для всех.
+//        ✅ НОВОЕ: Delta Mode — прогресс не сбрасывается при перезапуске
 // ═══════════════════════════════════════════════════
 (function() {
 'use strict';
 
 // ─────────────────────────────────────────────────────
-// 🔢 УТИЛИТЫ (детерминизм + римские цифры)
+//  УТИЛИТЫ (детерминизм + римские цифры)
 // ─────────────────────────────────────────────────────
 function hashStr(s) {
     let h = 2166136261;
@@ -38,7 +39,7 @@ function toRoman(num) {
 const RANKS = [
     { threshold: 1,    title: { ru: '✨ Искра',       en: '✨ Spark',          zh: '✨ 火花' },     bonus: null },
     { threshold: 10,   title: { ru: '🌟 Созвездие',   en: '🌟 Constellation',  zh: '🌟 星座' },   bonus: { type: 'clickPower', value: 0.01 } },
-    { threshold: 50,   title: { ru: '🌌 Галактика',   en: '🌌 Galaxy',         zh: '🌌 星系' },   bonus: { type: 'coinsMult', value: 0.02 } },
+    { threshold: 50,   title: { ru: ' Галактика',   en: '🌌 Galaxy',         zh: '🌌 星系' },   bonus: { type: 'coinsMult', value: 0.02 } },
     { threshold: 100,  title: { ru: '🌫️ Туманность',  en: '🌫️ Nebula',         zh: '🌫️ 星云' },   bonus: { type: 'critChance', value: 0.003 } },
     { threshold: 250,  title: { ru: '💥 Сверхновая',  en: '💥 Supernova',      zh: '💥 超新星' }, bonus: { type: 'comboMult', value: 0.05 } },
     { threshold: 500,  title: { ru: '🕳️ Чёрная дыра', en: '🕳️ Black Hole',     zh: '🕳️ 黑洞' },   bonus: { type: 'damageMult', value: 0.07 } },
@@ -76,7 +77,7 @@ function calculateRank(totalUnlocked) {
 }
 
 // ─────────────────────────────────────────────────────
-// 🏭 СОЗДАНИЕ МОДУЛЯ ПЛАНЕТЫ
+//  СОЗДАНИЕ МОДУЛЯ ПЛАНЕТЫ
 // ─────────────────────────────────────────────────────
 function createPlanetModule(config, nameTemplates) {
     
@@ -152,8 +153,9 @@ function createPlanetModule(config, nameTemplates) {
         };
     }
     
-    // 💾 Обновление прогресса (с начислением кристаллов)
-    function updateMetricProgress(metric, newValue) {
+    // ✅ ИСПРАВЛЕНО: УМНОЕ обновление прогресса (Delta Mode)
+    // mode: 'add' (накопление), 'max' (рекорд), 'min' (анти-рекорд), 'set' (жесткая установка)
+    function updateMetric(metric, value, mode = 'add') {
         if (!window.gameState) return;
         if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
         if (!window.gameState.achievementsV2[config.id]) {
@@ -163,12 +165,23 @@ function createPlanetModule(config, nameTemplates) {
         if (!planet.metrics[metric]) planet.metrics[metric] = { level: 0, progress: 0 };
         
         const state = planet.metrics[metric];
-        state.progress = newValue;
+        
+        //  ЛОГИКА СОХРАНЕНИЯ БЕЗ ОБНУЛЕНИЯ
+        if (mode === 'add') {
+            state.progress += value; // Прибавляем дельту к сохранённому
+        } else if (mode === 'max') {
+            if (value > state.progress) state.progress = value; // Обновляем только если это новый рекорд
+        } else if (mode === 'min') {
+            if (state.progress === 0 || value < state.progress) state.progress = value; // Рекорд минимума (время)
+        } else {
+            state.progress = value; // mode === 'set' (прямая установка)
+        }
         
         let unlockedAny = false;
         let totalReward = 0;
         
-        while (isLevelComplete(metric, state.level, newValue)) {
+        // Проверяем разблокировку на основе обновлённого state.progress
+        while (isLevelComplete(metric, state.level, state.progress)) {
             const level = generateLevel(metric, state.level);
             if (!level) break;
             
@@ -205,6 +218,11 @@ function createPlanetModule(config, nameTemplates) {
                 window.EventBus.emit('achievement:v2:rankChanged', { planet: config.id, rank: planet.rank });
             }
         }
+    }
+    
+    //  Обёртка для обратной совместимости (если где-то вызывается старое имя)
+    function updateMetricProgress(metric, newValue) {
+        updateMetric(metric, newValue, 'set');
     }
     
     function checkMasterAchievement(currentPlanetDamage) {
@@ -251,7 +269,9 @@ function createPlanetModule(config, nameTemplates) {
         config,
         generateLevel, generateLevels, getMasterAchievement, getMetricDefinitions,
         isLevelComplete, getCardProgress, calculateRank,
-        updateMetricProgress, checkMasterAchievement,
+        updateMetric,            // ✅ НОВОЕ
+        updateMetricProgress,    // ✅ ОСТАВЛЯЕМ для обратной совместимости
+        checkMasterAchievement,
         getPlanetInfo: function() {
             return {
                 id: config.id, emoji: config.emoji,
@@ -287,5 +307,5 @@ window.AchievementsV2.PlanetFactory = {
     }
 };
 
-console.log('🏭 [ACH-V2] Planet Factory initialized');
+console.log('🏭 [ACH-V2] Planet Factory v2.1 initialized (Delta Mode)');
 })();
