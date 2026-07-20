@@ -1,21 +1,23 @@
 // js/gyro-parallax.js
 // ═══════════════════════════════════════════════════
-// 🌌 ГИРОСКОПИЧЕСКИЙ ПАРАЛЛАКС ФОНА
-// ЧТО: Двигает ТОЛЬКО звёзды/туманности при наклоне телефона
-// ЗАЧЕМ: Создаёт эффект 3D-погружения, как будто смотришь в иллюминатор
-// ВАЖНО: Интерфейс (кнопки, HUD, заголовки) остаётся статичным!
+//  ГИРОСКОПИЧЕСКИЙ ПАРАЛЛАКС ФОНА
+// ЧТО: Двигает ТОЛЬКО отдельный слой космоса, не затрагивая UI
+// ЗАЧЕМ: Эффект "иллюминатора" — звёзды плывут, интерфейс статичен
+// ВАЖНО: Создаёт собственный контейнер #gyroBackground поверх всего
 // ══════════════════════════════════════════════════
 (function() {
 'use strict';
 
 const GyroParallax = {
-    // ─ Настройки ──
+    // ── Настройки ──
     config: {
-        maxTilt: 25,          // Максимальный угол наклона (градусы)
-        maxShift: 30,         // Максимальный сдвиг фона (пиксели)
+        maxTilt: 20,          // Максимальный угол наклона (градусы)
+        maxShift: 25,         // Максимальный сдвиг фона (пиксели)
         smoothness: 0.06,     // Плавность (0.01 = очень плавно, 0.15 = резко)
-        enabled: false,       // Включено ли
-        useGyro: false        // Использовать гироскоп
+        enabled: false,
+        useGyro: false,
+        // ✅ НОВОЕ: Фон будет больше экрана, чтобы при сдвиге не было видно краёв
+        overflow: 1.15        // 115% от размера экрана
     },
     
     // ── Состояние ──
@@ -28,28 +30,24 @@ const GyroParallax = {
     permissionGranted: false,
     
     // ── DOM элементы ──
-    bgLayers: [],             // Массив слоёв фона (звёзды, туманности)
+    bgContainer: null,        // Наш собственный контейнер фона
+    starsLayer: null,         // Слой со звёздами
+    nebulaLayer: null,        // Слой с туманностями
     toggleBtn: null,
     
     // ═══════════════════════════════════════════════
     // 🔍 ИНИЦИАЛИЗАЦИЯ
     // ═══════════════════════════════════════════════
     init: function() {
-        // Проверяем, мобильное ли устройство
         if (!this.isMobileDevice()) {
-            console.log('🌌 [GYRO] Desktop detected — parallax disabled');
+            console.log('🌌 [GYRO] Desktop — parallax disabled');
             return;
         }
         
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
-        // ✅ КЛЮЧЕВОЕ: Находим ТОЛЬКО слои фона, не весь интерфейс!
-        this.findBackgroundLayers();
-        
-        if (this.bgLayers.length === 0) {
-            console.warn('⚠️ [GYRO] Background layers not found!');
-            return;
-        }
+        // ✅ КЛЮЧЕВОЕ: Создаём СОБСТВЕННЫЙ контейнер фона
+        this.createBackgroundContainer();
         
         // Создаём кнопку включения
         this.createToggleButton();
@@ -57,48 +55,150 @@ const GyroParallax = {
         // Запускаем цикл анимации
         this.startAnimationLoop();
         
-        console.log('🌌 [GYRO] Initialized with', this.bgLayers.length, 'layers');
+        console.log('🌌 [GYRO] Initialized with dedicated background layer');
     },
     
     // ═══════════════════════════════════════════════
-    // 🔎 ПОИСК СЛОЁВ ФОНА
+    // 🎨 СОЗДАНИЕ ОТДЕЛЬНОГО СЛОЯ ФОНА
     // ═══════════════════════════════════════════════
-    findBackgroundLayers: function() {
-        this.bgLayers = [];
-        
-        // Ищем контейнер фона
-        const bgContainer = document.getElementById('planetBackground') || 
-                           document.querySelector('.planet-bg') ||
-                           document.querySelector('#gameArea');
-        
-        if (!bgContainer) {
-            console.warn('⚠️ [GYRO] Background container not found');
-            return;
+    createBackgroundContainer: function() {
+        // Удаляем старый если есть
+        if (this.bgContainer) {
+            this.bgContainer.remove();
         }
         
-        // ✅ Ищем слои внутри контейнера фона
-        const layers = bgContainer.querySelectorAll('.stars-layer, .nebula-layer, .planet-layer, .bg-layer');
+        // ✅ Создаём контейнер, который будет ДВИГАТЬСЯ
+        this.bgContainer = document.createElement('div');
+        this.bgContainer.id = 'gyroBackground';
+        this.bgContainer.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: ${this.config.overflow * 100}vw;
+            height: ${this.config.overflow * 100}vh;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            will-change: transform;
+        `;
         
-        if (layers.length > 0) {
-            // Многослойный фон — отлично!
-            layers.forEach((layer, idx) => {
-                this.bgLayers.push({
-                    element: layer,
-                    depth: (idx + 1) * 0.4  // Глубина для параллакса
-                });
-            });
+        // ✅ Создаём слой со звёздами
+        this.starsLayer = document.createElement('div');
+        this.starsLayer.className = 'gyro-stars-layer';
+        this.starsLayer.style.cssText = `
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        `;
+        
+        // Генерируем звёзды
+        this.generateStars(this.starsLayer, 200, 1, 0.3);
+        this.generateStars(this.starsLayer, 100, 2, 0.6);
+        this.generateStars(this.starsLayer, 40, 3, 1.0);
+        
+        // ✅ Создаём слой с туманностью (опционально)
+        this.nebulaLayer = document.createElement('div');
+        this.nebulaLayer.className = 'gyro-nebula-layer';
+        this.nebulaLayer.style.cssText = `
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 140, 0, 0.15) 0%, 
+                rgba(255, 100, 0, 0.08) 30%, 
+                transparent 70%);
+        `;
+        
+        this.bgContainer.appendChild(this.nebulaLayer);
+        this.bgContainer.appendChild(this.starsLayer);
+        
+        // ✅ Вставляем ПЕРЕД игровым полем (чтобы быть под ним)
+        const gameArea = document.getElementById('gameArea');
+        if (gameArea && gameArea.parentNode) {
+            gameArea.parentNode.insertBefore(this.bgContainer, gameArea);
         } else {
-            // Однослойный фон — двигаем весь контейнер
-            this.bgLayers.push({
-                element: bgContainer,
-                depth: 1.0
-            });
+            document.body.appendChild(this.bgContainer);
         }
         
-        console.log(' [GYRO] Found', this.bgLayers.length, 'background layers');
+        // ✅ Поднимаем z-index у игрового поля и UI, чтобы они были выше фона
+        this.elevateGameLayers();
+        
+        console.log(' [GYRO] Background container created');
     },
     
     // ═══════════════════════════════════════════════
+    // ️ ПОДНЯТИЕ СЛОЁВ ИГРЫ НАД ФОНОМ
+    // ═══════════════════════════════════════════════
+    elevateGameLayers: function() {
+        const layers = [
+            '#gameArea',
+            '#header',
+            '#footer',
+            '.hud',
+            '.upgrade-panel',
+            '#achievementsBtn',
+            '#shopBtn',
+            '#saveBtn',
+            '.moving-block',
+            '.damage-text',
+            '.reward-text',
+            '#dailyBonusIcon',
+            '#randomEventsCanvas'
+        ];
+        
+        layers.forEach(selector => {
+            const el = document.querySelector(selector);
+            if (el) {
+                const currentZ = parseInt(window.getComputedStyle(el).zIndex) || 0;
+                if (currentZ < 10) {
+                    el.style.zIndex = '10';
+                }
+            }
+        });
+        
+        // Особые элементы с высокими z-index
+        const highZ = [
+            { sel: '#achievementsPanel', z: 2000 },
+            { sel: '#shopPanel', z: 2000 },
+            { sel: '.notification', z: 10000 },
+            { sel: '#gyroToggleBtn', z: 1000 }
+        ];
+        
+        highZ.forEach(({ sel, z }) => {
+            const el = document.querySelector(sel);
+            if (el) el.style.zIndex = z;
+        });
+    },
+    
+    // ═══════════════════════════════════════════════
+    // ✨ ГЕНЕРАЦИЯ ЗВЁЗД
+    // ═══════════════════════════════════════════════
+    generateStars(container, count, size, brightness) {
+        for (let i = 0; i < count; i++) {
+            const star = document.createElement('div');
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const opacity = (0.3 + Math.random() * 0.7) * brightness;
+            const twinkle = Math.random() > 0.7;
+            
+            star.style.cssText = `
+                position: absolute;
+                left: ${x}%;
+                top: ${y}%;
+                width: ${size}px;
+                height: ${size}px;
+                background: #fff;
+                border-radius: 50%;
+                opacity: ${opacity};
+                box-shadow: 0 0 ${size * 2}px rgba(255, 255, 255, ${opacity * 0.5});
+                ${twinkle ? 'animation: twinkle ' + (2 + Math.random() * 3) + 's ease-in-out infinite;' : ''}
+            `;
+            container.appendChild(star);
+        }
+    },
+    
+    // ══════════════════════════════════════════════
     // 📱 ОПРЕДЕЛЕНИЕ МОБИЛЬНОГО УСТРОЙСТВА
     // ═══════════════════════════════════════════════
     isMobileDevice: function() {
@@ -110,6 +210,8 @@ const GyroParallax = {
     // 🔘 КНОПКА ВКЛЮЧЕНИЯ
     // ═══════════════════════════════════════════════
     createToggleButton: function() {
+        if (this.toggleBtn) return;
+        
         this.toggleBtn = document.createElement('button');
         this.toggleBtn.id = 'gyroToggleBtn';
         this.toggleBtn.innerHTML = '🌌';
@@ -149,7 +251,6 @@ const GyroParallax = {
     // ═══════════════════════════════════════════════
     handleToggle: async function() {
         if (!this.config.enabled) {
-            // ВКЛЮЧАЕМ
             if (this.isIOS && !this.permissionGranted) {
                 const granted = await this.requestIOSPermission();
                 if (!granted) {
@@ -164,13 +265,11 @@ const GyroParallax = {
             this.toggleBtn.style.borderColor = '#4CAF50';
             this.toggleBtn.style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.6)';
             
-            // Подписываемся на датчики
             window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
             
             this.showNotification('🌌 Гироскоп включён!', '#4CAF50');
-            console.log('🌌 [GYRO] Enabled');
+            console.log(' [GYRO] Enabled');
         } else {
-            // ВЫКЛЮЧАЕМ
             this.config.enabled = false;
             this.config.useGyro = false;
             this.targetX = 0;
@@ -179,10 +278,9 @@ const GyroParallax = {
             this.toggleBtn.style.borderColor = 'rgba(255, 215, 0, 0.4)';
             this.toggleBtn.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.5)';
             
-            // Отписываемся
             window.removeEventListener('deviceorientation', this.handleOrientation.bind(this));
             
-            this.showNotification('🌌 Гироскоп выключен', '#FF9800');
+            this.showNotification(' Гироскоп выключен', '#FF9800');
             console.log(' [GYRO] Disabled');
         }
     },
@@ -210,22 +308,20 @@ const GyroParallax = {
         });
     },
     
-    // ═══════════════════════════════════════════════
+    // ══════════════════════════════════════════════
     // 📐 ОБРАБОТКА НАКЛОНА УСТРОЙСТВА
     // ═══════════════════════════════════════════════
     handleOrientation: function(event) {
         if (!this.config.enabled) return;
         
-        // gamma: наклон влево-вправо (-90 до 90)
-        // beta: наклон вперёд-назад (-180 до 180)
-        const gamma = event.gamma || 0;
-        const beta = event.beta || 0;
+        const gamma = event.gamma || 0;  // -90..90 (влево-вправо)
+        const beta = event.beta || 0;    // -180..180 (вперёд-назад)
         
         // Нормализуем и ограничиваем
         const normalizedGamma = Math.max(-this.config.maxTilt, Math.min(this.config.maxTilt, gamma));
         const normalizedBeta = Math.max(-this.config.maxTilt, Math.min(this.config.maxTilt, beta - 45));
         
-        // Вычисляем целевое смещение (инвертируем для эффекта "окна")
+        // Инвертируем для эффекта "окна"
         this.targetX = -(normalizedGamma / this.config.maxTilt) * this.config.maxShift;
         this.targetY = -(normalizedBeta / this.config.maxTilt) * this.config.maxShift;
     },
@@ -235,15 +331,13 @@ const GyroParallax = {
     // ═══════════════════════════════════════════════
     startAnimationLoop: function() {
         const animate = () => {
-            // Линейная интерполяция для плавности
             this.currentX += (this.targetX - this.currentX) * this.config.smoothness;
             this.currentY += (this.targetY - this.currentY) * this.config.smoothness;
             
-            // Округляем до 2 знаков для производительности
             const x = Math.round(this.currentX * 100) / 100;
             const y = Math.round(this.currentY * 100) / 100;
             
-            // ✅ Применяем ТОЛЬКО к слоям фона!
+            // ✅ Двигаем ТОЛЬКО наш контейнер фона
             this.applyTransform(x, y);
             
             this.animationId = requestAnimationFrame(animate);
@@ -252,17 +346,14 @@ const GyroParallax = {
     },
     
     // ═══════════════════════════════════════════════
-    //  ПРИМЕНЕНИЕ СДВИГА К ФОНУ
+    // 🎨 ПРИМЕНЕНИЕ СДВИГА ТОЛЬКО К ФОНУ
     // ═══════════════════════════════════════════════
     applyTransform: function(x, y) {
-        if (this.bgLayers.length === 0) return;
+        if (!this.bgContainer) return;
         
-        // ✅ Двигаем каждый слой с разной скоростью (параллакс)
-        this.bgLayers.forEach(layer => {
-            const lx = x * layer.depth;
-            const ly = y * layer.depth;
-            layer.element.style.transform = `translate(${lx}px, ${ly}px)`;
-        });
+        // ✅ Двигаем только #gyroBackground, ничего больше!
+        // translate(-50%, -50%) сохраняет центрирование
+        this.bgContainer.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
     },
     
     // ═══════════════════════════════════════════════
@@ -302,6 +393,7 @@ const GyroParallax = {
     // ══════════════════════════════════════════════
     destroy: function() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        if (this.bgContainer) this.bgContainer.remove();
         if (this.toggleBtn?.parentNode) this.toggleBtn.parentNode.removeChild(this.toggleBtn);
         window.removeEventListener('deviceorientation', this.handleOrientation);
     }
@@ -309,6 +401,16 @@ const GyroParallax = {
 
 // ── Экспорт ──
 window.GyroParallax = GyroParallax;
+
+// ── CSS анимация мерцания звёзд ──
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes twinkle {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
 
 // ── Автозапуск ──
 if (document.readyState === 'loading') {
