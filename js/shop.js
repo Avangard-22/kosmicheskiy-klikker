@@ -35,7 +35,7 @@ const shopConfig = {
     luckyCharm: {
         id: 'luckyCharm',
         name: 'Талисман удачи',
-        desc: '+50% шанс редких блоков',
+        desc: '+70% шанс редких блоков',
         cost: 1200,
         duration: 60000,
         icon: 'fas fa-clover',
