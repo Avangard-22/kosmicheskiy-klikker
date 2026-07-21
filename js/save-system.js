@@ -1,4 +1,4 @@
-// js/save-system.js (v4.1 — ТОЛЬКО серверное сохранение)
+ // js/save-system.js (v4.1 — ТОЛЬКО серверное сохранение)
 (function() {
 'use strict';
 
@@ -228,70 +228,14 @@ function ensureSkipPenaltyState() {
         };
     }
 }
-/**
- * 🔄 АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ СУТОЧНОГО ПРОГРЕССА
- * Проверяет, наступил ли новый день по UTC. Если да — архивирует урон и сбрасывает счетчик.
- */
-window.syncDailyProgress = function() {
-    if (!window.gameMetrics) window.gameMetrics = {};
-    if (!window.gameState) return;
 
-    if (!window.gameMetrics.dailyProgress) {
-        window.gameMetrics.dailyProgress = {
-            currentDayStart: Date.now(),
-            dayStartDamage: window.gameState.totalDamageDealt || 0,
-            history: []
-        };
-        return;
-    }
-
-    const dp = window.gameMetrics.dailyProgress;
-    const now = Date.now();
-    const totalDamage = window.gameState.totalDamageDealt || 0;
-
-    // Проверяем смену суток по UTC (совпадает с логикой бэкенда и daily-bonus)
-    const lastDate = new Date(dp.currentDayStart).toISOString().split('T')[0];
-    const currentDate = new Date(now).toISOString().split('T')[0];
-
-    if (lastDate !== currentDate) {
-        console.log('📅 [SAVE] Обнаружена смена суток! Архивируем прогресс.');
-        
-        // 1. Сохраняем урон, нанесенный за прошлый день
-        const yesterdayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
-        dp.history.push({
-            date: lastDate,
-            timestamp: dp.currentDayStart,
-            damage: yesterdayDamage
-        });
-
-        // 2. Храним только последние 7 дней
-        if (dp.history.length > 7) {
-            dp.history = dp.history.slice(-7);
-        }
-
-        // 3. Сбрасываем счетчик на сегодня
-        dp.currentDayStart = now;
-        dp.dayStartDamage = totalDamage;
-        
-        // Сохраняем изменения в облако
-        if (typeof window.saveGame === 'function') window.saveGame();
-    }
-};
-    
 function reconstructMetricsFromAchievements() {
     try {
         if (!window.gameState || !window.gameMetrics) return;
 
-    // ✅ НОВОЕ: Гарантируем полную структуру после загрузки
-    ensurePlanetStatsStructure();
-    ensureAchievementsV2Structure();
-    ensureSkipPenaltyState();
-    
-    // ✅ НОВОЕ: Проверяем, не сменились ли сутки после загрузки данных
-    if (typeof window.syncDailyProgress === 'function') {
-        window.syncDailyProgress();
-    }
-}
+        ensurePlanetStatsStructure();
+        ensureAchievementsV2Structure();
+        ensureSkipPenaltyState();
 
         const gm = window.gameMetrics;
         const ach = window.gameState.achievementsV2;
@@ -652,11 +596,6 @@ function init() {
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
-    
-    // ✅ НОВОЕ: Синхронизируем суточный прогресс при инициализации
-    if (typeof window.syncDailyProgress === 'function') {
-        window.syncDailyProgress();
-    }
     
     reconstructMetricsFromAchievements();
     startAutoSave();
