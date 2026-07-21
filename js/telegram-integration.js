@@ -125,17 +125,21 @@ function initTelegramIntegration() {
     const initDataFromURL = extractInitDataFromURL();
     console.log('🔍 initData from URL:', initDataFromURL ? 'exists (' + initDataFromURL.length + ' chars)' : 'null');
     
-    window.isTelegramEnvironment = isTelegram;
-    window.isCloudAvailable = false;
-    
-    // ==========================================
-    // РЕЖИМ БРАУЗЕРА (не в Telegram)
-    // ==========================================
-    if (!isTelegram && initDataFromURL) {
-        console.log('✅ Using initData from URL for cloud sync');
-        window.isTelegramEnvironment = true;
-        window.isCloudAvailable = true;
-    }
+window.isTelegramEnvironment = isTelegram;
+
+// ✅ ВРЕМЕННЫЙ ФЛАГ ДЛЯ ТЕСТОВ В БРАУЗЕРЕ 
+// (Не забудьте поставить false перед финальным релизом в Telegram!)
+const FORCE_BROWSER_CLOUD_TEST = true; 
+window.isCloudAvailable = FORCE_BROWSER_CLOUD_TEST;
+
+// ==========================================
+// РЕЖИМ БРАУЗЕРА (не в Telegram)
+// ==========================================
+if (!isTelegram && initDataFromURL) {
+    console.log('✅ Using initData from URL for cloud sync');
+    window.isTelegramEnvironment = true;
+    window.isCloudAvailable = true;
+}
     
     if (!isTelegram) {
         console.log('ℹ️ Telegram WebApp не обнаружен. Работа в режиме браузера.');
