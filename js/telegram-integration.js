@@ -125,51 +125,49 @@ function initTelegramIntegration() {
         window.isCloudAvailable = true;
     }
     
-    if (!isTelegram) {
-        console.log('ℹ️ Telegram WebApp не обнаружен. Работа в режиме браузера.');
-        
-        // HAPTIC FEEDBACK (пустые функции для браузера)
-        window.telegramHaptic = {
-            light: () => {}, medium: () => {}, heavy: () => {},
-            success: () => {}, warning: () => {}, error: () => {},
-            selectionChanged: () => {}
-        };
-        
-        // ОБЛАЧНЫЕ ФУНКЦИИ (для браузера)
-        window.telegramCloud = {
-            isAvailable: window.isCloudAvailable,
-            saveProgress: async (progressData) => {
-                if (!window.isCloudAvailable) {
-                    return { success: false, error: 'Not in Telegram' };
-                }
-                return sendToCloud('save', progressData, initDataFromURL);
-            },
-            saveProgressCritical: async (progressData) => {
-                if (!window.isCloudAvailable) {
-                    return { success: false, error: 'Not in Telegram' };
-                }
-                return sendToCloud('save', progressData, initDataFromURL, true);
-            },
-            loadProgress: async () => {
-                if (!window.isCloudAvailable) {
-                    return { success: false, error: 'Not in Telegram' };
-                }
-                return sendToCloud('load', null, initDataFromURL);
-            },
-            getLeaderboard: async function(period = 'global', limit = 50) {
-                if (!window.isCloudAvailable) {
-                    return { success: false, data: [], error: 'Not in Telegram' };
-                }
-                return sendToCloud('leaderboard', { period, limit }, initDataFromURL);
-            },
-            submitLeaderboard: async function(data) {
-                if (!window.isCloudAvailable) {
-                    return { success: false, error: 'Not in Telegram' };
-                }
-                return sendToCloud('leaderboard_submit', data, initDataFromURL);
+if (!isTelegram) {
+    console.log('ℹ️ Telegram WebApp не обнаружен. Работа в режиме браузера.');
+    window.telegramHaptic = {
+        light: () => {}, medium: () => {}, heavy: () => {},
+        success: () => {}, warning: () => {}, error: () => {},
+        selectionChanged: () => {}
+    };
+    
+    // ✅ ВСЕ МЕТОДЫ ВНУТРИ ОБЪЕКТА
+    window.telegramCloud = {
+        isAvailable: window.isCloudAvailable,
+        saveProgress: async (progressData) => {
+            if (!window.isCloudAvailable) {
+                return { success: false, error: 'Not in Telegram' };
             }
-        };
-        
+            return sendToCloud('save', progressData, initDataFromURL);
+        },
+        saveProgressCritical: async (progressData) => {
+            if (!window.isCloudAvailable) {
+                return { success: false, error: 'Not in Telegram' };
+            }
+            return sendToCloud('save', progressData, initDataFromURL, true);
+        },
+        loadProgress: async () => {
+            if (!window.isCloudAvailable) {
+                return { success: false, error: 'Not in Telegram' };
+            }
+            return sendToCloud('load', null, initDataFromURL);
+        },
+        // ✅ ДОБАВЛЕНО: leaderboard методы ВНУТРИ объекта
+        getLeaderboard: async function(period = 'global', limit = 50) {
+            if (!window.isCloudAvailable) {
+                return { success: false, data: [], error: 'Not in Telegram' };
+            }
+            return sendToCloud('leaderboard', { period, limit }, initDataFromURL);
+        },
+        submitLeaderboard: async function(data) {
+            if (!window.isCloudAvailable) {
+                return { success: false, error: 'Not in Telegram' };
+            }
+            return sendToCloud('leaderboard_submit', data, initDataFromURL);
+        }
+    };          
         // Извлекаем пользователя из URL initData
         if (initDataFromURL) {
             try {
