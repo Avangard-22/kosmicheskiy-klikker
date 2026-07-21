@@ -284,16 +284,17 @@ formatDistance: function(num, period = 'global') {
             .lb-loading { text-align: center; padding: 30px; color: #aaa; }
             .lb-empty { text-align: center; padding: 30px; color: #666; }
             
-            .lb-entry {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                padding: 10px 12px;
-                background: rgba(255,255,255,0.03);
-                border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 10px;
-                transition: all 0.2s;
-            }
+.lb-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    transition: all 0.2s;
+    min-width: 0; /* Важно для flex */
+}
             .lb-entry.top-1 { background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.1)); border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3); }
             .lb-entry.top-2 { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(150,150,150,0.1)); border-color: #C0C0C0; }
             .lb-entry.top-3 { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(160,100,40,0.1)); border-color: #CD7F32; }
@@ -311,18 +312,33 @@ formatDistance: function(num, period = 'global') {
             .lb-entry.top-3 .lb-rank { color: #CD7F32; }
             .lb-rank-number { color: #4FC3F7; font-size: 1.1em; }
             
-            .lb-info { flex: 1; min-width: 0; }
-            .lb-name { font-size: 0.9em; color: #fff; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-info {
+    flex: 1;
+    min-width: 0; /* Важно для text-overflow */
+}
+
+.lb-name {
+    font-size: clamp(0.8em, 3vw, 0.95em);
+    color: #fff;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
             .lb-level { font-size: 0.7em; color: #aaa; font-family: 'Orbitron', monospace; margin-top: 2px; }
             
-            .lb-distance {
-                font-size: 0.9em;
-                color: #FFD700;
-                font-weight: bold;
-                font-family: 'Orbitron', monospace;
-                text-align: right;
-                white-space: nowrap;
-            }
+.lb-distance {
+    font-size: clamp(0.75em, 2.5vw, 0.95em);
+    color: #FFD700;
+    font-weight: bold;
+    font-family: 'Orbitron', monospace;
+    text-align: right;
+    white-space: nowrap;
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
             
             .lb-my-position {
                 margin-top: 12px;
@@ -356,11 +372,11 @@ formatDistance: function(num, period = 'global') {
                 <h3 class="lb-title">🏆 Таблица лидеров</h3>
                 <button class="lb-close" id="lbCloseBtn">✕</button>
             </div>
-            <div class="lb-tabs">
-                <button class="lb-tab" data-period="daily">24 часа</button>
-                <button class="lb-tab" data-period="weekly">7 дней</button>
-                <button class="lb-tab active" data-period="global">Всё время</button>
-            </div>
+<div class="lb-tabs">
+    <button class="lb-tab" data-period="daily">24 часа<br><small style="font-size:0.7em;opacity:0.7">в а.е.</small></button>
+    <button class="lb-tab" data-period="weekly">7 дней<br><small style="font-size:0.7em;opacity:0.7">в а.е.</small></button>
+    <button class="lb-tab active" data-period="global">Всё время<br><small style="font-size:0.7em;opacity:0.7">в км</small></button>
+</div>
             <div class="lb-list" id="lbList">
                 <div class="lb-loading">⏳ Загрузка...</div>
             </div>
