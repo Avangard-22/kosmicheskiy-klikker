@@ -463,15 +463,22 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
+        // ✅ Ждём инициализации telegramCloud (максимум 1 секунду), чтобы избежать гонки потоков
+        let retries = 0;
+        while (!window.telegramCloud && retries < 10) {
+            await new Promise(r => setTimeout(r, 100));
+            retries++;
+        }
+
         if (!window.telegramCloud?.isAvailable) {
-            console.warn('⚠️ [LOAD] Облако недоступно. Начинаем новую игру.');
+            console.warn('⚠️ [LOAD] Облако недоступно (не Telegram или ошибка инициализации). Начинаем новую игру.');
             return false;
         }
         
         const result = await window.telegramCloud.loadProgress();
         
         if (result?.success && result.data) {
-            console.log('☁️ [LOAD] Данные загружены из облака');
+            console.log('☁️ [LOAD] Данные успешно загружены из облака');
             applyCloudData(result.data);
             return true;
         } else {
@@ -480,7 +487,6 @@ window.loadGame = async function() {
         }
     } catch (e) {
         console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
-        console.warn('⚠️ [LOAD] Начинаем новую игру из-за ошибки облака');
         return false;
     }
 };
