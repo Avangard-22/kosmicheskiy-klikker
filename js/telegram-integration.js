@@ -292,10 +292,14 @@ submitLeaderboard: async function(data) {
             return sendToCloud('load', null, tg.initData, false);
         },
 
-        getLeaderboard: async function(limit = 50) {
-            return sendToCloud('leaderboard', { limit }, tg.initData, false);
-        }
-    };
+    // ✅ ДОБАВЛЕНО: Методы лидерборда для Telegram
+    getLeaderboard: async function(period = 'global', limit = 50) {
+        return sendToCloud('leaderboard', { period, limit }, tg.initData, false);
+    },
+    submitLeaderboard: async function(data) {
+        return sendToCloud('leaderboard_submit', data, tg.initData, false);
+    }
+};
 
     // ✅ ЭКСПОРТ ФУНКЦИЙ ДЛЯ ДРУГИХ МОДУЛЕЙ (режим Telegram)
     window.getTelegramUser = () => window.telegramUser;
