@@ -25,11 +25,7 @@ const Leaderboard = {
 // 🔢 ФОРМАТИРОВАНИЕ РАССТОЯНИЯ
 // ═══════════════════════════════════════════════
 formatDistance: function(num, period = 'global') {
-    if (!num || num <= 0) {
-        // Для отладки показываем что именно 0
-        console.log(` [LEADERBOARD] formatDistance: num=${num}, period=${period}, returning 0`);
-        return '0';
-    }
+    if (!num || num <= 0) return '0';
     
     const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
     
@@ -38,14 +34,12 @@ formatDistance: function(num, period = 'global') {
         const au = num / AU_TO_DAMAGE;
         
         if (period === 'daily') {
-            // 24 часа: точность до 6 знаков (0.000001 а.е.)
             if (au < 0.000001) return '< 0.000001 а.е.';
             if (au < 0.001) return au.toFixed(6) + ' а.е.';
             if (au < 1) return au.toFixed(4) + ' а.е.';
             if (au < 1000) return au.toFixed(2) + ' а.е.';
             return au.toFixed(1) + ' а.е.';
         } else {
-            // 7 дней: точность до 4 знаков
             if (au < 0.0001) return '< 0.0001 а.е.';
             if (au < 0.01) return au.toFixed(4) + ' а.е.';
             if (au < 1) return au.toFixed(3) + ' а.е.';
@@ -54,58 +48,19 @@ formatDistance: function(num, period = 'global') {
         }
     }
     
-    // Для "Всё время" — километры с сокращениями
-    const km = num / 1000; // переводим из метров в км
-    
-    if (km >= 1000000000) {
-        return (km / 1000000000).toFixed(2) + 'B км';
+    // Для "Всё время" — показываем В УРОНЕ с сокращениями (K, M, B)
+    // ✅ ИСПРАВЛЕНО: не делим на 1000, так как num — это урон, а не метры!
+    if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(2) + 'B';
     }
-    if (km >= 1000000) {
-        return (km / 1000000).toFixed(2) + 'M км';
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(2) + 'M';
     }
-    if (km >= 1000) {
-        return (km / 1000).toFixed(2) + 'K км';
+    if (num >= 1000) {
+        return (num / 1000).toFixed(2) + 'K';
     }
-    if (km >= 100) {
-        return km.toFixed(1) + ' км';
-    }
-    return Math.floor(km).toLocaleString() + ' км';
+    return Math.floor(num).toLocaleString();
 },
-    
-    // ═══════════════════════════════════════════════
-    //  ПОДСЧЁТ РАССТОЯНИЯ ПО ПЕРИОДАМ
-    // ═══════════════════════════════════════════════
-    calculateDistances: function() {
-        const gs = window.gameState;
-        const gm = window.gameMetrics;
-        if (!gs || !gm) return { daily: 0, weekly: 0, global: 0 };
-        
-        const totalDamage = gs.totalDamageDealt || 0;
-        const dailyProgress = gm.dailyProgress || {
-            currentDayStart: Date.now(),
-            dayStartDamage: 0,
-            history: []
-        };
-        
-        // ── За сегодня (24ч от активации daily bonus) ──
-        const daily = Math.max(0, totalDamage - (dailyProgress.dayStartDamage || 0));
-        
-        // ── За 7 дней (сумма истории + сегодня) ──
-        let weekly = daily;
-        const history = dailyProgress.history || [];
-        const now = Date.now();
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-        history.forEach(day => {
-            if (day.timestamp && (now - day.timestamp) <= sevenDaysMs) {
-                weekly += (day.damage || 0);
-            }
-        });
-        
-        // ── Общее расстояние (всё время) ──
-        const global = totalDamage;
-        
-        return { daily, weekly, global };
-    },
     
     // ═══════════════════════════════════════════════
     // 🔄 ОБНОВЛЕНИЕ ИСТОРИИ ДНЕЙ
