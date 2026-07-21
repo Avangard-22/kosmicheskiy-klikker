@@ -47,6 +47,11 @@ const Leaderboard = {
     },
     
     calculateDistances: function() {
+        // ✅ НОВОЕ: Принудительно синхронизируем сутки перед расчетом, чтобы данные всегда были свежими
+        if (typeof window.syncDailyProgress === 'function') {
+            window.syncDailyProgress();
+        }
+
         const gs = window.gameState;
         const gm = window.gameMetrics;
         if (!gs || !gm) return { daily: 0, weekly: 0, global: 0 };
@@ -54,7 +59,7 @@ const Leaderboard = {
         const totalDamage = gs.totalDamageDealt || 0;
         const dailyProgress = gm.dailyProgress || {
             currentDayStart: Date.now(),
-            dayStartDamage: 0,
+            dayStartDamage: totalDamage,
             history: []
         };
         
