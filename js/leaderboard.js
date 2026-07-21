@@ -21,19 +21,52 @@ const Leaderboard = {
     modalVisible: false,
     cachedData: { daily: null, weekly: null, global: null },
     
-    // ═══════════════════════════════════════════════
-    // 🔢 ФОРМАТИРОВАНИЕ РАССТОЯНИЯ
-    // ═══════════════════════════════════════════════
-    formatDistance: function(num) {
-        if (!num || num <= 0) return '0';
-        const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
+// ═══════════════════════════════════════════════
+// 🔢 ФОРМАТИРОВАНИЕ РАССТОЯНИЯ
+// ═══════════════════════════════════════════════
+formatDistance: function(num, period = 'global') {
+    if (!num || num <= 0) return '0';
+    
+    const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
+    
+    // Для 24 часов и 7 дней — показываем в а.е. с точностью
+    if (period === 'daily' || period === 'weekly') {
         const au = num / AU_TO_DAMAGE;
-        if (au >= 1000000000) return (au / 1000000000).toFixed(2) + 'B а.е.';
-        if (au >= 1000000) return (au / 1000000).toFixed(2) + 'M а.е.';
-        if (au >= 1000) return (au / 1000).toFixed(2) + 'K а.е.';
-        if (au >= 1) return au.toFixed(4) + ' а.е.';
-        return Math.floor(num).toLocaleString() + ' урона';
-    },
+        
+        if (period === 'daily') {
+            // 24 часа: точность до 6 знаков (0.000001 а.е.)
+            if (au < 0.000001) return '< 0.000001 а.е.';
+            if (au < 0.001) return au.toFixed(6) + ' а.е.';
+            if (au < 1) return au.toFixed(4) + ' а.е.';
+            if (au < 1000) return au.toFixed(2) + ' а.е.';
+            return au.toFixed(1) + ' а.е.';
+        } else {
+            // 7 дней: точность до 4 знаков
+            if (au < 0.0001) return '< 0.0001 а.е.';
+            if (au < 0.01) return au.toFixed(4) + ' а.е.';
+            if (au < 1) return au.toFixed(3) + ' а.е.';
+            if (au < 1000) return au.toFixed(2) + ' а.е.';
+            return au.toFixed(1) + ' а.е.';
+        }
+    }
+    
+    // Для "Всё время" — километры с сокращениями
+    const km = num / 1000; // переводим из метров в км
+    
+    if (km >= 1000000000) {
+        return (km / 1000000000).toFixed(2) + 'B км';
+    }
+    if (km >= 1000000) {
+        return (km / 1000000).toFixed(2) + 'M км';
+    }
+    if (km >= 1000) {
+        return (km / 1000).toFixed(2) + 'K км';
+    }
+    if (km >= 100) {
+        return km.toFixed(1) + ' км';
+    }
+    return Math.floor(km).toLocaleString() + ' км';
+},
     
     // ═══════════════════════════════════════════════
     //  ПОДСЧЁТ РАССТОЯНИЯ ПО ПЕРИОДАМ
