@@ -1,4 +1,4 @@
-// js/save-system.js (v4.0 — ТОЛЬКО серверное сохранение)
+// js/save-system.js (v4.1 — ТОЛЬКО серверное сохранение)
 (function() {
 'use strict';
 
