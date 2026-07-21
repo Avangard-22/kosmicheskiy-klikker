@@ -166,10 +166,13 @@ function initTelegramIntegration() {
                 }
                 return sendToCloud('load', null, initDataFromURL);
             },
-            getLeaderboard: async (limit = 50) => {
-                if (!window.isCloudAvailable) {
-                    return { success: false, data: [] };
-                }
+getLeaderboard: async function(period = 'global', limit = 50) {
+    return sendToCloud('leaderboard', { period, limit }, tg.initData, false);
+},
+// ✅ НОВОЕ: Отправка результата в лидерборд
+submitLeaderboard: async function(data) {
+    return sendToCloud('leaderboard_submit', data, tg.initData, false);
+}
                 return sendToCloud('leaderboard', { limit }, initDataFromURL);
             }
         };

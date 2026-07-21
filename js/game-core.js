@@ -1054,7 +1054,9 @@ setTimeout(() => this.createMovingBlock(), 500);
             }
         });
 
-        add('saveBtn', () => { if (typeof window.saveGame === 'function') window.saveGame(); });
+add('saveBtn', () => { if (typeof window.saveGame === 'function') window.saveGame(); });
+// ✅ НОВОЕ: Кнопка лидерборда
+add('leaderboardBtn', () => { if (window.Leaderboard?.showModal) window.Leaderboard.showModal(); });
 
         const tips = {
             upgradeClickBtn: 'tooltips.upgradeClick',
