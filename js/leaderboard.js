@@ -25,7 +25,11 @@ const Leaderboard = {
 // 🔢 ФОРМАТИРОВАНИЕ РАССТОЯНИЯ
 // ═══════════════════════════════════════════════
 formatDistance: function(num, period = 'global') {
-    if (!num || num <= 0) return '0';
+    if (!num || num <= 0) {
+        // Для отладки показываем что именно 0
+        console.log(` [LEADERBOARD] formatDistance: num=${num}, period=${period}, returning 0`);
+        return '0';
+    }
     
     const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
     
@@ -442,78 +446,89 @@ formatDistance: function(num, period = 'global') {
     },
     
     loadAndRender: async function(period) {
-        const list = document.getElementById('lbList');
-        list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
+    const list = document.getElementById('lbList');
+    list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
+    
+    console.log(`🔍 [LEADERBOARD] loadAndRender called for period: ${period}`);
+    
+    const result = await this.fetchLeaderboard(period);
+    
+    console.log(`🔍 [LEADERBOARD] fetchLeaderboard result:`, result);
+    
+    if (!result?.success || !result.data || result.data.length === 0) {
+        list.innerHTML = '<div class="lb-empty">📭 Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
+        document.getElementById('lbMyPosition').style.display = 'none';
+        return;
+    }
+    
+    const entries = result.data;
+    const myUserId = window.getUserId ? window.getUserId() : null;
+    const myUsername = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
+    
+    console.log(`🔍 [LEADERBOARD] Processing ${entries.length} entries for period ${period}`);
+    
+    let html = '';
+    let myPosition = null;
+    let myDistance = 0;
+    
+    const planetEmojis = {
+        mercury: '☿', venus: '♀', earth: '🌍', mars: '♂',
+        jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '', pluto: '♇', heliosphere: '🌌'
+    };
+    
+    entries.forEach((entry, idx) => {
+        const rank = idx + 1;
+        const isMe = (myUserId && entry.userId == myUserId) || 
+                     (!myUserId && entry.username === myUsername);
         
-        const result = await this.fetchLeaderboard(period);
+        let rankClass = '';
+        let rankDisplay = '';
+        if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
+        else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
+        else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
+        else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
         
-        if (!result?.success || !result.data || result.data.length === 0) {
-            list.innerHTML = '<div class="lb-empty">📭 Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
-            document.getElementById('lbMyPosition').style.display = 'none';
-            return;
+        if (isMe) {
+            rankClass += ' is-me';
+            myPosition = rank;
+            myDistance = entry[period] || 0;
         }
         
-        const entries = result.data;
-        const myUserId = window.getUserId ? window.getUserId() : null;
-        const myUsername = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
+        const distance = entry[period] || 0;
+        const planetEmoji = planetEmojis[entry.level] || '🪐';
         
-        let html = '';
-        let myPosition = null;
-        let myDistance = 0;
+        // Форматируем расстояние с указанием периода
+        const formattedDistance = this.formatDistance(distance, period);
         
-        const planetEmojis = {
-            mercury: '', venus: '♀', earth: '', mars: '♂',
-            jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆', pluto: '♇', heliosphere: '🌌'
-        };
+        console.log(`🔍 [LEADERBOARD] Entry ${idx}: username=${entry.username}, distance=${distance}, formatted=${formattedDistance}, period=${period}`);
         
-        entries.forEach((entry, idx) => {
-            const rank = idx + 1;
-            const isMe = (myUserId && entry.userId == myUserId) || 
-                         (!myUserId && entry.username === myUsername);
-            
-            let rankClass = '';
-            let rankDisplay = '';
-            if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
-            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
-            else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
-            else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
-            
-            if (isMe) {
-                rankClass += ' is-me';
-                myPosition = rank;
-                myDistance = entry[period] || 0;
-            }
-            
-            const distance = entry[period] || 0;
-            const planetEmoji = planetEmojis[entry.level] || '🪐';
-            
-            html += `
-                <div class="lb-entry ${rankClass}">
-                    <div class="lb-rank">${rankDisplay}</div>
-                    <div class="lb-info">
-                        <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
-                        <div class="lb-level">${planetEmoji} ${entry.level || 'mercury'}</div>
-                    </div>
-                    <div class="lb-distance">${this.formatDistance(distance)}</div>
+        html += `
+            <div class="lb-entry ${rankClass}">
+                <div class="lb-rank">${rankDisplay}</div>
+                <div class="lb-info">
+                    <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
+                    <div class="lb-level">${planetEmoji} ${entry.level || 'mercury'}</div>
                 </div>
-            `;
-        });
-        
-        list.innerHTML = html;
-        
-        // Показываем свою позицию
-        const myPosBlock = document.getElementById('lbMyPosition');
-        const distances = this.calculateDistances();
-        const myDist = distances[period] || 0;
-        
-        if (myPosition || myDist > 0) {
-            myPosBlock.style.display = 'flex';
-            document.getElementById('lbMyRank').textContent = myPosition ? `#${myPosition}` : '—';
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(myDist);
-        } else {
-            myPosBlock.style.display = 'none';
-        }
-    },
+                <div class="lb-distance">${formattedDistance}</div>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+    
+    // Показываем свою позицию
+    const myPosBlock = document.getElementById('lbMyPosition');
+    const distances = this.calculateDistances();
+    const myDist = distances[period] || 0;
+    
+    if (myPosition || myDist > 0) {
+        myPosBlock.style.display = 'flex';
+        document.getElementById('lbMyRank').textContent = myPosition ? `#${myPosition}` : '—';
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDist, period);
+    } else {
+        myPosBlock.style.display = 'none';
+    }
+},
     
     escapeHtml: function(text) {
         const div = document.createElement('div');
