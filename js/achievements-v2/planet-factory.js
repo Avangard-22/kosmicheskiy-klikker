@@ -231,8 +231,6 @@ function createPlanetModule(config, nameTemplates) {
         if (planet.masterUnlocked) return;
         
         // ✅ КРИТИЧЕСКАЯ ЗАЩИТА: не разблокируем мастер-достижение при нулевом прогрессе
-        // Это защищает от бага, когда planetDamageDealt случайно остался огромным
-        // от предыдущей планеты при переходе на новую локацию
         if (!currentPlanetDamage || currentPlanetDamage <= 0) return;
         
         const master = getMasterAchievement();
@@ -243,7 +241,12 @@ function createPlanetModule(config, nameTemplates) {
             
             window.gameState.coins = (window.gameState.coins || 0) + master.reward;
             if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(master.reward);
+            
+            // ✅ ИСПРАВЛЕНО: Обновляем ВСЕ компоненты UI, а не только HUD
             if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+            if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+            if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
+            
             if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
             if (window.telegramHaptic?.success) window.telegramHaptic.success();
             if (typeof window.saveGame === 'function') window.saveGame();
