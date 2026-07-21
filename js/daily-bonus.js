@@ -263,6 +263,9 @@ function applyReward(reward) {
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
             }
+            if (typeof window.syncDailyProgress === 'function') {
+    window.syncDailyProgress();
+}
             break;
     }
     
