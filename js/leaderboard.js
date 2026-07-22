@@ -50,55 +50,69 @@ const Leaderboard = {
     calculateDistances: function(period = 'total') {
         const gs = window.gameState;
         const gm = window.gameMetrics;
-        const achV2 = gs?.achievementsV2;
         
-        // Для "24 часа" и "7 дней" используем dailyProgress
+        // ✅ Для "24 часа" и "7 дней" используем dailyProgress
         if (period === 'daily' || period === 'weekly') {
-            if (!gm || !gm.dailyProgress) return { blocks: 0 };
+            if (!gm || !gm.dailyProgress) return { blocks: 0, distance: 0, time: 0 };
             
             const totalDamage = gs?.totalDamageDealt || 0;
             const dp = gm.dailyProgress;
             
             // За сегодня
-            const todayBlocks = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+            const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
             
             if (period === 'daily') {
-                return { blocks: Math.floor(todayBlocks) };
+                return { 
+                    blocks: Math.floor(todayDamage), // 1 урон = 1 блок (упрощенно)
+                    distance: Math.floor(todayDamage), // 1 урон = 1 км
+                    time: 0 // Время за сегодня не считаем
+                };
             }
             
             // За 7 дней (сумма истории + сегодня)
-            let weeklyBlocks = todayBlocks;
+            let weeklyDamage = todayDamage;
             const now = Date.now();
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
             
             if (dp.history && Array.isArray(dp.history)) {
                 dp.history.forEach(day => {
                     if (day.timestamp && (now - day.timestamp) <= sevenDaysMs) {
-                        weeklyBlocks += (day.damage || 0);
+                        weeklyDamage += (day.damage || 0);
                     }
                 });
             }
             
-            return { blocks: Math.floor(weeklyBlocks) };
+            return { 
+                blocks: Math.floor(weeklyDamage),
+                distance: Math.floor(weeklyDamage),
+                time: 0
+            };
         }
         
-        // Для "Всё время" используем achievementsV2
-        if (!achV2) return { blocks: 0, distance: 0, time: 0 };
+        // ✅ Для "Всё время" используем gameState.totalDamageDealt (источник правды)
+        const totalDamage = gs?.totalDamageDealt || 0;
         
-        let totalBlocks = 0;
-        let totalDistance = 0;
+        // Для времени используем gameMetrics.planetStats
         let totalTime = 0;
+        if (gm && gm.planetStats) {
+            Object.values(gm.planetStats).forEach(planet => {
+                totalTime += (planet.timePlayed || 0);
+            });
+        }
         
-        Object.values(achV2).forEach(planetAch => {
-            const metrics = planetAch?.metrics || {};
-            totalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-            totalDistance += metrics.damage?.progress || 0;
-            totalTime += metrics.time?.progress || 0;
-        });
+        // Для блоков используем achievementsV2 (там есть разделение blocks/rare)
+        let totalBlocks = 0;
+        const achV2 = gs?.achievementsV2;
+        if (achV2) {
+            Object.values(achV2).forEach(planetAch => {
+                const metrics = planetAch?.metrics || {};
+                totalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+            });
+        }
         
         return { 
             blocks: Math.floor(totalBlocks),
-            distance: Math.floor(totalDistance),
+            distance: Math.floor(totalDamage), // ✅ 1 урон = 1 км
             time: Math.floor(totalTime)
         };
     },
@@ -646,10 +660,20 @@ const Leaderboard = {
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-        // ✅ Для блоков используем локальный расчет (так как бэкенд пока не поддерживает под-периоды)
+
+        // ✅ Обновляем "Ваш результат" для ВСЕХ периодов
         if (period === 'blocks') {
+            // Для блоков используем локальный расчет с учетом под-периода
             const localDistances = this.calculateDistances(blockPeriod);
             document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.blocks, 'blocks');
+        } else if (period === 'distance') {
+            // Для расстояния используем gameState.totalDamageDealt
+            const localDistances = this.calculateDistances('total');
+            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.distance, 'distance');
+        } else if (period === 'time') {
+            // Для времени используем локальный расчет
+            const localDistances = this.calculateDistances('total');
+            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.time, 'time');
         } else {
             // Для остальных используем данные из таблицы
             document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
