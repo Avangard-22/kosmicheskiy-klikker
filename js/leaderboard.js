@@ -19,8 +19,6 @@ const Leaderboard = {
     
     currentPeriod: 'time',
     currentBlockPeriod: 'total', // Текущий под-период для блоков
-    
-    currentPeriod: 'global',
     modalVisible: false,
     
     formatDistance: function(num, period = 'time') {
@@ -660,22 +658,18 @@ const Leaderboard = {
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-
-        // ✅ Обновляем "Ваш результат" для ВСЕХ периодов
-        if (period === 'blocks') {
-            // Для блоков используем локальный расчет с учетом под-периода
+        // ✅ Обновляем "Ваш результат"
+        // Мы уже нашли myDistance из записи таблицы лидеров (entry[period])
+        // Используем его, так как сервер возвращает корректные данные для time и distance
+        
+        // Исключение: для блоков с под-периодами (daily/weekly) сервер пока возвращает total,
+        // поэтому для них используем локальный расчет.
+        if (period === 'blocks' && (blockPeriod === 'daily' || blockPeriod === 'weekly')) {
             const localDistances = this.calculateDistances(blockPeriod);
             document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.blocks, 'blocks');
-        } else if (period === 'distance') {
-            // Для расстояния используем gameState.totalDamageDealt
-            const localDistances = this.calculateDistances('total');
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.distance, 'distance');
-        } else if (period === 'time') {
-            // Для времени используем локальный расчет
-            const localDistances = this.calculateDistances('total');
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.time, 'time');
         } else {
-            // Для остальных используем данные из таблицы
+            // Для time, distance и blocks-total используем данные, которые уже пришли с сервера
+            console.log('🔍 [LEADERBOARD] Отображаем результат из таблицы:', myDistance, 'формат:', this.formatDistance(myDistance, period));
             document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
         }
     },
