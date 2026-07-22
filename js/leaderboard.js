@@ -51,19 +51,67 @@ const Leaderboard = {
         
         // ✅ Для "24 часа" и "7 дней" используем dailyProgress
         if (period === 'daily' || period === 'weekly') {
-            if (!gm || !gm.dailyProgress) return { blocks: 0, distance: 0, time: 0 };
+            if (!gm) return { blocks: 0, distance: 0, time: 0 };
             
             const totalDamage = gs?.totalDamageDealt || 0;
+            
+            // ✅ Инициализируем dailyProgress, если его нет
+            if (!gm.dailyProgress) {
+                gm.dailyProgress = {
+                    currentDayStart: Date.now(),
+                    dayStartDamage: totalDamage,
+                    history: []
+                };
+                console.log('📅 [LEADERBOARD] dailyProgress инициализирован');
+            }
+            
             const dp = gm.dailyProgress;
             
-            // За сегодня
+            // ✅ Проверяем смену суток (на случай, если syncDailyProgress не сработал)
+            const lastDate = new Date(dp.currentDayStart).toISOString().split('T')[0];
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            if (lastDate !== currentDate) {
+                console.log('📅 [LEADERBOARD] Обнаружена смена суток в calculateDistances!');
+                
+                // Архивируем вчерашний урон
+                const yesterdayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+                dp.history.push({
+                    date: lastDate,
+                    timestamp: dp.currentDayStart,
+                    damage: yesterdayDamage
+                });
+                
+                // Храним только последние 7 дней
+                if (dp.history.length > 7) {
+                    dp.history = dp.history.slice(-7);
+                }
+                
+                // Сбрасываем счетчик на сегодня
+                dp.currentDayStart = Date.now();
+                dp.dayStartDamage = totalDamage;
+                
+                // Сохраняем изменения
+                if (typeof window.saveGame === 'function') {
+                    window.saveGame();
+                }
+            }
+            
+            // Рассчитываем урон за сегодня
             const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+            
+            console.log('🔍 [LEADERBOARD] daily:', {
+                totalDamage,
+                dayStartDamage: dp.dayStartDamage,
+                todayDamage,
+                historyLength: dp.history?.length || 0
+            });
             
             if (period === 'daily') {
                 return { 
-                    blocks: Math.floor(todayDamage), // 1 урон = 1 блок (упрощенно)
-                    distance: Math.floor(todayDamage), // 1 урон = 1 км
-                    time: 0 // Время за сегодня не считаем
+                    blocks: Math.floor(todayDamage),
+                    distance: Math.floor(todayDamage),
+                    time: 0
                 };
             }
             
@@ -79,6 +127,8 @@ const Leaderboard = {
                     }
                 });
             }
+            
+            console.log('🔍 [LEADERBOARD] weekly:', { weeklyDamage });
             
             return { 
                 blocks: Math.floor(weeklyDamage),
