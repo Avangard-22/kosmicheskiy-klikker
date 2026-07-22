@@ -716,18 +716,32 @@ const Leaderboard = {
         }
         
         // ✅ Обновляем "Ваш результат"
-        // Мы уже нашли myDistance из записи таблицы лидеров (entry[period])
-        // Используем его, так как сервер возвращает корректные данные для time и distance
+        // ПРИОРИТЕТ: используем myDistance из таблицы лидеров (данные с сервера)
+        // Локальный расчет — только если myDistance === 0
         
-        // Исключение: для блоков с под-периодами (daily/weekly) сервер пока возвращает total,
-        // поэтому для них используем локальный расчет.
-        if (period === 'blocks' && (blockPeriod === 'daily' || blockPeriod === 'weekly')) {
-            const localDistances = this.calculateDistances(blockPeriod);
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.blocks, 'blocks');
-        } else {
-            // Для time, distance и blocks-total используем данные, которые уже пришли с сервера
-            console.log('🔍 [LEADERBOARD] Отображаем результат из таблицы:', myDistance, 'формат:', this.formatDistance(myDistance, period));
+        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'blockPeriod:', blockPeriod);
+        
+        if (myDistance > 0) {
+            // ✅ Сервер вернул данные — используем их
+            console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
             document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
+        } else {
+            // ️ Сервер не вернул данные (myDistance === 0) — используем локальный расчет
+            console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
+            
+            let localValue = 0;
+            if (period === 'blocks') {
+                const localDistances = this.calculateDistances(blockPeriod || 'total');
+                localValue = localDistances.blocks;
+            } else if (period === 'distance') {
+                const localDistances = this.calculateDistances('total');
+                localValue = localDistances.distance;
+            } else if (period === 'time') {
+                const localDistances = this.calculateDistances('total');
+                localValue = localDistances.time;
+            }
+            
+            document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
         }
     },
     
