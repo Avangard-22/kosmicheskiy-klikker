@@ -9,16 +9,17 @@
 (function() {
 'use strict';
 
-const Leaderboard = {
     config: {
         submitInterval: 30000,
         maxEntries: 50,
         mainPeriods: ['blocks', 'distance', 'time'],
-        blockSubPeriods: ['daily', 'weekly', 'total'] // Под-периоды для блоков
+        blockSubPeriods: ['daily', 'weekly', 'total'], // Под-периоды для блоков
+        distanceSubPeriods: ['daily', 'weekly', 'total'] // Под-периоды для расстояния
     },
     
     currentPeriod: 'time',
     currentBlockPeriod: 'total', // Текущий под-период для блоков
+    currentDistancePeriod: 'total', // Текущий под-период для расстояния
     modalVisible: false,
     
     formatDistance: function(num, period = 'time') {
@@ -521,10 +522,18 @@ const Leaderboard = {
                 <button class="lb-tab active" data-period="time">Время<br><small style="font-size:0.7em;opacity:0.7">в игре</small></button>
             </div>
             
+            <!-- Под-табы для блоков -->
             <div class="lb-subtabs" id="lbBlockSubtabs" style="display:none;">
                 <button class="lb-subtab" data-block-period="daily">24 часа</button>
                 <button class="lb-subtab" data-block-period="weekly">7 дней</button>
                 <button class="lb-subtab active" data-block-period="total">Всё время</button>
+            </div>
+            
+            <!-- Под-табы для расстояния -->
+            <div class="lb-subtabs" id="lbDistanceSubtabs" style="display:none;">
+                <button class="lb-subtab" data-distance-period="daily">24 часа</button>
+                <button class="lb-subtab" data-distance-period="weekly">7 дней</button>
+                <button class="lb-subtab active" data-distance-period="total">Всё время</button>
             </div>
             
             <div class="lb-list" id="lbList">
@@ -572,7 +581,17 @@ const Leaderboard = {
                 }, { passive: false });
             });
         }
-        
+                // ✅ Под-табы для расстояния
+        const distanceSubtabs = document.getElementById('lbDistanceSubtabs');
+        if (distanceSubtabs) {
+            distanceSubtabs.querySelectorAll('.lb-subtab').forEach(tab => {
+                tab.addEventListener('click', () => this.switchDistancePeriod(tab.dataset.distancePeriod));
+                tab.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.switchDistancePeriod(tab.dataset.distancePeriod);
+                }, { passive: false });
+            });
+        }
         // Закрытие по клику вне модалки
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.hideModal();
@@ -607,18 +626,28 @@ const Leaderboard = {
             t.classList.toggle('active', t.dataset.period === period);
         });
         
-        // Показываем/скрываем под-табы только для "blocks"
-        const subtabs = document.getElementById('lbBlockSubtabs');
-        if (subtabs) {
-            subtabs.style.display = period === 'blocks' ? 'flex' : 'none';
+        // Показываем/скрываем под-табы
+        const blockSubtabs = document.getElementById('lbBlockSubtabs');
+        const distanceSubtabs = document.getElementById('lbDistanceSubtabs');
+        
+        if (blockSubtabs) {
+            blockSubtabs.style.display = period === 'blocks' ? 'flex' : 'none';
+        }
+        if (distanceSubtabs) {
+            distanceSubtabs.style.display = period === 'distance' ? 'flex' : 'none';
         }
         
         // Определяем какой под-период использовать
-        const blockPeriod = period === 'blocks' ? this.currentBlockPeriod : undefined;
+        let subPeriod = undefined;
+        if (period === 'blocks') {
+            subPeriod = this.currentBlockPeriod;
+        } else if (period === 'distance') {
+            subPeriod = this.currentDistancePeriod;
+        }
         
-        await this.loadAndRender(period, blockPeriod);
+        await this.loadAndRender(period, subPeriod);
     },
-        switchBlockPeriod: async function(period) {
+    switchBlockPeriod: async function(period) {
         this.currentBlockPeriod = period;
         
         // Обновляем активный под-таб
@@ -632,12 +661,32 @@ const Leaderboard = {
         // Перезагружаем таблицу с новым периодом
         await this.loadAndRender('blocks', period);
     },
- loadAndRender: async function(period, blockPeriod = 'total') {
+    
+    switchDistancePeriod: async function(period) {
+        this.currentDistancePeriod = period;
+        
+        // Обновляем активный под-таб
+        const subtabs = document.getElementById('lbDistanceSubtabs');
+        if (subtabs) {
+            subtabs.querySelectorAll('.lb-subtab').forEach(t => {
+                t.classList.toggle('active', t.dataset.distancePeriod === period);
+            });
+        }
+        
+        // Перезагружаем таблицу с новым периодом
+        await this.loadAndRender('distance', period);
+    },
+    loadAndRender: async function(period, subPeriod = 'total') {
         const list = document.getElementById('lbList');
         list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
         
-        const displayPeriod = period === 'blocks' ? blockPeriod : period;
-        console.log(' [LEADERBOARD] Загрузка периода:', period, 'под-период:', blockPeriod);
+        // Определяем какой под-период использовать для отображения
+        let displayPeriod = period;
+        if (period === 'blocks' || period === 'distance') {
+            displayPeriod = subPeriod;
+        }
+        
+        console.log(' [LEADERBOARD] Загрузка периода:', period, 'под-период:', subPeriod, 'displayPeriod:', displayPeriod);
         
         const result = await this.fetchLeaderboard(period);
         
@@ -719,7 +768,7 @@ const Leaderboard = {
         // ПРИОРИТЕТ: используем myDistance из таблицы лидеров (данные с сервера)
         // Локальный расчет — только если myDistance === 0
         
-        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'blockPeriod:', blockPeriod);
+        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
         
         if (myDistance > 0) {
             // ✅ Сервер вернул данные — используем их
@@ -731,10 +780,11 @@ const Leaderboard = {
             
             let localValue = 0;
             if (period === 'blocks') {
-                const localDistances = this.calculateDistances(blockPeriod || 'total');
+                const localDistances = this.calculateDistances(subPeriod || 'total');
                 localValue = localDistances.blocks;
             } else if (period === 'distance') {
-                const localDistances = this.calculateDistances('total');
+                // Для расстояния с под-периодами используем calculateDistances
+                const localDistances = this.calculateDistances(subPeriod || 'total');
                 localValue = localDistances.distance;
             } else if (period === 'time') {
                 const localDistances = this.calculateDistances('total');
