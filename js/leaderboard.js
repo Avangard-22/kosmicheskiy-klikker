@@ -409,6 +409,10 @@ const Leaderboard = {
             jupiter: '', saturn: '♄', uranus: '', neptune: '♆', pluto: '♇'
         };
         
+        // ✅ СБРАСЫВАЕМ позицию перед каждым рендером
+        myPosition = null;
+        myDistance = 0;
+        
         entries.forEach((entry, idx) => {
             const rank = idx + 1;
             
@@ -418,14 +422,14 @@ const Leaderboard = {
             let rankClass = '';
             let rankDisplay = '';
             if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
-            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
-            else if (rank === 3) { rankClass = 'top-3'; rankDisplay = ''; }
+            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = ''; }
+            else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
             else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
             
             if (isMe) {
                 rankClass += ' is-me';
-                myPosition = rank;
-                myDistance = entry[period] || 0;
+                myPosition = rank;  // ✅ Сохраняем позицию в топ-50
+                myDistance = entry[period] || 0;  // ✅ Сохраняем результат
             }
             
             const distance = entry[period] || 0;
@@ -453,13 +457,21 @@ const Leaderboard = {
         const distances = this.calculateDistances();
         const myDist = distances[period] || 0;
         
-        if (myPosition || myDist > 0) {
-            myPosBlock.style.display = 'flex';
-            document.getElementById('lbMyRank').textContent = myPosition ? `#${myPosition}` : '—';
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(myDist, period);
+        // ✅ Показываем блок, если есть хоть какие-то данные
+        myPosBlock.style.display = 'flex';
+        
+        if (myPosition) {
+            // Игрок в топ-50
+            document.getElementById('lbMyRank').textContent = `#${myPosition}`;
+            document.getElementById('lbMyRank').style.color = '#4FC3F7';
         } else {
-            myPosBlock.style.display = 'none';
+            // Игрок вне топ-50
+            document.getElementById('lbMyRank').textContent = 'вне топ-50';
+            document.getElementById('lbMyRank').style.color = '#999';
         }
+        
+        // ✅ Показываем актуальный результат для выбранной вкладки
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDist, period);
     },
     
     escapeHtml: function(text) {
