@@ -45,20 +45,28 @@ const Leaderboard = {
     
     calculateDistances: function() {
         const gs = window.gameState;
-        const gm = window.gameMetrics;
-        if (!gs || !gm || !gm.planetStats) return { blocks: 0, distance: 0, time: 0 };
+        const achV2 = gs?.achievementsV2;
+        
+        // Если achievementsV2 не загружен — возвращаем нули
+        if (!achV2) return { blocks: 0, distance: 0, time: 0 };
         
         let totalBlocks = 0;
+        let totalDistance = 0;
         let totalTime = 0;
         
-        // Суммируем блоки и время по всем планетам
-        Object.values(gm.planetStats).forEach(planet => {
-            totalBlocks += (planet.blocks || 0) + (planet.rare || 0);
-            totalTime += (planet.timePlayed || 0);
+        // ✅ Берем данные из achievementsV2.metrics (источник правды)
+        Object.values(achV2).forEach(planetAch => {
+            const metrics = planetAch?.metrics || {};
+            
+            // Блоки: blocks + rare
+            totalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+            
+            // Расстояние: damageDealt (урон = км)
+            totalDistance += metrics.damage?.progress || 0;
+            
+            // Время: timePlayed (в секундах)
+            totalTime += metrics.time?.progress || 0;
         });
-        
-        // ✅ ИСПРАВЛЕНО: используем gameState.totalDamageDealt (источник правды, как в достижениях)
-        const totalDistance = gs.totalDamageDealt || 0;
         
         return { 
             blocks: Math.floor(totalBlocks),
