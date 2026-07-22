@@ -49,64 +49,78 @@ const Leaderboard = {
         const gs = window.gameState;
         const gm = window.gameMetrics;
         
-        // ✅ Для "24 часа" и "7 дней" используем dailyProgress
+        if (!gs || !gm) {
+            console.warn('⚠️ [LEADERBOARD] gameState или gameMetrics отсутствуют!');
+            return { blocks: 0, distance: 0, time: 0 };
+        }
+
+        // 1. Получаем totalDamage
+        let totalDamage = gs.totalDamageDealt || 0;
+        
+        // 2. ✅ FALLBACK: Если totalDamage почему-то 0, восстанавливаем его из достижений (источник правды)
+        if (totalDamage === 0 && gs.achievementsV2) {
+            let fallbackDamage = 0;
+            let fallbackBlocks = 0;
+            
+            Object.values(gs.achievementsV2).forEach(planetAch => {
+                const metrics = planetAch?.metrics || {};
+                fallbackDamage += metrics.damage?.progress || 0;
+                fallbackBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+            });
+            
+            // Используем damage, если он есть, иначе берем blocks (так как 1 блок ≈ 1 урон)
+            const recoveredValue = fallbackDamage > 0 ? fallbackDamage : fallbackBlocks;
+            
+            if (recoveredValue > 0) {
+                console.log('⚠️ [LEADERBOARD] totalDamage был 0, восстановлен из достижений:', recoveredValue);
+                totalDamage = recoveredValue;
+                gs.totalDamageDealt = recoveredValue; // Синхронизируем gameState
+            }
+        }
+
+        // 3. ✅ Для "24 часа" и "7 дней"
         if (period === 'daily' || period === 'weekly') {
-            if (!gm) return { blocks: 0, distance: 0, time: 0 };
-            
-            const totalDamage = gs?.totalDamageDealt || 0;
-            
-            // ✅ Инициализируем dailyProgress, если его нет
             if (!gm.dailyProgress) {
                 gm.dailyProgress = {
                     currentDayStart: Date.now(),
                     dayStartDamage: totalDamage,
                     history: []
                 };
-                console.log('📅 [LEADERBOARD] dailyProgress инициализирован');
+                console.log('📅 [LEADERBOARD] dailyProgress инициализирован с dayStartDamage:', totalDamage);
             }
             
             const dp = gm.dailyProgress;
             
-            // ✅ Проверяем смену суток (на случай, если syncDailyProgress не сработал)
+            // Проверяем смену суток
             const lastDate = new Date(dp.currentDayStart).toISOString().split('T')[0];
             const currentDate = new Date().toISOString().split('T')[0];
             
             if (lastDate !== currentDate) {
-                console.log('📅 [LEADERBOARD] Обнаружена смена суток в calculateDistances!');
-                
-                // Архивируем вчерашний урон
+                console.log('📅 [LEADERBOARD] Обнаружена смена суток! Архивируем прогресс.');
                 const yesterdayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
                 dp.history.push({
                     date: lastDate,
                     timestamp: dp.currentDayStart,
                     damage: yesterdayDamage
                 });
-                
-                // Храним только последние 7 дней
                 if (dp.history.length > 7) {
                     dp.history = dp.history.slice(-7);
                 }
-                
-                // Сбрасываем счетчик на сегодня
                 dp.currentDayStart = Date.now();
                 dp.dayStartDamage = totalDamage;
                 
-                // Сохраняем изменения
-                if (typeof window.saveGame === 'function') {
-                    window.saveGame();
-                }
+                if (typeof window.saveGame === 'function') window.saveGame();
             }
             
-            // Рассчитываем урон за сегодня
             const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
             
-            console.log('🔍 [LEADERBOARD] daily:', {
+            console.log('🔍 [LEADERBOARD] daily расчет:', {
                 totalDamage,
                 dayStartDamage: dp.dayStartDamage,
                 todayDamage,
                 historyLength: dp.history?.length || 0
             });
-            
+
             if (period === 'daily') {
                 return { 
                     blocks: Math.floor(todayDamage),
@@ -115,7 +129,7 @@ const Leaderboard = {
                 };
             }
             
-            // За 7 дней (сумма истории + сегодня)
+            // За 7 дней
             let weeklyDamage = todayDamage;
             const now = Date.now();
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -128,31 +142,24 @@ const Leaderboard = {
                 });
             }
             
-            console.log('🔍 [LEADERBOARD] weekly:', { weeklyDamage });
-            
             return { 
                 blocks: Math.floor(weeklyDamage),
                 distance: Math.floor(weeklyDamage),
                 time: 0
             };
         }
-        
-        // ✅ Для "Всё время" используем gameState.totalDamageDealt (источник правды)
-        const totalDamage = gs?.totalDamageDealt || 0;
-        
-        // Для времени используем gameMetrics.planetStats
+
+        // 4. ✅ Для "Всё время"
         let totalTime = 0;
-        if (gm && gm.planetStats) {
+        if (gm.planetStats) {
             Object.values(gm.planetStats).forEach(planet => {
                 totalTime += (planet.timePlayed || 0);
             });
         }
         
-        // Для блоков используем achievementsV2 (там есть разделение blocks/rare)
         let totalBlocks = 0;
-        const achV2 = gs?.achievementsV2;
-        if (achV2) {
-            Object.values(achV2).forEach(planetAch => {
+        if (gs.achievementsV2) {
+            Object.values(gs.achievementsV2).forEach(planetAch => {
                 const metrics = planetAch?.metrics || {};
                 totalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
             });
@@ -160,7 +167,7 @@ const Leaderboard = {
         
         return { 
             blocks: Math.floor(totalBlocks),
-            distance: Math.floor(totalDamage), // ✅ 1 урон = 1 км
+            distance: Math.floor(totalDamage),
             time: Math.floor(totalTime)
         };
     },
