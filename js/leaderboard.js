@@ -9,7 +9,7 @@
 (function() {
 'use strict';
 
-    config: {
+    const Leaderboard = {
         submitInterval: 30000,
         maxEntries: 50,
         mainPeriods: ['blocks', 'distance', 'time'],
