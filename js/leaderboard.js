@@ -13,69 +13,57 @@ const Leaderboard = {
     config: {
         submitInterval: 30000,
         maxEntries: 50,
-        periods: ['daily', 'weekly', 'global']
+        periods: ['blocks', 'distance', 'time']
     },
     
     currentPeriod: 'global',
     modalVisible: false,
     
-    formatDistance: function(num, period = 'global') {
+    formatDistance: function(num, period = 'time') {
         if (!num || num <= 0) return '0';
         
-        const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
-        
-        if (period === 'daily' || period === 'weekly') {
-            const au = num / AU_TO_DAMAGE;
-            
-            if (period === 'daily') {
-                if (au < 0.000001) return '< 0.000001 а.е.';
-                if (au < 0.001) return au.toFixed(6) + ' а.е.';
-                if (au < 1) return au.toFixed(4) + ' а.е.';
-                return au.toFixed(2) + ' а.е.';
-            } else {
-                if (au < 0.0001) return '< 0.0001 а.е.';
-                if (au < 0.01) return au.toFixed(4) + ' а.е.';
-                if (au < 1) return au.toFixed(3) + ' а.е.';
-                return au.toFixed(2) + ' а.е.';
-            }
+        if (period === 'blocks') {
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+            return Math.floor(num).toLocaleString();
         }
         
-        if (num >= 1000000000) return (num / 1000000000).toFixed(2) + 'B';
-        if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
-        if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+        if (period === 'distance') {
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M км';
+            if (num >= 1000) return (num / 1000).toFixed(2) + 'K км';
+            return Math.floor(num).toLocaleString() + ' км';
+        }
+        
+        if (period === 'time') {
+            const hours = Math.floor(num / 3600);
+            const minutes = Math.floor((num % 3600) / 60);
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+        
         return Math.floor(num).toLocaleString();
     },
     
     calculateDistances: function() {
-        // ✅ НОВОЕ: Принудительно синхронизируем сутки перед расчетом, чтобы данные всегда были свежими
-        if (typeof window.syncDailyProgress === 'function') {
-            window.syncDailyProgress();
-        }
-
         const gs = window.gameState;
         const gm = window.gameMetrics;
-        if (!gs || !gm) return { daily: 0, weekly: 0, global: 0 };
+        if (!gs || !gm || !gm.planetStats) return { blocks: 0, distance: 0, time: 0 };
         
-        const totalDamage = gs.totalDamageDealt || 0;
-        const dailyProgress = gm.dailyProgress || {
-            currentDayStart: Date.now(),
-            dayStartDamage: totalDamage,
-            history: []
-        };
+        let totalBlocks = 0;
+        let totalDistance = 0;
+        let totalTime = 0;
         
-        const daily = Math.max(0, totalDamage - (dailyProgress.dayStartDamage || 0));
-        
-        let weekly = daily;
-        const history = dailyProgress.history || [];
-        const now = Date.now();
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-        history.forEach(day => {
-            if (day.timestamp && (now - day.timestamp) <= sevenDaysMs) {
-                weekly += (day.damage || 0);
-            }
+        // Суммируем по всем планетам
+        Object.values(gm.planetStats).forEach(planet => {
+            totalBlocks += (planet.blocks || 0) + (planet.rare || 0);
+            totalDistance += (planet.damageDealt || 0); // 1 урон = 1 км
+            totalTime += (planet.timePlayed || 0); // в секундах
         });
         
-        return { daily, weekly, global: totalDamage };
+        return { 
+            blocks: Math.floor(totalBlocks),
+            distance: Math.floor(totalDistance),
+            time: Math.floor(totalTime)
+        };
     },
     
     updateDailyHistory: function() {
@@ -134,16 +122,16 @@ const Leaderboard = {
         console.log('🏆 [LEADERBOARD] Отправка результатов:', {
             userId,
             username,
-            daily: distances.daily,
-            weekly: distances.weekly,
-            global: distances.global
+            blocks: distances.blocks,
+            distance: distances.distance,
+            time: distances.time
         });
         
         try {
             const result = await window.telegramCloud.submitLeaderboard({
-                daily: Math.floor(distances.daily),
-                weekly: Math.floor(distances.weekly),
-                global: Math.floor(distances.global),
+                blocks: distances.blocks,
+                distance: distances.distance,
+                time: distances.time,
                 username: username,
                 userId: userId,
                 level: window.gameState?.currentLocation || 'mercury'
@@ -323,9 +311,9 @@ const Leaderboard = {
                 <button class="lb-close" id="lbCloseBtn">✕</button>
             </div>
             <div class="lb-tabs">
-                <button class="lb-tab" data-period="daily">24 часа<br><small style="font-size:0.7em;opacity:0.7">в а.е.</small></button>
-                <button class="lb-tab" data-period="weekly">7 дней<br><small style="font-size:0.7em;opacity:0.7">в а.е.</small></button>
-                <button class="lb-tab active" data-period="global">Всё время<br><small style="font-size:0.7em;opacity:0.7">урон</small></button>
+                <button class="lb-tab" data-period="blocks">Блоков<br><small style="font-size:0.7em;opacity:0.7">уничтожено</small></button>
+                <button class="lb-tab" data-period="distance">Расстояние<br><small style="font-size:0.7em;opacity:0.7">в км</small></button>
+                <button class="lb-tab active" data-period="time">Время<br><small style="font-size:0.7em;opacity:0.7">в игре</small></button>
             </div>
             <div class="lb-list" id="lbList">
                 <div class="lb-loading"> Загрузка...</div>
