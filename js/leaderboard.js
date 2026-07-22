@@ -13,8 +13,12 @@ const Leaderboard = {
     config: {
         submitInterval: 30000,
         maxEntries: 50,
-        periods: ['blocks', 'distance', 'time']
+        mainPeriods: ['blocks', 'distance', 'time'],
+        blockSubPeriods: ['daily', 'weekly', 'total'] // Под-периоды для блоков
     },
+    
+    currentPeriod: 'time',
+    currentBlockPeriod: 'total', // Текущий под-период для блоков
     
     currentPeriod: 'global',
     modalVisible: false,
@@ -43,28 +47,52 @@ const Leaderboard = {
         return Math.floor(num).toLocaleString();
     },
     
-    calculateDistances: function() {
+    calculateDistances: function(period = 'total') {
         const gs = window.gameState;
+        const gm = window.gameMetrics;
         const achV2 = gs?.achievementsV2;
         
-        // Если achievementsV2 не загружен — возвращаем нули
+        // Для "24 часа" и "7 дней" используем dailyProgress
+        if (period === 'daily' || period === 'weekly') {
+            if (!gm || !gm.dailyProgress) return { blocks: 0 };
+            
+            const totalDamage = gs?.totalDamageDealt || 0;
+            const dp = gm.dailyProgress;
+            
+            // За сегодня
+            const todayBlocks = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+            
+            if (period === 'daily') {
+                return { blocks: Math.floor(todayBlocks) };
+            }
+            
+            // За 7 дней (сумма истории + сегодня)
+            let weeklyBlocks = todayBlocks;
+            const now = Date.now();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            
+            if (dp.history && Array.isArray(dp.history)) {
+                dp.history.forEach(day => {
+                    if (day.timestamp && (now - day.timestamp) <= sevenDaysMs) {
+                        weeklyBlocks += (day.damage || 0);
+                    }
+                });
+            }
+            
+            return { blocks: Math.floor(weeklyBlocks) };
+        }
+        
+        // Для "Всё время" используем achievementsV2
         if (!achV2) return { blocks: 0, distance: 0, time: 0 };
         
         let totalBlocks = 0;
         let totalDistance = 0;
         let totalTime = 0;
         
-        // ✅ Берем данные из achievementsV2.metrics (источник правды)
         Object.values(achV2).forEach(planetAch => {
             const metrics = planetAch?.metrics || {};
-            
-            // Блоки: blocks + rare
             totalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-            
-            // Расстояние: damageDealt (урон = км)
             totalDistance += metrics.damage?.progress || 0;
-            
-            // Время: timePlayed (в секундах)
             totalTime += metrics.time?.progress || 0;
         });
         
@@ -245,8 +273,36 @@ const Leaderboard = {
                 border-color: #FFD700;
                 box-shadow: 0 2px 8px rgba(255,215,0,0.4);
             }
+                        .lb-subtabs { 
+                display: flex; 
+                gap: 4px; 
+                margin-bottom: 12px;
+                padding: 0 4px;
+            }
             
-                     .lb-list { 
+                .lb-subtab {
+                flex: 1;
+                padding: 8px 6px;
+                background: rgba(255,255,255,0.03);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 6px;
+                cursor: pointer;
+                text-align: center;
+                color: #888;
+                font-weight: bold;
+                font-family: 'Orbitron', sans-serif;
+                font-size: 0.75em;
+                transition: all 0.2s;
+            }
+            .lb-subtab:hover { background: rgba(255,255,255,0.08); color: #fff; }
+            .lb-subtab.active {
+                background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,140,0,0.2));
+                color: #FFD700;
+                border-color: rgba(255,215,0,0.4);
+                box-shadow: 0 2px 6px rgba(255,215,0,0.2);
+            }
+                
+                .lb-list { 
                 display: flex; 
                 flex-direction: column; 
                 gap: 6px; 
@@ -379,9 +435,12 @@ const Leaderboard = {
     
     createModal: function() {
         if (document.getElementById('leaderboardModal')) return;
+        
         const modal = document.createElement('div');
         modal.id = 'leaderboardModal';
         modal.className = 'lb-modal';
+        
+        // Создаем HTML структуру
         modal.innerHTML = `
             <div class="lb-header">
                 <h3 class="lb-title">🏆 Таблица лидеров</h3>
@@ -392,8 +451,15 @@ const Leaderboard = {
                 <button class="lb-tab" data-period="distance">Расстояние<br><small style="font-size:0.7em;opacity:0.7">в км</small></button>
                 <button class="lb-tab active" data-period="time">Время<br><small style="font-size:0.7em;opacity:0.7">в игре</small></button>
             </div>
+            
+            <div class="lb-subtabs" id="lbBlockSubtabs" style="display:none;">
+                <button class="lb-subtab" data-block-period="daily">24 часа</button>
+                <button class="lb-subtab" data-block-period="weekly">7 дней</button>
+                <button class="lb-subtab active" data-block-period="total">Всё время</button>
+            </div>
+            
             <div class="lb-list" id="lbList">
-                <div class="lb-loading"> Загрузка...</div>
+                <div class="lb-loading">⏳ Загрузка...</div>
             </div>
             <div class="lb-my-position" id="lbMyPosition" style="display:none;">
                 <div>
@@ -406,14 +472,18 @@ const Leaderboard = {
                 </div>
             </div>
         `;
+        
         document.body.appendChild(modal);
         
-        document.getElementById('lbCloseBtn').addEventListener('click', () => this.hideModal());
-        document.getElementById('lbCloseBtn').addEventListener('touchstart', (e) => {
+        // ✅ Добавляем обработчики событий ПРОГРАММНО
+        const closeBtn = document.getElementById('lbCloseBtn');
+        closeBtn.addEventListener('click', () => this.hideModal());
+        closeBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             this.hideModal();
         }, { passive: false });
         
+        // Главные табы
         modal.querySelectorAll('.lb-tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchPeriod(tab.dataset.period));
             tab.addEventListener('touchstart', (e) => {
@@ -422,6 +492,19 @@ const Leaderboard = {
             }, { passive: false });
         });
         
+        // ✅ Под-табы для блоков
+        const blockSubtabs = document.getElementById('lbBlockSubtabs');
+        if (blockSubtabs) {
+            blockSubtabs.querySelectorAll('.lb-subtab').forEach(tab => {
+                tab.addEventListener('click', () => this.switchBlockPeriod(tab.dataset.blockPeriod));
+                tab.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.switchBlockPeriod(tab.dataset.blockPeriod);
+                }, { passive: false });
+            });
+        }
+        
+        // Закрытие по клику вне модалки
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.hideModal();
         });
@@ -449,17 +532,43 @@ const Leaderboard = {
     
     switchPeriod: async function(period) {
         this.currentPeriod = period;
+        
+        // Обновляем главные табы
         document.querySelectorAll('.lb-tab').forEach(t => {
             t.classList.toggle('active', t.dataset.period === period);
         });
-        await this.loadAndRender(period);
+        
+        // Показываем/скрываем под-табы только для "blocks"
+        const subtabs = document.getElementById('lbBlockSubtabs');
+        if (subtabs) {
+            subtabs.style.display = period === 'blocks' ? 'flex' : 'none';
+        }
+        
+        // Определяем какой под-период использовать
+        const blockPeriod = period === 'blocks' ? this.currentBlockPeriod : undefined;
+        
+        await this.loadAndRender(period, blockPeriod);
     },
-    
-    loadAndRender: async function(period) {
+        switchBlockPeriod: async function(period) {
+        this.currentBlockPeriod = period;
+        
+        // Обновляем активный под-таб
+        const subtabs = document.getElementById('lbBlockSubtabs');
+        if (subtabs) {
+            subtabs.querySelectorAll('.lb-subtab').forEach(t => {
+                t.classList.toggle('active', t.dataset.blockPeriod === period);
+            });
+        }
+        
+        // Перезагружаем таблицу с новым периодом
+        await this.loadAndRender('blocks', period);
+    },
+ loadAndRender: async function(period, blockPeriod = 'total') {
         const list = document.getElementById('lbList');
         list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
         
-        console.log('🔍 [LEADERBOARD] Загрузка периода:', period);
+        const displayPeriod = period === 'blocks' ? blockPeriod : period;
+        console.log(' [LEADERBOARD] Загрузка периода:', period, 'под-период:', blockPeriod);
         
         const result = await this.fetchLeaderboard(period);
         
@@ -537,9 +646,14 @@ const Leaderboard = {
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-        // ✅ ВАЖНО: Показываем РЕАЛЬНЫЙ результат из entry
-        console.log('🔍 [LEADERBOARD] Отображаем результат:', myDistance, 'формат:', this.formatDistance(myDistance, period));
-        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
+        // ✅ Для блоков используем локальный расчет (так как бэкенд пока не поддерживает под-периоды)
+        if (period === 'blocks') {
+            const localDistances = this.calculateDistances(blockPeriod);
+            document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.blocks, 'blocks');
+        } else {
+            // Для остальных используем данные из таблицы
+            document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
+        }
     },
     
     escapeHtml: function(text) {
