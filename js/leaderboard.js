@@ -197,8 +197,8 @@ const Leaderboard = {
                 flex-direction: column;
                 gap: 10px;
                 backdrop-filter: blur(10px);
-                overflow-y: auto;
                 font-family: system-ui, sans-serif;
+                overflow: hidden; /* ✅ Убираем скролл с модалки */
             }
             .lb-modal.active { display: flex; }
             
@@ -237,24 +237,80 @@ const Leaderboard = {
                 box-shadow: 0 2px 8px rgba(255,215,0,0.4);
             }
             
-            .lb-list { display: flex; flex-direction: column; gap: 6px; min-height: 200px; }
+                     .lb-list { 
+                display: flex; 
+                flex-direction: column; 
+                gap: 6px; 
+                min-height: 200px;
+                max-height: 60vh; /* ✅ Ограничиваем высоту */
+                overflow-y: auto; /* ✅ Добавляем скролл */
+                padding-right: 5px; /* ✅ Отступ для скролла */
+            }
+            
+            /* ✅ Стилизация скроллбара */
+            .lb-list::-webkit-scrollbar {
+                width: 6px;
+            }
+            .lb-list::-webkit-scrollbar-track {
+                background: rgba(255,255,255,0.05);
+                border-radius: 3px;
+            }
+            .lb-list::-webkit-scrollbar-thumb {
+                background: rgba(255,215,0,0.3);
+                border-radius: 3px;
+            }
+            .lb-list::-webkit-scrollbar-thumb:hover {
+                background: rgba(255,215,0,0.5);
+            }
             .lb-loading { text-align: center; padding: 30px; color: #aaa; }
             .lb-empty { text-align: center; padding: 30px; color: #666; }
             
             .lb-entry {
                 display: flex;
                 align-items: center;
-                gap: 12px;
-                padding: 10px 12px;
+                gap: 10px; /* ✅ Уменьшили отступ */
+                padding: 8px 10px; /* ✅ Уменьшили padding */
                 background: rgba(255,255,255,0.03);
                 border: 1px solid rgba(255,255,255,0.08);
                 border-radius: 10px;
                 transition: all 0.2s;
             }
-            .lb-entry.top-1 { background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.1)); border-color: #FFD700; box-shadow: 0 0 10px rgba(255,215,0,0.3); }
-            .lb-entry.top-2 { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(150,150,150,0.1)); border-color: #C0C0C0; }
-            .lb-entry.top-3 { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(160,100,40,0.1)); border-color: #CD7F32; }
-            .lb-entry.is-me { background: linear-gradient(135deg, rgba(79,195,247,0.2), rgba(33,150,243,0.15)); border-color: #4FC3F7; box-shadow: 0 0 10px rgba(79,195,247,0.3); }
+            .lb-rank { 
+                font-size: 1.3em; /* ✅ Уменьшили размер */
+                width: 35px; /* ✅ Уменьшили ширину */
+                text-align: center; 
+                font-family: 'Orbitron', sans-serif; 
+                font-weight: bold; 
+            }
+            .lb-info { flex: 1; min-width: 0; }
+            .lb-name { 
+                font-size: 0.85em; /* ✅ Уменьшили шрифт */
+                color: #fff; 
+                font-weight: bold; 
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis;
+                line-height: 1.3;
+            }
+            .lb-level { 
+                font-size: 0.65em; /* ✅ Уменьшили шрифт */
+                color: #aaa; 
+                font-family: 'Orbitron', monospace; 
+                margin-top: 2px;
+                line-height: 1.2;
+            }
+            .lb-distance {
+                font-size: clamp(0.7em, 2vw, 0.85em); /* ✅ Уменьшили шрифт */
+                color: #FFD700;
+                font-weight: bold;
+                font-family: 'Orbitron', monospace;
+                text-align: right;
+                white-space: nowrap;
+                max-width: 40%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                line-height: 1.2;
+            }
             
             .lb-rank { font-size: 1.5em; width: 40px; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold; }
             .lb-entry.top-1 .lb-rank { color: #FFD700; }
@@ -279,17 +335,29 @@ const Leaderboard = {
             }
             
             .lb-my-position {
-                margin-top: 12px;
-                padding: 12px;
+                margin-top: 10px;
+                padding: 8px 12px;
                 background: linear-gradient(135deg, rgba(79,195,247,0.15), rgba(33,150,243,0.1));
                 border: 1px solid rgba(79,195,247,0.3);
                 border-radius: 10px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-shrink: 0; /* ✅ Не сжимается */
             }
-            .lb-my-position-label { font-size: 0.8em; color: #4FC3F7; font-family: 'Orbitron', sans-serif; }
-            .lb-my-position-value { font-size: 1.1em; color: #fff; font-weight: bold; font-family: 'Orbitron', monospace; }
+            .lb-my-position-label { 
+                font-size: 0.75em; /* ✅ Уменьшили шрифт */
+                color: #4FC3F7; 
+                font-family: 'Orbitron', sans-serif;
+                line-height: 1.2;
+            }
+            .lb-my-position-value { 
+                font-size: 1em; /* ✅ Уменьшили шрифт */
+                color: #fff; 
+                font-weight: bold; 
+                font-family: 'Orbitron', monospace;
+                line-height: 1.2;
+            }
             
             @keyframes lbSlideIn {
                 from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); }
