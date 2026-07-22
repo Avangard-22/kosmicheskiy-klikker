@@ -459,7 +459,7 @@ const Leaderboard = {
         const list = document.getElementById('lbList');
         list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
         
-        console.log(' [LEADERBOARD] Загрузка периода:', period);
+        console.log('🔍 [LEADERBOARD] Загрузка периода:', period);
         
         const result = await this.fetchLeaderboard(period);
         
@@ -483,38 +483,33 @@ const Leaderboard = {
         
         const planetEmojis = {
             mercury: '☿', venus: '♀', earth: '🌍', mars: '♂',
-            jupiter: '', saturn: '♄', uranus: '', neptune: '♆', pluto: '♇'
+            jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆', pluto: ''
         };
-        
-        // ✅ СБРАСЫВАЕМ позицию перед каждым рендером
-        myPosition = null;
-        myDistance = 0;
         
         entries.forEach((entry, idx) => {
             const rank = idx + 1;
             
-            // ✅ ВАЖНО: Сравниваем userId как строки (может быть число или строка)
+            // ✅ ВАЖНО: Сравниваем userId как строки
             const isMe = myUserId && String(entry.userId) === String(myUserId);
             
             let rankClass = '';
             let rankDisplay = '';
             if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
-            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = ''; }
+            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
             else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
             else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
             
             if (isMe) {
                 rankClass += ' is-me';
-                myPosition = rank;  // ✅ Сохраняем позицию в топ-50
-                myDistance = entry[period] || 0;  // ✅ Сохраняем результат
+                myPosition = rank;
+                myDistance = entry[period] || 0; // ✅ Сохраняем результат
+                console.log('🔍 [LEADERBOARD] Найдён мой результат:', myDistance, 'для периода:', period);
             }
             
             const distance = entry[period] || 0;
             const planetEmoji = planetEmojis[entry.level] || '🪐';
             
             const formattedDistance = this.formatDistance(distance, period);
-            
-            console.log(`🔍 [LEADERBOARD] Игрок ${rank}: ${entry.username}, расстояние: ${distance}, формат: ${formattedDistance}`);
             
             html += `
                 <div class="lb-entry ${rankClass}">
@@ -530,25 +525,21 @@ const Leaderboard = {
         
         list.innerHTML = html;
         
+        // ✅ Обновляем блок "Ваша позиция"
         const myPosBlock = document.getElementById('lbMyPosition');
-        const distances = this.calculateDistances();
-        const myDist = distances[period] || 0;
-        
-        // ✅ Показываем блок, если есть хоть какие-то данные
         myPosBlock.style.display = 'flex';
         
         if (myPosition) {
-            // Игрок в топ-50
             document.getElementById('lbMyRank').textContent = `#${myPosition}`;
             document.getElementById('lbMyRank').style.color = '#4FC3F7';
         } else {
-            // Игрок вне топ-50
             document.getElementById('lbMyRank').textContent = 'вне топ-50';
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-        // ✅ Показываем актуальный результат для выбранной вкладки
-        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDist, period);
+        // ✅ ВАЖНО: Показываем РЕАЛЬНЫЙ результат из entry
+        console.log('🔍 [LEADERBOARD] Отображаем результат:', myDistance, 'формат:', this.formatDistance(myDistance, period));
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
     },
     
     escapeHtml: function(text) {
