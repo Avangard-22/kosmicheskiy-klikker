@@ -49,15 +49,16 @@ const Leaderboard = {
         if (!gs || !gm || !gm.planetStats) return { blocks: 0, distance: 0, time: 0 };
         
         let totalBlocks = 0;
-        let totalDistance = 0;
         let totalTime = 0;
         
-        // Суммируем по всем планетам
+        // Суммируем блоки и время по всем планетам
         Object.values(gm.planetStats).forEach(planet => {
             totalBlocks += (planet.blocks || 0) + (planet.rare || 0);
-            totalDistance += (planet.damageDealt || 0); // 1 урон = 1 км
-            totalTime += (planet.timePlayed || 0); // в секундах
+            totalTime += (planet.timePlayed || 0);
         });
+        
+        // ✅ ИСПРАВЛЕНО: используем gameState.totalDamageDealt (источник правды, как в достижениях)
+        const totalDistance = gs.totalDamageDealt || 0;
         
         return { 
             blocks: Math.floor(totalBlocks),
