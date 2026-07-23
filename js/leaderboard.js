@@ -765,10 +765,11 @@ const Leaderboard = {
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-               // ✅ Обновляем "Ваш результат"
+        // ✅ Обновляем "Ваш результат"
         // ПРИОРИТЕТ: используем myDistance из таблицы лидеров (данные с сервера)
         // Локальный расчет — только если myDistance === 0
-        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'blockPeriod:', blockPeriod);
+        
+        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
         
         if (myDistance > 0) {
             // ✅ Сервер вернул данные — используем их
@@ -780,10 +781,11 @@ const Leaderboard = {
             
             let localValue = 0;
             if (period === 'blocks') {
-                const localDistances = this.calculateDistances(blockPeriod || 'total');
+                const localDistances = this.calculateDistances(subPeriod || 'total');
                 localValue = localDistances.blocks;
             } else if (period === 'distance') {
-                const localDistances = this.calculateDistances('total');
+                // Для расстояния с под-периодами используем calculateDistances
+                const localDistances = this.calculateDistances(subPeriod || 'total');
                 localValue = localDistances.distance;
             } else if (period === 'time') {
                 const localDistances = this.calculateDistances('total');
