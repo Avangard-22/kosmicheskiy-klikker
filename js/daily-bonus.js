@@ -1,4 +1,4 @@
- // js/daily-bonus.js
+// js/daily-bonus.js
 (function() {
 'use strict';
 
@@ -129,12 +129,10 @@ function claimDailyBonus() {
     const dayNumber = data.totalClaimed + 1;
     const reward = generateReward(dayNumber);
     
-    // ✅ НЕ БЛОКИРУЕМ синхронизацию (это было ошибкой!)
-    
     try {
         applyReward(reward);
 
-        // ✅ ИСПРАВЛЕНО: Сброс счётчика "24 часа" (без сохранения!)
+        // ✅ Сброс счётчика "24 часа" (без сохранения!)
         if (window.gameMetrics && window.gameState) {
             if ((window.gameState.totalDamageDealt || 0) === 0 && window.gameState.achievementsV2) {
                 let fallbackDamage = 0;
@@ -146,7 +144,7 @@ function claimDailyBonus() {
                 });
                 const recoveredValue = fallbackDamage > 0 ? fallbackDamage : fallbackBlocks;
                 if (recoveredValue > 0) {
-                    console.log(' [DAILY-BONUS] totalDamageDealt восстановлен:', recoveredValue);
+                    console.log('📅 [DAILY-BONUS] totalDamageDealt восстановлен:', recoveredValue);
                     window.gameState.totalDamageDealt = recoveredValue;
                 }
             }
@@ -177,17 +175,14 @@ function claimDailyBonus() {
             console.log('📅 [DAILY-BONUS] Счётчик "24 часа" сброшен. dayStartDamage:', totalDamage);
         }
         
-        // ✅ ОБНОВЛЯЕМ данные
+        // ✅ ОБНОВЛЯЕМ данные dailyBonus
         data.lastClaimDate = today;
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
         
         // ❌ НЕ ВЫЗЫВАЕМ saveGame() здесь! Это была фатальная ошибка!
-        // Вместо этого полагаемся на автосохранение из save-system.js
-        // if (typeof window.saveGame === 'function') {
-        //     console.log('💾 [DAILY] Сохраняем gameState...');
-        //     window.saveGame();  // ← ЭТО УБИВАЛО ВСЁ СОХРАНЕНИЕ!
-        // }
+        // Изменения в gameState.dailyBonus сохранятся автоматически через автосохранение save-system.js
+        console.log('📅 [DAILY-BONUS] dailyBonus обновлён. Сохранение произойдёт автоматически через save-system.js');
         
         showRewardNotification(reward, dayNumber);
         
@@ -203,11 +198,8 @@ function claimDailyBonus() {
         }
         
         console.log(`🎁 День ${dayNumber}: ${reward.name}`);
-    } finally {
-        // ❌ НЕ РАЗБЛОКИРУЕМ синхронизацию
-        // setTimeout(() => {
-        //     if (typeof window.unlockSync === 'function') window.unlockSync();
-        // }, 300);
+    } catch (e) {
+        console.error(' [DAILY-BONUS] Ошибка при получении бонуса:', e);
     }
 }
 
@@ -305,10 +297,7 @@ function updateIconDisplay() {
         icon.style.display = isMainMenu ? 'flex' : 'none';
     }
     
-    if (!data) {
-        // Если данных нет, игра еще не загрузилась из облака
-        return;
-    }
+    if (!data) return;
     
     const dayEl = document.getElementById('dailyBonusDay');
     const timerEl = document.getElementById('dailyBonusTimer');
@@ -436,7 +425,6 @@ window.dailyBonusSystem = {
 function init() {
     const ensureDailyBonus = () => {
         if (window.gameState) {
-            // ✅ ВАЖНО: Создаем dailyBonus ТОЛЬКО если его вообще нет
             if (!window.gameState.dailyBonus) {
                 console.log('📅 [DAILY] Инициализация dailyBonus (первый запуск или старый сейв)');
                 window.gameState.dailyBonus = {
@@ -446,8 +434,7 @@ function init() {
                     lastClaimTimestamp: 0
                 };
             } else {
-                // ✅ Используем то, что пришло из облака (даже если там нули)
-                console.log('📅 [DAILY] dailyBonus загружен из сохранения:', {
+                console.log(' [DAILY] dailyBonus загружен из сохранения:', {
                     lastClaimDate: window.gameState.dailyBonus.lastClaimDate,
                     totalClaimed: window.gameState.dailyBonus.totalClaimed,
                     streak: window.gameState.dailyBonus.streak
@@ -472,7 +459,7 @@ function init() {
             ensureDailyBonus();
         });
     } else {
-        console.warn('⚠️ [DAILY] EventBus недоступен, fallback на setTimeout');
+        console.warn('️ [DAILY] EventBus недоступен, fallback на setTimeout');
         setTimeout(() => {
             if (!ensureDailyBonus()) {
                 setTimeout(init, 500);
