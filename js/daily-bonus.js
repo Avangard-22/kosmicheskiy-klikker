@@ -180,9 +180,12 @@ function claimDailyBonus() {
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
         
-        // ❌ НЕ ВЫЗЫВАЕМ saveGame() здесь! Это была фатальная ошибка!
-        // Изменения в gameState.dailyBonus сохранятся автоматически через автосохранение save-system.js
-        console.log('📅 [DAILY-BONUS] dailyBonus обновлён. Сохранение произойдёт автоматически через save-system.js');
+        // ✅ КРИТИЧЕСКИ ВАЖНО: Принудительно вызываем сохранение СРАЗУ.
+        // Авто-сохранение слишком медленное (3 сек задержка + 30 сек интервал), игрок может перезагрузить страницу раньше.
+        console.log('💾 [DAILY-BONUS] Принудительно вызываем window.saveGame()...');
+        if (typeof window.saveGame === 'function') {
+            window.saveGame();
+        }
         
         showRewardNotification(reward, dayNumber);
         
