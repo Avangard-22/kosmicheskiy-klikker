@@ -263,14 +263,17 @@ function applyReward(reward) {
             if (window.gameFunctions?.calculateClickPower) {
                 window.gameState.clickPower = window.gameFunctions.calculateClickPower();
             }
-            if (typeof window.syncDailyProgress === 'function') {
-    window.syncDailyProgress();
-}
             break;
     }
     
+    // ✅ НОВОЕ: синхронизируем суточный прогресс для ВСЕХ типов наград
+    if (typeof window.syncDailyProgress === 'function') {
+        window.syncDailyProgress();
+    }
+    
     if (window.UI?.updateHUD) window.UI.updateHUD();
-    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();}
+    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();
+}
 
 // ==========================================
 // 🎨 UI
