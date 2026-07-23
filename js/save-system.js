@@ -102,18 +102,27 @@ const DEFAULT_GAME_METRICS = {
 // УТИЛИТЫ
 // ============================================
 function deepMerge(defaults, saved) {
+    // Если saved не объект — возвращаем как есть
     if (typeof saved !== 'object' || saved === null) return saved;
     if (Array.isArray(saved)) return [...saved];
-    const result = Object.assign({}, defaults || {});
-    for (const key in saved) {
-        if (saved.hasOwnProperty(key)) {
-            if (typeof saved[key] === 'object' && saved[key] !== null && !Array.isArray(saved[key])) {
-                result[key] = deepMerge(defaults ? defaults[key] : {}, saved[key]);
-            } else {
-                result[key] = saved[key];
+    
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: создаём результат из saved, а не из defaults
+    // Это гарантирует, что данные из облака полностью заменят дефолтные
+    const result = Object.assign({}, saved);
+    
+    // Добавляем отсутствующие поля из defaults (для обратной совместимости)
+    if (defaults) {
+        for (const key in defaults) {
+            if (defaults.hasOwnProperty(key) && !(key in result)) {
+                if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
+                    result[key] = deepMerge(defaults[key], result[key] || {});
+                } else {
+                    result[key] = defaults[key];
+                }
             }
         }
     }
+    
     return result;
 }
 
