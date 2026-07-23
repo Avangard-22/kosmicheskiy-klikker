@@ -769,29 +769,38 @@ const Leaderboard = {
         // ПРИОРИТЕТ: используем myDistance из таблицы лидеров (данные с сервера)
         // Локальный расчет — только если myDistance === 0
         
-        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
+        // ✅ Обновляем "Ваш результат"
+        console.log('🔍 [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'blockPeriod:', blockPeriod);
         
-        if (myDistance > 0) {
-            // ✅ Сервер вернул данные — используем их
+        // КЛЮЧЕВАЯ ЛОГИКА:
+        // - Для под-периодов (daily/weekly) ВСЕГДА используем локальный расчёт,
+        //   потому что сервер возвращает общие значения (total), а не суточные/недельные
+        // - Для 'total' используем серверные данные (myDistance)
+        const isSubPeriod = (blockPeriod === 'daily' || blockPeriod === 'weekly');
+        
+        if (!isSubPeriod && myDistance > 0) {
+            // ✅ Под-периода нет (total) + сервер вернул данные — используем сервер
             console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
             document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
         } else {
-            // ️ Сервер не вернул данные (myDistance === 0) — используем локальный расчет
-            console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
+            //  Для под-периодов ИЛИ если сервер вернул 0 — используем локальный расчёт
+            console.warn('⚠️ [LEADERBOARD] Локальный расчет (subPeriod:', blockPeriod, ')');
             
             let localValue = 0;
+            const effectiveSubPeriod = blockPeriod || 'total';
+            
             if (period === 'blocks') {
-                const localDistances = this.calculateDistances(subPeriod || 'total');
+                const localDistances = this.calculateDistances(effectiveSubPeriod);
                 localValue = localDistances.blocks;
             } else if (period === 'distance') {
-                // Для расстояния с под-периодами используем calculateDistances
-                const localDistances = this.calculateDistances(subPeriod || 'total');
+                const localDistances = this.calculateDistances(effectiveSubPeriod);
                 localValue = localDistances.distance;
             } else if (period === 'time') {
                 const localDistances = this.calculateDistances('total');
                 localValue = localDistances.time;
             }
             
+            console.log('🔢 [LEADERBOARD] Локальное значение:', localValue, 'для периода:', effectiveSubPeriod);
             document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
         }
     },
