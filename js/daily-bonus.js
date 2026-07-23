@@ -84,6 +84,7 @@ const getToday = () => new Date().toISOString().split('T')[0];
 function claimDailyBonus() {
     if (!window.gameState) return;
     
+    // ✅ ГАРАНТИРОВАННАЯ ИНИЦИАЛИЗАЦИЯ ПЕРЕД ИСПОЛЬЗОВАНИЕМ
     if (!window.gameState.dailyBonus) {
         window.gameState.dailyBonus = {
             lastClaimDate: null,
@@ -131,12 +132,10 @@ function claimDailyBonus() {
     if (typeof window.lockSync === 'function') window.lockSync();
     
     try {
-        // Применяем награду
         applyReward(reward);
 
         // ✅ ИСПРАВЛЕНО: Принудительный и надежный сброс счётчика "24 часа" при получении бонуса
         if (window.gameMetrics && window.gameState) {
-            // 1. Гарантируем, что totalDamageDealt не 0 (fallback из достижений)
             if ((window.gameState.totalDamageDealt || 0) === 0 && window.gameState.achievementsV2) {
                 let fallbackDamage = 0;
                 let fallbackBlocks = 0;
@@ -152,7 +151,6 @@ function claimDailyBonus() {
                 }
             }
 
-            // 2. Инициализируем dailyProgress, если его нет
             if (!window.gameMetrics.dailyProgress) {
                 window.gameMetrics.dailyProgress = { history: [] };
             }
@@ -160,7 +158,6 @@ function claimDailyBonus() {
             const dp = window.gameMetrics.dailyProgress;
             const totalDamage = window.gameState.totalDamageDealt || 0;
 
-            // 3. Сохраняем предыдущий день в историю
             if (dp.currentDayStart) {
                 const yesterdayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
                 if (yesterdayDamage > 0) {
@@ -175,24 +172,23 @@ function claimDailyBonus() {
                 }
             }
 
-            // 4. НАЧИНАЕМ НОВЫЙ ДЕНЬ: сбрасываем счётчик на ТЕКУЩЕЕ значение урона
             dp.currentDayStart = Date.now();
             dp.dayStartDamage = totalDamage;
             console.log('📅 [DAILY-BONUS] Новый игровой день начался. Счётчик "24 часа" сброшен. dayStartDamage:', totalDamage);
         }
         
-        // Обновляем данные
         data.lastClaimDate = today;
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
         
-        // Сохраняем
-        if (typeof window.saveGame === 'function') window.saveGame();
+        // ✅ КРИТИЧЕСКИ ВАЖНО: Сохраняем состояние СРАЗУ после изменения
+        if (typeof window.saveGame === 'function') {
+            console.log('💾 [DAILY] Сохраняем gameState с обновленным dailyBonus...');
+            window.saveGame();
+        }
         
-        // Уведомления
         showRewardNotification(reward, dayNumber);
         
-        // Звук и вибрация
         const sound = document.getElementById('upgradeSound');
         if (sound) {
             sound.currentTime = 0;
@@ -223,7 +219,6 @@ function applyReward(reward) {
         case 'crystals':
             window.gameState.coins = (window.gameState.coins || 0) + reward.amount;
             break;
-            
         case 'boost':
             const duration = window.shopSystem?.config?.[reward.boost]?.duration || 30000;
             if (!window.gameState.shopItems[reward.boost]) {
@@ -234,7 +229,6 @@ function applyReward(reward) {
             window.gameState.shopItems[reward.boost].purchased = true;
             if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
             break;
-            
         case 'upgrade':
             if (reward.upgrade === 'clickPower') {
                 window.gameState.clickUpgradeLevel += reward.levels;
@@ -265,7 +259,6 @@ function createBonusIcon() {
     
     const icon = document.createElement('div');
     icon.id = 'dailyBonusIcon';
-    // ✅ ИЗМЕНЕНО: Верхний левый угол, скрыта по умолчанию (управляется через updateIconDisplay)
     icon.style.cssText = `
         position: fixed; top: 20px; left: 20px;
         width: 60px; height: 60px;
@@ -304,13 +297,15 @@ function updateIconDisplay() {
     const data = window.gameState?.dailyBonus;
     const icon = document.getElementById('dailyBonusIcon');
     
-    // ✅ УПРАВЛЕНИЕ ВИДИМОСТЬЮ: Показываем только в главном меню (когда игра не активна)
     if (icon) {
         const isMainMenu = !window.gameState?.gameActive;
         icon.style.display = isMainMenu ? 'flex' : 'none';
     }
     
-    if (!data || !icon) return;
+    if (!data) {
+        // Если данных нет, игра еще не загрузилась из облака
+        return;
+    }
     
     const dayEl = document.getElementById('dailyBonusDay');
     const timerEl = document.getElementById('dailyBonusTimer');
@@ -349,13 +344,7 @@ function updateIconDisplay() {
             const hoursLeft = Math.floor(totalMinutesLeft / 60);
             const minutesLeft = totalMinutesLeft % 60;
             
-            let timerText;
-            if (hoursLeft > 0) {
-                timerText = `${hoursLeft}ч ${String(minutesLeft).padStart(2, '0')}м`;
-            } else {
-                timerText = `${minutesLeft}м`;
-            }
-            
+            let timerText = hoursLeft > 0 ? `${hoursLeft}ч ${String(minutesLeft).padStart(2, '0')}м` : `${minutesLeft}м`;
             timerEl.textContent = timerText;
         } else {
             timerEl.textContent = '00ч 00м';
@@ -440,24 +429,46 @@ window.dailyBonusSystem = {
     getToday
 };
 
+// ✅ ПУЛЕНЕПРОБИВАЕМАЯ ИНИЦИАЛИЗАЦИЯ
 function init() {
-    if (window.gameState && Object.keys(window.gameState).length > 0) {
-        createBonusIcon();
-        updateIconDisplay();
-        console.log('✅ Daily bonus system initialized (procedural)');
+    const ensureDailyBonus = () => {
+        if (window.gameState) {
+            if (!window.gameState.dailyBonus) {
+                console.log('📅 [DAILY] Инициализация dailyBonus (первый запуск или старый сейв)');
+                window.gameState.dailyBonus = {
+                    lastClaimDate: null,
+                    totalClaimed: 0,
+                    streak: 0,
+                    lastClaimTimestamp: 0
+                };
+            } else {
+                console.log('📅 [DAILY] dailyBonus успешно загружен из сохранения:', window.gameState.dailyBonus);
+            }
+            createBonusIcon();
+            updateIconDisplay();
+            return true;
+        }
+        return false;
+    };
+
+    if (ensureDailyBonus()) {
+        console.log('✅ Daily bonus system initialized immediately');
         return;
     }
     
     if (window.EventBus) {
         console.log('⏳ [DAILY] Ждём save:ready...');
         window.EventBus.once('save:ready', () => {
-            console.log('✅ [DAILY] save:ready получен, инициализируем Daily Bonus');
-            createBonusIcon();
-            updateIconDisplay();
+            console.log('✅ [DAILY] save:ready получен, проверяем dailyBonus...');
+            ensureDailyBonus();
         });
     } else {
         console.warn('⚠️ [DAILY] EventBus недоступен, fallback на setTimeout');
-        setTimeout(init, 500);
+        setTimeout(() => {
+            if (!ensureDailyBonus()) {
+                setTimeout(init, 500);
+            }
+        }, 500);
     }
 }
 
