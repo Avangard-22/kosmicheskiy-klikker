@@ -374,3 +374,22 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
     .shop-card-name { font-size: 0.85em !important; }
     .shop-card-desc { font-size: 0.7em !important; min-height: 2.4em !important; }
 }
+
+/* Стиль для кнопки "Новая игра" при долгом нажатии */
+#startBtn.holding-reset {
+    background: linear-gradient(135deg, #ff4444, #cc0000) !important;
+    color: #ffffff !important;
+    border-color: #ff0000 !important;
+    transform: scale(0.98);
+    transition: all 0.1s ease;
+    cursor: progress;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: resetPulse 1s infinite;
+}
+
+@keyframes resetPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+}
