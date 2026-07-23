@@ -1,4 +1,4 @@
-// js/event-bus.js
+ // js/event-bus.js
 (function() {
     'use strict';
 
