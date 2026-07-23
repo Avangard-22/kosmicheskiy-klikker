@@ -16,7 +16,7 @@ const CFG = window.GAME_CONFIG;
 const EVENTS_CONFIG = {
     // Интервал появления: случайный от MIN до MAX миллисекунд
     minIntervalMs: 2 * 60 * 1000,   // 2 минуты
-    maxIntervalMs: 30 * 60 * 1000,  // 30 минут
+    maxIntervalMs: 10 * 60 * 1000,  // 10 минут (гарантия события в короткой сессии)
     
     // Вероятность типа события при срабатывании таймера
     asteroidWeight: 60,  // 60% шанс астероида
@@ -88,6 +88,7 @@ let eventCanvas = null;
 let eventCtx = null;
 let activeEvents = [];
 let nextEventTimer = null;
+let nextEventTargetTime = 0; // ✅ Абсолютное время (timestamp), когда должно произойти событие
 let animationId = null;
 let isPaused = false;
 
@@ -579,17 +580,23 @@ function updateBuffIndicator() {
 function scheduleNextEvent() {
     if (nextEventTimer) clearTimeout(nextEventTimer);
     
-    const interval = getRandomInterval();
-    const minutes = (interval / 60000).toFixed(1);
+    // ✅ Если целевое время не установлено или уже прошло, генерируем новый интервал
+    if (!nextEventTargetTime || nextEventTargetTime <= Date.now()) {
+        nextEventTargetTime = Date.now() + getRandomInterval();
+    }
+    
+    const remainingMs = Math.max(0, nextEventTargetTime - Date.now());
+    const minutes = (remainingMs / 60000).toFixed(1);
     console.log(`🌠 [EVENTS] Next event in ${minutes} min`);
     
     nextEventTimer = setTimeout(() => {
         if (!isPaused && window.gameState?.gameActive) {
             spawnRandomEvent();
         }
-        // Планируем следующее событие независимо от того, появилось ли текущее
+        // ✅ Сбрасываем целевое время, чтобы следующее событие сгенерировало новый интервал
+        nextEventTargetTime = 0;
         scheduleNextEvent();
-    }, interval);
+    }, remainingMs);
 }
 
 function spawnRandomEvent() {
@@ -660,11 +667,17 @@ function handlePointerDown(e) {
 // ─────────────────────────────────────────────────────
 function pause() {
     isPaused = true;
-    if (nextEventTimer) clearTimeout(nextEventTimer);
+    if (nextEventTimer) {
+        clearTimeout(nextEventTimer);
+        nextEventTimer = null;
+        // ✅ nextEventTargetTime НЕ сбрасываем! Таймер "замораживается" на текущем значении.
+    }
 }
 
 function resume() {
     isPaused = false;
+    // ✅ Просто перезапускаем планировщик. Он увидит, что nextEventTargetTime ещё в будущем,
+    // и корректно рассчитает оставшееся время, а не выдаст новый случайный интервал!
     scheduleNextEvent();
 }
 
