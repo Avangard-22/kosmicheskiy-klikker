@@ -429,10 +429,11 @@ window.dailyBonusSystem = {
     getToday
 };
 
-// ✅ ПУЛЕНЕПРОБИВАЕМАЯ ИНИЦИАЛИЗАЦИЯ
+// ✅ ПУЛЕНЕПРОБИВАЕМАЯ ИНИЦИАЛИЗАЦИЯ (НЕ ПЕРЕЗАПИСЫВАЕТ ОБЛАКО)
 function init() {
     const ensureDailyBonus = () => {
         if (window.gameState) {
+            // ✅ ВАЖНО: Создаем dailyBonus ТОЛЬКО если его вообще нет
             if (!window.gameState.dailyBonus) {
                 console.log('📅 [DAILY] Инициализация dailyBonus (первый запуск или старый сейв)');
                 window.gameState.dailyBonus = {
@@ -442,7 +443,12 @@ function init() {
                     lastClaimTimestamp: 0
                 };
             } else {
-                console.log('📅 [DAILY] dailyBonus успешно загружен из сохранения:', window.gameState.dailyBonus);
+                // ✅ Используем то, что пришло из облака (даже если там нули)
+                console.log('📅 [DAILY] dailyBonus загружен из сохранения:', {
+                    lastClaimDate: window.gameState.dailyBonus.lastClaimDate,
+                    totalClaimed: window.gameState.dailyBonus.totalClaimed,
+                    streak: window.gameState.dailyBonus.streak
+                });
             }
             createBonusIcon();
             updateIconDisplay();
