@@ -176,23 +176,50 @@ if (window.gameMetrics) {
     if (!window.gameMetrics.dailyProgress) {
         window.gameMetrics.dailyProgress = { history: [] };
     }
-    // Сохраняем предыдущий день в историю
+    
+    // Сохраняем прогресс за предыдущий день
     if (window.gameMetrics.dailyProgress.currentDayStart && window.gameState) {
         const yesterdayDamage = (window.gameState.totalDamageDealt || 0) - (window.gameMetrics.dailyProgress.dayStartDamage || 0);
+        
+        // ✅ НОВОЕ: Считаем блоки за день через achievementsV2
+        let yesterdayBlocks = 0;
+        if (window.gameState.achievementsV2) {
+            Object.values(window.gameState.achievementsV2).forEach(planetAch => {
+                const metrics = planetAch?.metrics || {};
+                yesterdayBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+            });
+            // Вычитаем блоки, которые уже были на момент прошлой активации
+            yesterdayBlocks = Math.max(0, yesterdayBlocks - (window.gameMetrics.dailyProgress.dayStartBlocks || 0));
+        }
+        
         window.gameMetrics.dailyProgress.history.push({
             date: new Date().toISOString().split('T')[0],
             timestamp: Date.now(),
-            damage: Math.max(0, yesterdayDamage)
+            damage: Math.max(0, yesterdayDamage),
+            blocks: yesterdayBlocks // ✅ Сохраняем блоки за день
         });
+        
         // Оставляем только 7 дней
         if (window.gameMetrics.dailyProgress.history.length > 7) {
             window.gameMetrics.dailyProgress.history = window.gameMetrics.dailyProgress.history.slice(-7);
         }
     }
-    // Начинаем новый день
+    
+    // Начинаем новый день - сбрасываем счётчики
     window.gameMetrics.dailyProgress.currentDayStart = Date.now();
     window.gameMetrics.dailyProgress.dayStartDamage = window.gameState?.totalDamageDealt || 0;
-    console.log('📅 [DAILY-BONUS] Новый игровой день начался для лидерборда');
+    
+    // ✅ Сохраняем текущее количество блоков как точку отсчёта
+    if (window.gameState.achievementsV2) {
+        let currentBlocks = 0;
+        Object.values(window.gameState.achievementsV2).forEach(planetAch => {
+            const metrics = planetAch?.metrics || {};
+            currentBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+        });
+        window.gameMetrics.dailyProgress.dayStartBlocks = currentBlocks;
+    }
+    
+    console.log(' [DAILY-BONUS] Новый игровой день начался для лидерборда');
 }
         
         // Обновляем данные
