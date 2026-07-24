@@ -171,55 +171,43 @@ function claimDailyBonus() {
         // Применяем награду
         applyReward(reward);
 
-// ✅ НОВОЕ: Фиксируем начало нового игрового дня для лидерборда
-if (window.gameMetrics) {
+// ✅ НОВОЕ: Фиксируем начало нового игрового дня для лидерборда (СЧИТАЕМ БЛОКИ)
+if (window.gameMetrics && window.gameState) {
     if (!window.gameMetrics.dailyProgress) {
         window.gameMetrics.dailyProgress = { history: [] };
     }
-    
-    // Сохраняем прогресс за предыдущий день
-    if (window.gameMetrics.dailyProgress.currentDayStart && window.gameState) {
-        const yesterdayDamage = (window.gameState.totalDamageDealt || 0) - (window.gameMetrics.dailyProgress.dayStartDamage || 0);
-        
-        // ✅ НОВОЕ: Считаем блоки за день через achievementsV2
-        let yesterdayBlocks = 0;
-        if (window.gameState.achievementsV2) {
-            Object.values(window.gameState.achievementsV2).forEach(planetAch => {
-                const metrics = planetAch?.metrics || {};
-                yesterdayBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-            });
-            // Вычитаем блоки, которые уже были на момент прошлой активации
-            yesterdayBlocks = Math.max(0, yesterdayBlocks - (window.gameMetrics.dailyProgress.dayStartBlocks || 0));
-        }
-        
-        window.gameMetrics.dailyProgress.history.push({
-            date: new Date().toISOString().split('T')[0],
-            timestamp: Date.now(),
-            damage: Math.max(0, yesterdayDamage),
-            blocks: yesterdayBlocks // ✅ Сохраняем блоки за день
-        });
-        
-        // Оставляем только 7 дней
-        if (window.gameMetrics.dailyProgress.history.length > 7) {
-            window.gameMetrics.dailyProgress.history = window.gameMetrics.dailyProgress.history.slice(-7);
-        }
-    }
-    
-    // Начинаем новый день - сбрасываем счётчики
-    window.gameMetrics.dailyProgress.currentDayStart = Date.now();
-    window.gameMetrics.dailyProgress.dayStartDamage = window.gameState?.totalDamageDealt || 0;
-    
-    // ✅ Сохраняем текущее количество блоков как точку отсчёта
+    const dp = window.gameMetrics.dailyProgress;
+
+    // 1. Считаем текущие ОБЩИЕ блоки из источника правды (achievementsV2)
+    let currentTotalBlocks = 0;
     if (window.gameState.achievementsV2) {
-        let currentBlocks = 0;
         Object.values(window.gameState.achievementsV2).forEach(planetAch => {
             const metrics = planetAch?.metrics || {};
-            currentBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+            currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
         });
-        window.gameMetrics.dailyProgress.dayStartBlocks = currentBlocks;
     }
-    
-    console.log(' [DAILY-BONUS] Новый игровой день начался для лидерборда');
+
+    // 2. Сохраняем блоки за предыдущий день в историю
+    if (dp.currentDayStart && dp.dayStartBlocks !== undefined) {
+        const yesterdayBlocks = Math.max(0, currentTotalBlocks - dp.dayStartBlocks);
+        if (yesterdayBlocks > 0) {
+            dp.history.push({
+                date: new Date(dp.currentDayStart).toISOString().split('T')[0],
+                timestamp: dp.currentDayStart,
+                blocks: yesterdayBlocks // ✅ Сохраняем именно блоки, а не урон
+            });
+            // Оставляем только 7 дней
+            if (dp.history.length > 7) {
+                dp.history = dp.history.slice(-7);
+            }
+        }
+    }
+
+    // 3. Начинаем новый день: сбрасываем точку отсчёта на текущее количество блоков
+    dp.currentDayStart = Date.now();
+    dp.dayStartBlocks = currentTotalBlocks; // ✅ Новая переменная: сколько блоков было в момент активации бонуса
+
+    console.log('📅 [DAILY-BONUS] Новый день. Точка отсчёта блоков установлена:', dp.dayStartBlocks);
 }
         
         // Обновляем данные
