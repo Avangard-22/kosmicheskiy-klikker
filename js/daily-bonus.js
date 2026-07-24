@@ -171,34 +171,36 @@ function claimDailyBonus() {
         // Применяем награду
         applyReward(reward);
 
-// ✅ НОВОЕ: Фиксируем начало нового игрового дня для лидерборда
-if (window.gameMetrics) {
-    if (!window.gameMetrics.dailyProgress) {
-        window.gameMetrics.dailyProgress = { history: [] };
-    }
-    // Сохраняем предыдущий день в историю
-    if (window.gameMetrics.dailyProgress.currentDayStart && window.gameState) {
-        const yesterdayDamage = (window.gameState.totalDamageDealt || 0) - (window.gameMetrics.dailyProgress.dayStartDamage || 0);
-        window.gameMetrics.dailyProgress.history.push({
-            date: new Date().toISOString().split('T')[0],
-            timestamp: Date.now(),
-            damage: Math.max(0, yesterdayDamage)
-        });
-        // Оставляем только 7 дней
-        if (window.gameMetrics.dailyProgress.history.length > 7) {
-            window.gameMetrics.dailyProgress.history = window.gameMetrics.dailyProgress.history.slice(-7);
+         // 🔥 Уведомляем leaderboard о начале нового дня
+        if (window.EventBus && window.gameMetrics) {
+            if (!window.gameMetrics.dailyProgress) {
+                window.gameMetrics.dailyProgress = { history: [] };
+            }
+            const dp = window.gameMetrics.dailyProgress;
+            
+            // Архивируем предыдущий день в историю
+            if (dp.currentDayStart && dp.dayStartDamage !== undefined) {
+                const dayScore = Math.max(0, (window.gameState.totalDamageDealt || 0) - dp.dayStartDamage);
+                dp.history.push({
+                    date: new Date(dp.currentDayStart).toISOString().split('T')[0],
+                    timestamp: dp.currentDayStart,
+                    damage: dayScore
+                });
+                if (dp.history.length > 7) dp.history = dp.history.slice(-7);
+            }
+            
+            // Начинаем новый день
+            dp.currentDayStart = Date.now();
+            dp.dayStartDamage = window.gameState?.totalDamageDealt || 0;
+            
+            console.log('📅 [DAILY-BONUS] Новый игровой день:', dp.dayStartDamage);
         }
-    }
-    // Начинаем новый день
-    window.gameMetrics.dailyProgress.currentDayStart = Date.now();
-    window.gameMetrics.dailyProgress.dayStartDamage = window.gameState?.totalDamageDealt || 0;
-    console.log('📅 [DAILY-BONUS] Новый игровой день начался для лидерборда');
-}
         
         // Обновляем данные
         data.lastClaimDate = today;
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
+
         
         // Сохраняем
         if (typeof window.saveGame === 'function') window.saveGame();

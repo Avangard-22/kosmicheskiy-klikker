@@ -315,6 +315,11 @@ function extractCloudData() {
     const username = (typeof window.getTelegramUsername === 'function') 
         ? window.getTelegramUsername()
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
+       // ✅ ДУБЛИРУЕМ dailyProgress в gameState для сохранения на сервере
+    if (window.gameMetrics?.dailyProgress) {
+        window.gameState._dailyProgressBackup = JSON.parse(JSON.stringify(window.gameMetrics.dailyProgress));
+    }
+    
     return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
@@ -325,6 +330,7 @@ function extractCloudData() {
         full_game_state: JSON.parse(JSON.stringify(window.gameState)),
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {}))
     };
+
 }
 
 // ЧТО: Применение данных из облака к gameState
@@ -366,11 +372,18 @@ function applyCloudData(cloudData) {
     
     reconstructMetricsFromAchievements();
     
-    // ✅ НОВОЕ: Гарантируем полную структуру после загрузки
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
+    
+    // ✅ ВОССТАНАВЛИВАЕМ dailyProgress из бэкапа в gameState
+    if (window.gameState._dailyProgressBackup && window.gameMetrics) {
+        window.gameMetrics.dailyProgress = window.gameState._dailyProgressBackup;
+        delete window.gameState._dailyProgressBackup;
+        console.log('📅 [LOAD] dailyProgress восстановлен из gameState бэкапа');
+    }
 }
+
 
 // ============================================
 // ПУБЛИЧНЫЙ API СОХРАНЕНИЯ

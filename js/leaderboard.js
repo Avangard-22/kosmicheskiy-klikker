@@ -91,30 +91,12 @@ const Leaderboard = {
                 console.log('📅 [LEADERBOARD] dailyProgress инициализирован с dayStartDamage:', totalDamage);
             }
             
-            const dp = gm.dailyProgress;
-            
-            // Проверяем смену суток
-            const lastDate = new Date(dp.currentDayStart).toISOString().split('T')[0];
-            const currentDate = new Date().toISOString().split('T')[0];
-            
-            if (lastDate !== currentDate) {
-                console.log('📅 [LEADERBOARD] Обнаружена смена суток! Архивируем прогресс.');
-                const yesterdayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
-                dp.history.push({
-                    date: lastDate,
-                    timestamp: dp.currentDayStart,
-                    damage: yesterdayDamage
-                });
-                if (dp.history.length > 7) {
-                    dp.history = dp.history.slice(-7);
-                }
-                dp.currentDayStart = Date.now();
-                dp.dayStartDamage = totalDamage;
-                
-                if (typeof window.saveGame === 'function') window.saveGame();
-            }
-            
-            const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+    const dp = gm.dailyProgress;
+    
+    // 🔥 Смена суток — только через daily-bonus.js (кнопка «Ежедневный бонус»)
+    
+    const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
+
             
             console.log('🔍 [LEADERBOARD] daily расчет:', {
                 totalDamage,
@@ -173,43 +155,7 @@ const Leaderboard = {
             time: Math.floor(totalTime)
         };
     },
-    
-    updateDailyHistory: function() {
-        const gm = window.gameMetrics;
-        if (!gm) return;
         
-        if (!gm.dailyProgress) {
-            gm.dailyProgress = {
-                currentDayStart: Date.now(),
-                dayStartDamage: window.gameState?.totalDamageDealt || 0,
-                history: []
-            };
-            return;
-        }
-        
-        const dayMs = 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        const elapsed = now - gm.dailyProgress.currentDayStart;
-        
-        if (elapsed >= dayMs) {
-            const yesterdayDamage = (window.gameState?.totalDamageDealt || 0) - (gm.dailyProgress.dayStartDamage || 0);
-            gm.dailyProgress.history.push({
-                date: new Date(gm.dailyProgress.currentDayStart).toISOString().split('T')[0],
-                timestamp: gm.dailyProgress.currentDayStart,
-                damage: Math.max(0, yesterdayDamage)
-            });
-            
-            if (gm.dailyProgress.history.length > 7) {
-                gm.dailyProgress.history = gm.dailyProgress.history.slice(-7);
-            }
-            
-            gm.dailyProgress.currentDayStart = now;
-            gm.dailyProgress.dayStartDamage = window.gameState?.totalDamageDealt || 0;
-            
-            console.log('📅 [LEADERBOARD] Новый день начался');
-        }
-    },
-    
     lastSubmitTime: 0,
     
     submitToLeaderboard: async function() {
@@ -805,12 +751,10 @@ const Leaderboard = {
     init: function() {
         this.injectStyles();
         this.createModal();
-        this.updateDailyHistory();
-        
+          
         setInterval(() => {
             if (window.gameState?.gameActive) {
-                this.updateDailyHistory();
-                this.submitToLeaderboard();
+                   this.submitToLeaderboard();
             }
         }, this.config.submitInterval);
         
