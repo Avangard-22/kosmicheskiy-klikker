@@ -51,56 +51,48 @@ const Leaderboard = {
         const gs = window.gameState;
         const gm = window.gameMetrics;
         
-        // ✅ Для "24 часа" и "7 дней" используем dailyProgress и реальные блоки
+        // ✅ Для "24 часа" и "7 дней" используем dailyProgress
         if (period === 'daily' || period === 'weekly') {
             if (!gm || !gm.dailyProgress) return { blocks: 0, distance: 0, time: 0 };
             
+            const totalDamage = gs?.totalDamageDealt || 0;
             const dp = gm.dailyProgress;
-            const history = dp.history || [];
             
-            // Считаем текущие ОБЩИЕ блоки из источника правды
-            let currentTotalBlocks = 0;
-            if (gs && gs.achievementsV2) {
-                Object.values(gs.achievementsV2).forEach(planetAch => {
-                    const metrics = planetAch?.metrics || {};
-                    currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-                });
-            }
+            // За сегодня
+            const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
             
             if (period === 'daily') {
-                // Блоки за сегодня = текущие общие блоки - блоки на момент активации бонуса
-                const startBlocks = dp.dayStartBlocks !== undefined ? dp.dayStartBlocks : currentTotalBlocks;
-                const todayBlocks = Math.max(0, currentTotalBlocks - startBlocks);
-                
                 return { 
-                    blocks: Math.floor(todayBlocks),
-                    distance: 0,
-                    time: 0
+                    blocks: Math.floor(todayDamage), // 1 урон = 1 блок (упрощенно)
+                    distance: Math.floor(todayDamage), // 1 урон = 1 км
+                    time: 0 // Время за сегодня не считаем
                 };
             }
             
-            if (period === 'weekly') {
-                // Блоки за 7 дней = сумма блоков из истории + блоки за сегодня
-                let weeklyBlocks = 0;
-                history.forEach(day => {
-                    weeklyBlocks += (day.blocks || 0);
+            // За 7 дней (сумма истории + сегодня)
+            let weeklyDamage = todayDamage;
+            const now = Date.now();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            
+            if (dp.history && Array.isArray(dp.history)) {
+                dp.history.forEach(day => {
+                    if (day.timestamp && (now - day.timestamp) <= sevenDaysMs) {
+                        weeklyDamage += (day.damage || 0);
+                    }
                 });
-                
-                const startBlocks = dp.dayStartBlocks !== undefined ? dp.dayStartBlocks : currentTotalBlocks;
-                const todayBlocks = Math.max(0, currentTotalBlocks - startBlocks);
-                weeklyBlocks += todayBlocks;
-                
-                return { 
-                    blocks: Math.floor(weeklyBlocks),
-                    distance: 0,
-                    time: 0
-                };
             }
+            
+            return { 
+                blocks: Math.floor(weeklyDamage),
+                distance: Math.floor(weeklyDamage),
+                time: 0
+            };
         }
         
-        // ✅ Для "Всё время" используем точную копию из твоего рабочего кода
+        // ✅ Для "Всё время" используем gameState.totalDamageDealt (источник правды)
         const totalDamage = gs?.totalDamageDealt || 0;
         
+        // Для времени используем gameMetrics.planetStats
         let totalTime = 0;
         if (gm && gm.planetStats) {
             Object.values(gm.planetStats).forEach(planet => {
@@ -108,6 +100,7 @@ const Leaderboard = {
             });
         }
         
+        // Для блоков используем achievementsV2 (там есть разделение blocks/rare)
         let totalBlocks = 0;
         const achV2 = gs?.achievementsV2;
         if (achV2) {
