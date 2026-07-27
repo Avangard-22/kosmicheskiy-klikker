@@ -90,7 +90,7 @@ let eventCanvas = null;
 let eventCtx = null;
 let activeEvents = [];
 let nextEventTimer = null;
-let nextEventTargetTime = 0; // ✅ Абсолютное время (timestamp), когда должно произойти событие
+let nextEventTargetTime = 0;
 let animationId = null;
 let isPaused = false;
 
@@ -98,24 +98,31 @@ function initCanvas() {
     if (eventCanvas) return;
     eventCanvas = document.createElement('canvas');
     eventCanvas.id = 'randomEventsCanvas';
-    // ✅ ИСПРАВЛЕНО: pointer-events:none чтобы клики проходили к блокам
-    // Обработчики вешаем на document, не на canvas
-    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:150;';
+    // ✅ ИСПРАВЛЕНО: z-index поднят до 950 (выше блоков, но ниже модальных окон)
+    eventCanvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:950;';
     document.body.appendChild(eventCanvas);
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    
     eventCtx = eventCanvas.getContext('2d');
+    resizeCanvas(); // ✅ Вызываем ПОСЛЕ создания context
+    window.addEventListener('resize', resizeCanvas);
     console.log('🌠 [EVENTS] Canvas initialized');
 }
 
 function resizeCanvas() {
-    if (!eventCanvas) return;
+    if (!eventCanvas || !eventCtx) return;
     const dpr = window.devicePixelRatio || 1;
+    
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: сбрасываем трансформацию перед ресайзом,
+    // чтобы scale не накапливался при повороте экрана на мобильных!
+    eventCtx.setTransform(1, 0, 0, 1, 0, 0);
+    
     eventCanvas.width = window.innerWidth * dpr;
     eventCanvas.height = window.innerHeight * dpr;
     eventCanvas.style.width = window.innerWidth + 'px';
     eventCanvas.style.height = window.innerHeight + 'px';
-    if (eventCtx) eventCtx.scale(dpr, dpr);
+    
+    // Применяем масштаб заново
+    eventCtx.scale(dpr, dpr);
 }
 
 // ─────────────────────────────────────────────────────
@@ -647,9 +654,11 @@ function spawnRandomEvent() {
 function gameLoop() {
     if (!eventCtx || !eventCanvas) return;
     
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    eventCtx.clearRect(0, 0, w, h);
+    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: гарантированно очищаем холст перед каждым кадром,
+    // сбрасывая трансформацию, чтобы clearRect работал корректно на любых DPI
+    eventCtx.setTransform(1, 0, 0, 1, 0, 0);
+    eventCtx.clearRect(0, 0, eventCanvas.width, eventCanvas.height);
+    eventCtx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
     
     if (!isPaused && window.gameState?.gameActive) {
         for (let i = activeEvents.length - 1; i >= 0; i--) {
