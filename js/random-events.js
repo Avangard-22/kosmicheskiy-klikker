@@ -40,24 +40,26 @@ const EVENTS_CONFIG = {
         headColor: '#4fc3f7',
         emoji: '☄️',
         
-        buffs: [
-            {
-                type: 'damage_boost',
-                name: { ru: '⚡ Усиление урона', en: '⚡ Damage Boost', zh: '⚡ 伤害增强' },
-                durationMs: 180000,
-                valueMin: 1.5,
-                valueMax: 3.0,
-                weight: 50
-            },
-            {
-                type: 'crystal_boost',
-                name: { ru: '💰 Кристальный дождь', en: '💰 Crystal Rain', zh: '💰 水晶雨' },
-                durationMs: 0,
-                valueMin: 50,
-                valueMax: 500,
-                weight: 50
-            }
-        ]
+buffs: [
+    {
+        type: 'crystal_boost_blocks',
+        name: { ru: '💎 Кристальный шторм', en: '💎 Crystal Storm', zh: '💎 水晶风暴' },
+        durationMs: 0,
+        valueMin: 2000,
+        valueMax: 10000,
+        blocksMin: 1,
+        blocksMax: 10,
+        weight: 50
+    },
+    {
+        type: 'crystal_boost',
+        name: { ru: '💰 Кристальный дождь', en: '💰 Crystal Rain', zh: '💰 水晶雨' },
+        durationMs: 0,
+        valueMin: 500,
+        valueMax: 5000,
+        weight: 50
+    }
+]
     }
 };
 
@@ -460,28 +462,31 @@ hitTest(clientX, clientY) {
 }
     
     // ✅ 1 КЛИК — мгновенная активация баффа (как у астероида)
-    collect() {
-        if (this.clicked) return;
-        this.clicked = true;
-        this.alive = false;
-        
-        const lang = window.currentLanguage || 'ru';
-        const buffName = this.buff.name[lang] || this.buff.name.en;
-        
-        if (this.buff.type === 'damage_boost') {
-            activateDamageBuff(this.buffValue, this.buff.durationMs);
-            showFloatingText(`${buffName}\nx${this.buffValue} (${Math.round(this.buff.durationMs / 1000)}с)`, this.x, this.y, '#4FC3F7', 1.2);
-            console.log(`☄️ [EVENTS] Comet: Damage x${this.buffValue} for ${this.buff.durationMs / 1000}s`);
-        } else if (this.buff.type === 'crystal_boost') {
-            activateCrystalBuff(this.buffValue);
-            showFloatingText(`${buffName}\n+${this.buffValue}% 💎`, this.x, this.y, '#FFD700', 1.2);
-            console.log(`☄️ [EVENTS] Comet: +${this.buffValue}% crystals on next block`);
-        }
-        
-        if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('comboSound');
-        if (window.telegramHaptic?.success) window.telegramHaptic.success();
-        else if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+collect() {
+    if (this.clicked) return;
+    this.clicked = true;
+    this.alive = false;
+    
+    const lang = window.currentLanguage || 'ru';
+    const buffName = this.buff.name[lang] || this.buff.name.en;
+    
+    if (this.buff.type === 'crystal_boost_blocks') {
+        // ✅ НОВЫЙ БОНУС: Кристальный шторм (200-1000% на 1-10 блоков)
+        const blocksCount = randInt(this.buff.blocksMin, this.buff.blocksMax);
+        activateCrystalBlocksBuff(this.buffValue, blocksCount);
+        showFloatingText(`${buffName}\n+${this.buffValue}% 💎\n(${blocksCount} блоков)`, this.x, this.y, '#FFD700', 1.2);
+        console.log(`☄️ [EVENTS] Comet: +${this.buffValue}% crystals for next ${blocksCount} blocks`);
+    } else if (this.buff.type === 'crystal_boost') {
+        // Старый бонус: +50-500% на следующий блок
+        activateCrystalBuff(this.buffValue);
+        showFloatingText(`${buffName}\n+${this.buffValue}% 💎`, this.x, this.y, '#FFD700', 1.2);
+        console.log(`☄️ [EVENTS] Comet: +${this.buffValue}% crystals on next block`);
     }
+    
+    if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('comboSound');
+    if (window.telegramHaptic?.success) window.telegramHaptic.success();
+    else if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+}
 }
 
 // ─────────────────────────────────────────────────────
@@ -540,12 +545,35 @@ function consumeCrystalBuff(baseReward) {
     return baseReward + bonus;
 }
 
+// ✅ НОВЫЙ БОНУС: Кристальный шторм (процент на N блоков)
+let crystalBlocksBuffPercent = 0;
+let crystalBlocksBuffRemaining = 0;
+
+function activateCrystalBlocksBuff(percent, blocksCount) {
+    crystalBlocksBuffPercent = percent;
+    crystalBlocksBuffRemaining = blocksCount;
+    updateBuffIndicator();
+    console.log(`💎 [EVENTS] Crystal blocks buff activated: +${percent}% for ${blocksCount} blocks`);
+}
+
+function consumeCrystalBlocksBuff(baseReward) {
+    if (crystalBlocksBuffRemaining <= 0 || crystalBlocksBuffPercent <= 0) return baseReward;
+    const bonus = Math.floor(baseReward * (crystalBlocksBuffPercent / 100));
+    crystalBlocksBuffRemaining--;
+    if (crystalBlocksBuffRemaining <= 0) {
+        crystalBlocksBuffPercent = 0;
+        updateBuffIndicator();
+    }
+    console.log(`💎 [EVENTS] Crystal blocks buff applied: +${bonus} (${crystalBlocksBuffRemaining} blocks left)`);
+    return baseReward + bonus;
+}
+
 function updateBuffIndicator() {
     let indicator = document.getElementById('eventBuffIndicator');
-    const hasDamageBuff = damageBuffMultiplier > 1;
     const hasCrystalBuff = crystalBuffPercent > 0;
+    const hasCrystalBlocksBuff = crystalBlocksBuffRemaining > 0 && crystalBlocksBuffPercent > 0;
     
-    if (!hasDamageBuff && !hasCrystalBuff) {
+    if (!hasCrystalBuff && !hasCrystalBlocksBuff) {
         if (indicator) indicator.style.display = 'none';
         return;
     }
@@ -560,12 +588,13 @@ function updateBuffIndicator() {
     indicator.style.display = 'flex';
     indicator.innerHTML = '';
     
-    if (hasDamageBuff) {
+    if (hasCrystalBlocksBuff) {
         const badge = document.createElement('div');
-        badge.style.cssText = 'background:rgba(79,195,247,0.2);border:1px solid #4FC3F7;border-radius:8px;padding:4px 10px;font-size:0.7em;color:#4FC3F7;font-family:Orbitron,monospace;font-weight:bold;backdrop-filter:blur(4px);animation:dailyPulse 2s infinite;';
-        badge.textContent = `⚡ x${damageBuffMultiplier}`;
+        badge.style.cssText = 'background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:8px;padding:4px 10px;font-size:0.7em;color:#FFD700;font-family:Orbitron,monospace;font-weight:bold;backdrop-filter:blur(4px);animation:dailyPulse 2s infinite;';
+        badge.textContent = `💎 +${crystalBlocksBuffPercent}% (${crystalBlocksBuffRemaining})`;
         indicator.appendChild(badge);
     }
+    
     if (hasCrystalBuff) {
         const badge = document.createElement('div');
         badge.style.cssText = 'background:rgba(255,215,0,0.2);border:1px solid #FFD700;border-radius:8px;padding:4px 10px;font-size:0.7em;color:#FFD700;font-family:Orbitron,monospace;font-weight:bold;backdrop-filter:blur(4px);animation:dailyPulse 2s infinite;';
@@ -714,6 +743,7 @@ window.RandomEvents = {
     resume,
     getDamageMultiplier: () => damageBuffMultiplier,
     consumeCrystalBuff,
+    consumeCrystalBlocksBuff, // ✅ НОВОЕ
     // Для отладки
     spawnAsteroid: () => activeEvents.push(new AsteroidEvent()),
     spawnComet: () => activeEvents.push(new CometEvent()),
