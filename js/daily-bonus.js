@@ -201,7 +201,10 @@ function claimDailyBonus() {
         data.lastClaimTimestamp = now;
         data.totalClaimed = dayNumber;
 
-        
+// ✅ НОВОЕ: Сбрасываем цены в магазине
+if (window.shopSystem && typeof window.shopSystem.resetShopPrices === 'function') {
+    window.shopSystem.resetShopPrices();
+}        
         // Сохраняем
         if (typeof window.saveGame === 'function') window.saveGame();
         

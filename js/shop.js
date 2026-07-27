@@ -66,6 +66,8 @@ let activeBoosts = {};
 let boostTimers = {};
 let shopPanelVisible = false;
 const _lastPurchase = {};
+let shopPurchaseCount = 0;  // ✅ НОВОЕ: Счётчик покупок
+let priceMultiplier = 1.0;   // ✅ НОВОЕ: Множитель цен
 
 // ЧТО: Состояние двухступенчатой покупки
 // КУДА: shop.js → глобальная переменная модуля
@@ -85,6 +87,33 @@ function resetPendingPurchase() {
         clearTimeout(pendingPurchase.timeout);
         pendingPurchase = null;
     }
+}
+
+// ✅ НОВОЕ: Расчёт актуальной цены с учётом множителя
+function getActualPrice(basePrice) {
+    return Math.floor(basePrice * priceMultiplier);
+}
+
+// ✅ НОВОЕ: Увеличение цен каждые 10 покупок
+function checkPriceIncrease() {
+    shopPurchaseCount++;
+    
+    // Каждые 10 покупок увеличиваем цены на 50%
+    if (shopPurchaseCount % 10 === 0) {
+        priceMultiplier += 0.25;
+        showNotification(`📈 Цены выросли! x${priceMultiplier.toFixed(1)}`, '#ff9800');
+        updateShopDisplay();
+    }
+    
+    console.log(`🛒 [SHOP] Покупок: ${shopPurchaseCount}, Множитель: x${priceMultiplier.toFixed(1)}`);
+}
+
+// ✅ НОВОЕ: Сброс цен и счётчика
+function resetShopPrices() {
+    shopPurchaseCount = 0;
+    priceMultiplier = 1.0;
+    console.log('🛒 [SHOP] Цены сброшены до базовых');
+    updateShopDisplay();
 }
 
 // === ИНИЦИАЛИЗАЦИЯ ===
@@ -284,15 +313,20 @@ function executePurchase(boostId) {
     const item = shopConfig[boostId];
     if (!item || !window.gameState) return;
     
-    window.gameState.coins -= item.cost;
-    if (!window.gameState.shopItems) window.gameState.shopItems = {};
-    window.gameState.shopItems[boostId] = {
-        purchased: true,
-        active: true,
-        timeLeft: item.duration
-    };
-    activeBoosts[boostId] = { active: true, timeLeft: item.duration };
-    startBoostTimer(boostId);
+// ✅ НОВОЕ: Используем актуальную цену вместо базовой
+const actualPrice = getActualPrice(item.cost);
+window.gameState.coins -= actualPrice;
+if (!window.gameState.shopItems) window.gameState.shopItems = {};
+window.gameState.shopItems[boostId] = {
+    purchased: true,
+    active: true,
+    timeLeft: item.duration
+};
+activeBoosts[boostId] = { active: true, timeLeft: item.duration };
+startBoostTimer(boostId);
+
+// ✅ НОВОЕ: Увеличиваем счётчик и проверяем повышение цен
+checkPriceIncrease();
     
  if (window.achievementsSystem) {
      window.achievementsSystem.incrementBoosters(1);
@@ -476,9 +510,13 @@ function updateShopDisplay() {
             if (timerEl) timerEl.hidden = true;
          } else {
         // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения
-        if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
-            costEl.textContent = `${item.cost} 💎`;
-        }
+if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
+    const actualPrice = getActualPrice(item.cost);
+    const priceText = actualPrice !== item.cost 
+        ? `${actualPrice} 💎` 
+        : `${item.cost} 💎`;
+    costEl.textContent = priceText;
+}
         if (timerEl) timerEl.hidden = true;
     }
     });
@@ -567,6 +605,7 @@ window.shopSystem = {
     updateShopDisplay: updateShopDisplay,
     purchaseItem: purchaseItem,
     stopAutoClicker: stopAutoClicker,
+    resetShopPrices: resetShopPrices,  // ✅ НОВОЕ
     config: shopConfig,
 
     getSpeedMultiplier: () => (activeBoosts.timeWarp?.active) ? 0.5 : 1,
