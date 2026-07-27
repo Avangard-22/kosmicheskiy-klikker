@@ -359,15 +359,20 @@ hitBlock: function(block, damage) {
 destroyBlock: function(block, isAuto = false) {
     if (!window.gameState) return;
     
-    // ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает награду, комбо, обновляет метрики ──
-    let destroyResult;
-    if (window.CombatSystem && typeof window.CombatSystem.applyDestroy === 'function') {
-        destroyResult = window.CombatSystem.applyDestroy(block, false);
-    } else {
-        // Fallback на старую логику, если CombatSystem не готов
-        destroyResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
-        window.gameState.coins += destroyResult.reward;
-    }
+// ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает награду, комбо, обновляет метрики ──
+let destroyResult;
+if (window.CombatSystem && typeof window.CombatSystem.applyDestroy === 'function') {
+    destroyResult = window.CombatSystem.applyDestroy(block, false);
+} else {
+    // Fallback на старую логику, если CombatSystem не готов
+    destroyResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
+    window.gameState.coins += destroyResult.reward;
+}
+
+// ✅ НОВОЕ: Применяем бонус "Кристальный шторм" (если активен)
+if (destroyResult.reward > 0 && window.RandomEvents?.consumeCrystalBlocksBuff) {
+    destroyResult.reward = window.RandomEvents.consumeCrystalBlocksBuff(destroyResult.reward);
+}
     
     // ── UX: Комбо-текст (только если было комбо > 1) ──
     if (destroyResult.comboCount > 1 && destroyResult.comboBonus > 0) {
