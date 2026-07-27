@@ -497,6 +497,68 @@ collect() {
 }
 
 // ─────────────────────────────────────────────────────
+// ⚠️ ВИЗУАЛЬНОЕ ПРЕДУПРЕЖДЕНИЕ ПЕРЕД СПАВНОМ
+// ─────────────────────────────────────────────────────
+function showSpawnWarning(x, y, type) {
+    const warning = document.createElement('div');
+    warning.style.cssText = `
+        position: fixed;
+        left: ${x}px;
+        top: ${y}px;
+        transform: translate(-50%, -50%);
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,140,0,0.4) 50%, transparent 70%);
+        border: 3px solid #FFD700;
+        box-shadow: 0 0 20px #FFD700, 0 0 40px rgba(255,215,0,0.6);
+        pointer-events: none;
+        z-index: 140;
+        animation: spawnWarningPulse 0.8s ease-in-out infinite;
+    `;
+    
+    const icon = document.createElement('div');
+    icon.textContent = type === 'comet' ? '☄️' : '🪨';
+    icon.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 2em;
+        filter: drop-shadow(0 0 5px rgba(255,255,255,0.8));
+    `;
+    
+    warning.appendChild(icon);
+    document.body.appendChild(warning);
+    
+    // Исчезает ровно через 3 секунды (когда появляется само событие)
+    setTimeout(() => {
+        if (warning.parentNode) {
+            warning.style.transition = 'all 0.3s ease-out';
+            warning.style.opacity = '0';
+            warning.style.transform = 'translate(-50%, -50%) scale(0.5)';
+            setTimeout(() => {
+                if (warning.parentNode) warning.parentNode.removeChild(warning);
+            }, 300);
+        }
+    }, 3000);
+}
+
+// Внедряем CSS анимацию один раз при загрузке
+if (!document.getElementById('warning-style')) {
+    const style = document.createElement('style');
+    style.id = 'warning-style';
+    style.textContent = `
+        @keyframes spawnWarningPulse {
+            0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.6; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ─────────────────────────────────────────────────────
 // 💫 ПЛАВАЮЩИЙ ТЕКСТ
 // ─────────────────────────────────────────────────────
 function showFloatingText(text, x, y, color, scale) {
@@ -625,11 +687,50 @@ function scheduleNextEvent() {
     const minutes = (remainingMs / 60000).toFixed(1);
     console.log(`🌠 [EVENTS] Next event in ${minutes} min`);
     
+    // ✅ НОВОЕ: Устанавливаем предупреждение за 3 секунды до события
+    const warningTime = Math.max(0, remainingMs - 3000);
+    
+    if (warningTime > 0) {
+        setTimeout(() => {
+            if (!isPaused && window.gameState?.gameActive) {
+                // Предсказываем тип события и его координаты
+                const totalWeight = EVENTS_CONFIG.asteroidWeight + EVENTS_CONFIG.cometWeight;
+                const roll = Math.random() * totalWeight;
+                const isComet = roll >= EVENTS_CONFIG.asteroidWeight;
+                const type = isComet ? 'comet' : 'asteroid';
+                
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+                let wx = 0, wy = 0;
+                
+                if (isComet) {
+                    // Комета: слева-сверху или справа-сверху
+                    const direction = Math.random() > 0.5 ? 1 : -1;
+                    if (direction > 0) { wx = 60; wy = rand(60, h * 0.3); }
+                    else { wx = w - 60; wy = rand(60, h * 0.3); }
+                } else {
+                    // Астероид: с любой из 4-х сторон
+                    const side = Math.floor(Math.random() * 4);
+                    switch (side) {
+                        case 0: wx = rand(100, w - 100); wy = 60; break;       // Сверху
+                        case 1: wx = w - 60; wy = rand(100, h - 100); break;   // Справа
+                        case 2: wx = rand(100, w - 100); wy = h - 60; break;   // Снизу
+                        case 3: wx = 60; wy = rand(100, h - 100); break;       // Слева
+                    }
+                }
+                
+                showSpawnWarning(wx, wy, type);
+                console.log(`⚠️ [EVENTS] Spawn warning: ${type} at (${Math.round(wx)}, ${Math.round(wy)})`);
+            }
+        }, warningTime);
+    }
+    
+    // Основной таймер спавна события
     nextEventTimer = setTimeout(() => {
         if (!isPaused && window.gameState?.gameActive) {
             spawnRandomEvent();
         }
-        // ✅ Сбрасываем целевое время, чтобы следующее событие сгенерировало новый интервал
+        // ✅ Сбрасываем целевое время для следующего цикла
         nextEventTargetTime = 0;
         scheduleNextEvent();
     }, remainingMs);
