@@ -74,7 +74,11 @@ planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей план�
     dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
     dailyProgress: null, // ✅ ЧИСТОЕ РЕШЕНИЕ: хранится ВНУТРИ gameState и сохраняется на сервер автоматически
     
-    // ✅ НОВОЕ: Состояние системы достижений v2 (создаётся динамически в ensureAchievementsV2Structure)
+    // ✅ НОВОЕ: Динамические цены магазина (сохраняются в облако)
+    shopPurchaseCount: 0,
+    shopPriceMultiplier: 1.0,
+    
+    // ✅ НОВОЕ: Состояние системы достижений v2
     achievementsV2: {}
     // skipPenaltyState создаётся динамически в ensureSkipPenaltyState()
 };

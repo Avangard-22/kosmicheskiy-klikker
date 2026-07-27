@@ -66,8 +66,7 @@ let activeBoosts = {};
 let boostTimers = {};
 let shopPanelVisible = false;
 const _lastPurchase = {};
-let shopPurchaseCount = 0;  // ✅ НОВОЕ: Счётчик покупок
-let priceMultiplier = 1.0;   // ✅ НОВОЕ: Множитель цен
+// ✅ Переменные теперь хранятся в window.gameState
 
 // ЧТО: Состояние двухступенчатой покупки
 // КУДА: shop.js → глобальная переменная модуля
@@ -91,29 +90,44 @@ function resetPendingPurchase() {
 
 // ✅ НОВОЕ: Расчёт актуальной цены с учётом множителя
 function getActualPrice(basePrice) {
-    return Math.floor(basePrice * priceMultiplier);
+    // ✅ Читаем множитель из gameState (он сохраняется в облако)
+    // Если его вдруг нет (старый сейв), по умолчанию берём 1.0
+    const multiplier = window.gameState?.shopPriceMultiplier || 1.0;
+    return Math.floor(basePrice * multiplier);
 }
 
 // ✅ НОВОЕ: Увеличение цен каждые 10 покупок
 function checkPriceIncrease() {
-    shopPurchaseCount++;
-    
-    // Каждые 10 покупок увеличиваем цены на 50%
-    if (shopPurchaseCount % 10 === 0) {
-        priceMultiplier += 0.25;
-        showNotification(`📈 Цены выросли! x${priceMultiplier.toFixed(1)}`, '#ff9800');
+    // ✅ Инициализация для старых сохранений, если полей вдруг нет
+    if (window.gameState.shopPurchaseCount === undefined) window.gameState.shopPurchaseCount = 0;
+    if (window.gameState.shopPriceMultiplier === undefined) window.gameState.shopPriceMultiplier = 1.0;
+
+    window.gameState.shopPurchaseCount++;
+
+    // Каждые 10 покупок увеличиваем цены на 25%
+    if (window.gameState.shopPurchaseCount % 10 === 0) {
+        window.gameState.shopPriceMultiplier += 0.25;
+        showNotification(`📈 Цены выросли! x${window.gameState.shopPriceMultiplier.toFixed(1)}`, '#ff9800');
         updateShopDisplay();
+        
+        // ✅ КРИТИЧЕСКИ ВАЖНО: Сразу сохраняем в облако, чтобы при резком закрытии множитель не потерялся
+        if (typeof window.saveGame === 'function') window.saveGame();
     }
     
-    console.log(`🛒 [SHOP] Покупок: ${shopPurchaseCount}, Множитель: x${priceMultiplier.toFixed(1)}`);
+    console.log(`🛒 [SHOP] Покупок: ${window.gameState.shopPurchaseCount}, Множитель: x${window.gameState.shopPriceMultiplier.toFixed(1)}`);
 }
 
 // ✅ НОВОЕ: Сброс цен и счётчика
 function resetShopPrices() {
-    shopPurchaseCount = 0;
-    priceMultiplier = 1.0;
-    console.log('🛒 [SHOP] Цены сброшены до базовых');
-    updateShopDisplay();
+    if (window.gameState) {
+        window.gameState.shopPurchaseCount = 0;
+        window.gameState.shopPriceMultiplier = 1.0;
+        console.log('🛒 [SHOP] Цены сброшены до базовых (Ежедневный бонус)');
+        updateShopDisplay();
+        
+        // ✅ Сохраняем сброс в облако
+        if (typeof window.saveGame === 'function') window.saveGame();
+    }
 }
 
 // === ИНИЦИАЛИЗАЦИЯ ===
@@ -508,17 +522,18 @@ function updateShopDisplay() {
             card.classList.add('disabled');
             if (costEl) costEl.textContent = `${window.formatNumber ? window.formatNumber(item.cost) : item.cost} 💎`;
             if (timerEl) timerEl.hidden = true;
-         } else {
-        // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения
-if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
-    const actualPrice = getActualPrice(item.cost);
-    const priceText = actualPrice !== item.cost 
-        ? `${actualPrice} 💎` 
-        : `${item.cost} 💎`;
-    costEl.textContent = priceText;
-}
-        if (timerEl) timerEl.hidden = true;
-    }
+        } else {
+            // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения.
+            // Функция getActualPrice() сама возьмёт актуальный множитель из window.gameState.shopPriceMultiplier
+            if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
+                const actualPrice = getActualPrice(item.cost);
+                const priceText = actualPrice !== item.cost 
+                    ? `${actualPrice} 💎` 
+                    : `${item.cost} 💎`;
+                costEl.textContent = priceText;
+            }
+            if (timerEl) timerEl.hidden = true;
+        }
     });
 
     // Баланс в шапке
