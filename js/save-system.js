@@ -72,6 +72,7 @@ planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей план�
     unlockedLocations: ['mercury'],
     boboSkin: 'default',
     dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
+    dailyProgress: null, // ✅ ЧИСТОЕ РЕШЕНИЕ: хранится ВНУТРИ gameState и сохраняется на сервер автоматически
     
     // ✅ НОВОЕ: Состояние системы достижений v2 (создаётся динамически в ensureAchievementsV2Structure)
     achievementsV2: {}
@@ -315,11 +316,8 @@ function extractCloudData() {
     const username = (typeof window.getTelegramUsername === 'function') 
         ? window.getTelegramUsername()
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
-       // ✅ ДУБЛИРУЕМ dailyProgress в gameState для сохранения на сервере
-    if (window.gameMetrics?.dailyProgress) {
-        window.gameState._dailyProgressBackup = JSON.parse(JSON.stringify(window.gameMetrics.dailyProgress));
-    }
     
+    // ✅ dailyProgress теперь часть gameState, он сохранится автоматически внутри full_game_state
     return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
@@ -330,7 +328,6 @@ function extractCloudData() {
         full_game_state: JSON.parse(JSON.stringify(window.gameState)),
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {}))
     };
-
 }
 
 // ЧТО: Применение данных из облака к gameState
@@ -370,18 +367,13 @@ function applyCloudData(cloudData) {
         console.warn('⚠️ [LOAD] full_game_metrics отсутствует в облачных данных');
     }
     
-    reconstructMetricsFromAchievements();
     
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
     
-    // ✅ ВОССТАНАВЛИВАЕМ dailyProgress из бэкапа в gameState
-    if (window.gameState._dailyProgressBackup && window.gameMetrics) {
-        window.gameMetrics.dailyProgress = window.gameState._dailyProgressBackup;
-        delete window.gameState._dailyProgressBackup;
-        console.log('📅 [LOAD] dailyProgress восстановлен из gameState бэкапа');
-    }
+    // ✅ dailyProgress восстанавливается автоматически функцией deepMerge выше, 
+    // так как он теперь является частью full_game_state.
 }
 
 
