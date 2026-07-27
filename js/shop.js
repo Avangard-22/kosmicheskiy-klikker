@@ -66,7 +66,8 @@ let activeBoosts = {};
 let boostTimers = {};
 let shopPanelVisible = false;
 const _lastPurchase = {};
-// ✅ Переменные теперь хранятся в window.gameState
+// ✅ Счетчики и множители хранятся в gameState для каждого бонуса отдельно
+// Структура: gameState.shopBoostStats = { timeWarp: { count: 0, multiplier: 1.0 }, ... }
 
 // ЧТО: Состояние двухступенчатой покупки
 // КУДА: shop.js → глобальная переменная модуля
@@ -89,39 +90,48 @@ function resetPendingPurchase() {
 }
 
 // ✅ НОВОЕ: Расчёт актуальной цены с учётом множителя
-function getActualPrice(basePrice) {
-    // ✅ Читаем множитель из gameState (он сохраняется в облако)
-    // Если его вдруг нет (старый сейв), по умолчанию берём 1.0
-    const multiplier = window.gameState?.shopPriceMultiplier || 1.0;
+function getActualPrice(boostId, basePrice) {
+    // ✅ Читаем множитель конкретного бонуса из gameState
+    const stats = window.gameState?.shopBoostStats?.[boostId];
+    const multiplier = stats?.multiplier || 1.0;
     return Math.floor(basePrice * multiplier);
 }
 
 // ✅ НОВОЕ: Увеличение цен каждые 10 покупок
-function checkPriceIncrease() {
-    // ✅ Инициализация для старых сохранений, если полей вдруг нет
-    if (window.gameState.shopPurchaseCount === undefined) window.gameState.shopPurchaseCount = 0;
-    if (window.gameState.shopPriceMultiplier === undefined) window.gameState.shopPriceMultiplier = 1.0;
-
-    window.gameState.shopPurchaseCount++;
-
-    // Каждые 10 покупок увеличиваем цены на 25%
-    if (window.gameState.shopPurchaseCount % 10 === 0) {
-        window.gameState.shopPriceMultiplier += 0.25;
-        showNotification(`📈 Цены выросли! x${window.gameState.shopPriceMultiplier.toFixed(1)}`, '#ff9800');
+function checkPriceIncrease(boostId) {
+    // ✅ Инициализация структуры для старых сохранений
+    if (!window.gameState.shopBoostStats) {
+        window.gameState.shopBoostStats = {};
+    }
+    
+    // ✅ Инициализация статистики для конкретного бонуса
+    if (!window.gameState.shopBoostStats[boostId]) {
+        window.gameState.shopBoostStats[boostId] = { count: 0, multiplier: 1.0 };
+    }
+    
+    const stats = window.gameState.shopBoostStats[boostId];
+    stats.count++;
+    
+    // ✅ Каждые 10 покупок конкретного бонуса увеличиваем цену ТОЛЬКО на него
+    if (stats.count % 10 === 0) {
+        stats.multiplier += 0.5;
+        const item = shopConfig[boostId];
+        const itemName = item ? item.name : boostId;
+        showNotification(`📈 ${itemName}: цена x${stats.multiplier.toFixed(1)}`, '#ff9800');
         updateShopDisplay();
         
-        // ✅ КРИТИЧЕСКИ ВАЖНО: Сразу сохраняем в облако, чтобы при резком закрытии множитель не потерялся
+        // ✅ Сохраняем в облако
         if (typeof window.saveGame === 'function') window.saveGame();
     }
     
-    console.log(`🛒 [SHOP] Покупок: ${window.gameState.shopPurchaseCount}, Множитель: x${window.gameState.shopPriceMultiplier.toFixed(1)}`);
+    console.log(`🛒 [SHOP] ${boostId}: покупок=${stats.count}, множитель=x${stats.multiplier.toFixed(1)}`);
 }
 
 // ✅ НОВОЕ: Сброс цен и счётчика
 function resetShopPrices() {
     if (window.gameState) {
-        window.gameState.shopPurchaseCount = 0;
-        window.gameState.shopPriceMultiplier = 1.0;
+        // ✅ Сбрасываем статистику всех бонусов
+        window.gameState.shopBoostStats = {};
         console.log('🛒 [SHOP] Цены сброшены до базовых (Ежедневный бонус)');
         updateShopDisplay();
         
@@ -339,8 +349,8 @@ window.gameState.shopItems[boostId] = {
 activeBoosts[boostId] = { active: true, timeLeft: item.duration };
 startBoostTimer(boostId);
 
-// ✅ НОВОЕ: Увеличиваем счётчик и проверяем повышение цен
-checkPriceIncrease();
+    // ✅ НОВОЕ: Увеличиваем счётчик конкретного бонуса и проверяем повышение цен
+    checkPriceIncrease(boostId);
     
  if (window.achievementsSystem) {
      window.achievementsSystem.incrementBoosters(1);
@@ -523,10 +533,9 @@ function updateShopDisplay() {
             if (costEl) costEl.textContent = `${window.formatNumber ? window.formatNumber(item.cost) : item.cost} 💎`;
             if (timerEl) timerEl.hidden = true;
         } else {
-            // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения.
-            // Функция getActualPrice() сама возьмёт актуальный множитель из window.gameState.shopPriceMultiplier
+            // ✅ НОВОЕ: Не перезаписываем текст, если карточка в состоянии подтверждения
             if (costEl && !(pendingPurchase && pendingPurchase.boostId === item.id)) {
-                const actualPrice = getActualPrice(item.cost);
+                const actualPrice = getActualPrice(item.id, item.cost); // ✅ Передаем ID бонуса
                 const priceText = actualPrice !== item.cost 
                     ? `${actualPrice} 💎` 
                     : `${item.cost} 💎`;
