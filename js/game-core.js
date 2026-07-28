@@ -1,4 +1,4 @@
-// js/game-core.js
+ // js/game-core.js
 (function() {
 'use strict';
 
