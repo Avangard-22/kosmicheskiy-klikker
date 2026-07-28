@@ -306,36 +306,22 @@ hitBlock: function(block, damage) {
     }
     this.playSound('clickSound');
     
-    // ── UX: Визуальная анимация удара ──
+    // ── UX: Визуальная анимация удара ─
     block.style.transform = 'translateX(-50%) scale(0.85)';
     setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
     
-// ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает награду, комбо, обновляет метрики ──
-let destroyResult;
-if (window.CombatSystem && typeof window.CombatSystem.applyDestroy === 'function') {
-    destroyResult = window.CombatSystem.applyDestroy(block, false);
-} else {
-    // Fallback на старую логику, если CombatSystem не готов
-    destroyResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
-}
-
-// ✅ НОВОЕ: Применяем бонусы кометы К НАГРАДЕ
-if (destroyResult.reward > 0) {
-    // Кристальный шторм (на N блоков)
-    if (window.RandomEvents?.consumeCrystalBlocksBuff) {
-        destroyResult.reward = window.RandomEvents.consumeCrystalBlocksBuff(destroyResult.reward);
+    // ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает урон, криты, обновляет метрики ──
+    let hitResult;
+    if (window.CombatSystem && typeof window.CombatSystem.applyHit === 'function') {
+        hitResult = window.CombatSystem.applyHit(damage, false);
+    } else {
+        // Fallback, если CombatSystem не готов (защита от race condition)
+        hitResult = { destroyed: false, damage: Math.round(damage), isCrit: false };
+        this.currentBlockHealth -= hitResult.damage;
+        window.gameState.totalDamageDealt += hitResult.damage;
     }
     
-    // Кристальный дождь (на 1 блок)
-    if (window.RandomEvents?.consumeCrystalBuff) {
-        destroyResult.reward = window.RandomEvents.consumeCrystalBuff(destroyResult.reward);
-    }
-}
-
-// ✅ КРИТИЧЕСКИ ВАЖНО: Начисляем кристаллы игроку
-window.gameState.coins = (window.gameState.coins || 0) + (destroyResult.reward || 0);
-    
-    // ── UX: Визуальные эффекты на основе результата ──
+    // ── UX: Визуальные эффекты на основе результата ─
     this.createDamageText(hitResult.damage, block, hitResult.isCrit ? '#FFD700' : '#ff4444');
     UI.checkLocationUpgrade();
     
@@ -380,13 +366,23 @@ if (window.CombatSystem && typeof window.CombatSystem.applyDestroy === 'function
 } else {
     // Fallback на старую логику, если CombatSystem не готов
     destroyResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
-    window.gameState.coins += destroyResult.reward;
 }
 
-// ✅ НОВОЕ: Применяем бонус "Кристальный шторм" (если активен)
-if (destroyResult.reward > 0 && window.RandomEvents?.consumeCrystalBlocksBuff) {
-    destroyResult.reward = window.RandomEvents.consumeCrystalBlocksBuff(destroyResult.reward);
+// ✅ НОВОЕ: Применяем бонусы кометы К НАГРАДЕ
+if (destroyResult.reward > 0) {
+    // Кристальный шторм (на N блоков)
+    if (window.RandomEvents?.consumeCrystalBlocksBuff) {
+        destroyResult.reward = window.RandomEvents.consumeCrystalBlocksBuff(destroyResult.reward);
+    }
+    
+    // Кристальный дождь (на 1 блок)
+    if (window.RandomEvents?.consumeCrystalBuff) {
+        destroyResult.reward = window.RandomEvents.consumeCrystalBuff(destroyResult.reward);
+    }
 }
+
+// ✅ КРИТИЧЕСКИ ВАЖНО: Начисляем кристаллы игроку
+window.gameState.coins = (window.gameState.coins || 0) + (destroyResult.reward || 0);
     
     // ── UX: Комбо-текст (только если было комбо > 1) ──
     if (destroyResult.comboCount > 1 && destroyResult.comboBonus > 0) {
@@ -419,7 +415,7 @@ if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlane
     // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
     if (getFeat().createExplosion) getFeat().createExplosion(block);
     
-    // ── Очистка блока из DOM ──
+    // ─ Очистка блока из DOM ──
     const ga = document.getElementById('gameArea');
     if (ga?.contains(block)) ga.removeChild(block);
     this.currentBlock = null;
