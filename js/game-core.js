@@ -306,7 +306,7 @@ hitBlock: function(block, damage) {
     }
     this.playSound('clickSound');
     
-    // ── UX: Визуальная анимация удара ─
+    // ── UX: Визуальная анимация удара ──
     block.style.transform = 'translateX(-50%) scale(0.85)';
     setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
     
@@ -321,7 +321,7 @@ hitBlock: function(block, damage) {
         window.gameState.totalDamageDealt += hitResult.damage;
     }
     
-    // ── UX: Визуальные эффекты на основе результата ─
+    // ── UX: Визуальные эффекты на основе результата ──
     this.createDamageText(hitResult.damage, block, hitResult.isCrit ? '#FFD700' : '#ff4444');
     UI.checkLocationUpgrade();
     
@@ -337,7 +337,7 @@ hitBlock: function(block, damage) {
         window.gameMetrics.currentCritStreak = 0;
     }
     
-     // ── Логика: разрушение или обновление блока ──
+    // ── Логика: разрушение или обновление блока ──
     if (hitResult.destroyed || this.currentBlockHealth <= 0) {
         console.log('💥 [CORE] Block destroyed! HP:', this.currentBlockHealth);
         this.destroyBlock(block);
