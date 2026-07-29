@@ -1,4 +1,4 @@
-// js/music-system.js (v2.1 — реальные названия + бегущая строка)
+ // js/music-system.js (v2.1 — реальные названия + бегущая строка)
 (function() {
 'use strict';
 
