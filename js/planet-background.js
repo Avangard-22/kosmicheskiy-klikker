@@ -1,4 +1,4 @@
-// js/planet-background.js (v2.2 — Полностью оптимизированный фон глубокого космоса)
+ // js/planet-background.js (v2.2 — Полностью оптимизированный фон глубокого космоса)
 (function() {
     'use strict';
 
