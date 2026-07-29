@@ -1,4 +1,4 @@
-// js/game-features.js (v2.0)
+ // js/game-features.js (v2.0)
 (function() {
 'use strict';
 
