@@ -70,11 +70,23 @@ calculateClickPower: function() {
     return 100 + (lvl - 74) * 0.5;
 },
 
-    getCurrentSpeed: function() {
-        if (!window.gameState) return this.blockSpeed;
-        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
-        return speed * this.getBonus('getSpeedMultiplier', 1);
-    },
+getCurrentSpeed: function() {
+    if (!window.gameState) return this.blockSpeed;
+    
+    // 1. Базовая скорость с учётом планеты (первые 3 планеты чуть медленнее для обучения)
+    let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
+    
+    // 2. ✅ НОВОЕ: Органический прирост скорости на основе общего прогресса
+    // Решает проблему "слишком медленно на мобильных", создавая естественное напряжение
+    const blocksDestroyed = window.gameMetrics?.blocksDestroyed || 0;
+    const speedSteps = Math.floor(blocksDestroyed / 150);          // Каждые 150 блоков = 1 шаг
+    const speedIncrease = Math.min(0.60, speedSteps * 0.05);       // +5% за шаг, максимум +60% (0.60)
+    
+    speed = speed * (1.0 + speedIncrease);
+    
+    // 3. Применяем бонусы из магазина (например, "Замедление времени" даст 0.5)
+    return speed * this.getBonus('getSpeedMultiplier', 1);
+},
 
 // ЧТО: Делегируем расчёт HP блока в единый CombatSystem
 // КУДА: game-core.js → GAME_CORE.calculateBlockHealth()
