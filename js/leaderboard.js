@@ -49,35 +49,27 @@ const Leaderboard = {
     
     calculateDistances: function(period = 'total') {
         const gs = window.gameState;
-        if (!gs) {
-            console.warn('⚠️ [LEADERBOARD] gameState отсутствует!');
-            return { blocks: 0, distance: 0, time: 0 };
-        }
-
-        // 1. Получаем totalDamage
+        if (!gs) return { blocks: 0, distance: 0, time: 0 };
+        
         let totalDamage = gs.totalDamageDealt || 0;
         
-        // 2. ✅ FALLBACK: Если totalDamage почему-то 0, восстанавливаем его из достижений
+        // 1. Получаем totalDamage и восстанавливаем, если 0 (fallback из достижений)
         if (totalDamage === 0 && gs.achievementsV2) {
             let fallbackDamage = 0;
             let fallbackBlocks = 0;
-            
             Object.values(gs.achievementsV2).forEach(planetAch => {
                 const metrics = planetAch?.metrics || {};
                 fallbackDamage += metrics.damage?.progress || 0;
                 fallbackBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
             });
-            
             const recoveredValue = fallbackDamage > 0 ? fallbackDamage : fallbackBlocks;
-            
             if (recoveredValue > 0) {
-                console.log('⚠️ [LEADERBOARD] totalDamage был 0, восстановлен из достижений:', recoveredValue);
                 totalDamage = recoveredValue;
-                gs.totalDamageDealt = recoveredValue; // Синхронизируем gameState
+                gs.totalDamageDealt = recoveredValue;
             }
         }
 
-        // 3. ✅ Для "24 часа" и "7 дней" читаем из gameState.dailyProgress
+        // 2. ✅ Для "24 часа" и "7 дней" читаем из gameState.dailyProgress
         if (period === 'daily' || period === 'weekly') {
             const dp = gs.dailyProgress;
             
@@ -86,14 +78,16 @@ const Leaderboard = {
                 return { blocks: 0, distance: 0, time: 0 };
             }
             
-            // Считаем текущие общие блоки из источника правды
-            let currentTotalBlocks = 0;
-            if (gs.achievementsV2) {
-                Object.values(gs.achievementsV2).forEach(planetAch => {
-                    const metrics = planetAch?.metrics || {};
-                    currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-                });
-            }
+            const currentTotalBlocks = (() => {
+                let b = 0;
+                if (gs.achievementsV2) {
+                    Object.values(gs.achievementsV2).forEach(planetAch => {
+                        const metrics = planetAch?.metrics || {};
+                        b += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+                    });
+                }
+                return b;
+            })();
 
             const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
             const todayBlocks = Math.max(0, currentTotalBlocks - (dp.dayStartBlocks || 0));
@@ -127,8 +121,8 @@ const Leaderboard = {
                 time: 0
             };
         }
-
-        // 4. ✅ Для "Всё время"
+        
+        // 3. ✅ Для "Всё время"
         let totalTime = 0;
         if (window.gameMetrics && window.gameMetrics.planetStats) {
             Object.values(window.gameMetrics.planetStats).forEach(planet => {
