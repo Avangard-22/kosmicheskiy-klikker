@@ -18,6 +18,15 @@ let isSyncing = false;
 let isOperationLocked = false;
 let pendingOperations = [];
 let cloudSaveTimeout = null;
+ // ============================================
+// СОСТОЯНИЕ ЗАГРУЗКИ
+// ============================================
+let isLoadingFromCloud = false;
+let cloudLoadCompleted = false;
+let cloudLoadStartTime = 0;
+let firstSaveTimer = null;
+const CLOUD_LOAD_TIMEOUT = 30000; // 30 секунд
+const FIRST_SAVE_DELAY = 15000;   // 15 секунд
 
 // ============================================
 // 🔒 БЛОКИРОВКА СИНХРОНИЗАЦИИ
@@ -502,59 +511,154 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
-        // ✅ Ждём инициализации telegramCloud (максимум 1 секунду), чтобы избежать гонки потоков
+        // ✅ Устанавливаем флаг загрузки
+        isLoadingFromCloud = true;
+        cloudLoadCompleted = false;
+        cloudLoadStartTime = Date.now();
+        
+        // ✅ Обновляем UI кнопки
+        updateContinueButton('loading', 0);
+        
+        // ✅ Ждём инициализации telegramCloud (максимум 3 секунды)
         let retries = 0;
-        while (!window.telegramCloud && retries < 10) {
+        while (!window.telegramCloud && retries < 30) {
             await new Promise(r => setTimeout(r, 100));
             retries++;
         }
-
+        
         if (!window.telegramCloud?.isAvailable) {
-            console.warn('⚠️ [LOAD] Облако недоступно (не Telegram или ошибка инициализации). Начинаем новую игру.');
+            console.warn('⚠️ [LOAD] Облако недоступно.');
+            isLoadingFromCloud = false;
+            cloudLoadCompleted = true;
+            updateContinueButton('error', 0);
             return false;
         }
         
+        // ✅ Запускаем таймер прогресса загрузки (визуальный)
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - cloudLoadStartTime;
+            const progress = Math.min(90, (elapsed / CLOUD_LOAD_TIMEOUT) * 100);
+            updateContinueButton('loading', progress);
+            
+            // ✅ Проверка на таймаут
+            if (elapsed >= CLOUD_LOAD_TIMEOUT) {
+                clearInterval(progressInterval);
+                isLoadingFromCloud = false;
+                cloudLoadCompleted = true;
+                updateContinueButton('timeout', 100);
+                throw new Error('Cloud load timeout');
+            }
+        }, 100);
+        
+        // ✅ Пытаемся загрузить
         const result = await window.telegramCloud.loadProgress();
+        clearInterval(progressInterval);
         
         if (result?.success && result.data) {
             console.log('☁️ [LOAD] Данные успешно загружены из облака');
             applyCloudData(result.data);
+            isLoadingFromCloud = false;
+            cloudLoadCompleted = true;
+            updateContinueButton('ready', 100);
             return true;
         } else {
             console.log('☁️ [LOAD] Облако пустое. Начинаем новую игру.');
+            isLoadingFromCloud = false;
+            cloudLoadCompleted = true;
+            updateContinueButton('ready', 100); // Разрешаем начать новую игру
             return false;
         }
     } catch (e) {
         console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
+        isLoadingFromCloud = false;
+        cloudLoadCompleted = true;
+        updateContinueButton('error', 0);
         return false;
     }
 };
 
+ // ============================================
+// УПРАВЛЕНИЕ КНОПКОЙ "ПРОДОЛЖИТЬ"
+// ============================================
+function updateContinueButton(status, progress) {
+    const btn = document.getElementById('continueBtn');
+    if (!btn) return;
+    
+    const btnText = btn.querySelector('.btn-text');
+    const btnStatus = btn.querySelector('.btn-status');
+    const loadingOverlay = btn.querySelector('.btn-loading-overlay');
+    const loadingBar = btn.querySelector('.btn-loading-bar');
+    
+    if (!btnText || !btnStatus || !loadingOverlay || !loadingBar) return;
+    
+    switch (status) {
+        case 'loading':
+            btn.disabled = true;
+            btn.classList.remove('ready', 'error');
+            btn.classList.add('loading');
+            btnText.textContent = 'Продолжить';
+            btnStatus.textContent = ' Загрузка...';
+            loadingOverlay.style.display = 'block';
+            loadingBar.style.width = progress + '%';
+            break;
+            
+        case 'ready':
+            btn.disabled = false;
+            btn.classList.remove('loading', 'error');
+            btn.classList.add('ready');
+            btnText.textContent = 'Продолжить';
+            btnStatus.textContent = '✅ Готово';
+            loadingOverlay.style.display = 'block';
+            loadingBar.style.width = '100%';
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+                btnStatus.textContent = '';
+            }, 500);
+            break;
+            
+        case 'error':
+        case 'timeout':
+            btn.disabled = true;
+            btn.classList.remove('loading', 'ready');
+            btn.classList.add('error');
+            btnText.textContent = 'Ошибка';
+            btnStatus.textContent = status === 'timeout' 
+                ? '⏰ Превышено время загрузки (30 сек)' 
+                : '❌ Ошибка соединения';
+            loadingOverlay.style.display = 'none';
+            
+            // Показываем сообщение
+            setTimeout(() => {
+                alert('Ошибка загрузки сохранения. Пожалуйста, перезагрузите страницу.');
+            }, 100);
+            break;
+    }
+}
+
+// Экспортируем функцию для использования в game-core.js
+window.updateContinueButton = updateContinueButton;
+
 window.cloudInit = async function() {
     try {
         const loaded = await window.loadGame();
+        
         if (loaded) {
-            console.log('✅ [INIT] Данные загружены из облака');
             if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
             if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
             if (window.showTooltip) {
                 window.showTooltip('☁️ Прогресс синхронизирован!');
                 setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
-        } else {
-            console.log('️ [INIT] Облако пустое — начинаем новую игру');
-            // ✅ НЕ вызываем cloudSaveAsync() если игра только началась!
-            // Игрок сам нажмёт "Сохранить" или игра сохранится автоматически
         }
         
-        // ✅ НОВОЕ: Сигнализируем о готовности gameState
+        // ✅ НЕ сохраняем сразу! Ждём активации кнопки пользователем
+        
         if (window.EventBus) {
             window.EventBus.emit('save:ready');
             console.log('📡 [SAVE] Эмитировано событие save:ready');
         }
     } catch (e) {
-        console.error('❌ [INIT] Ошибка инициализации:', e);
-        console.warn('⚠️ Начинаем новую игру из-за ошибки');
+        console.error('❌ [CLOUD-INIT] Критическая ошибка:', e);
     }
 };
 
