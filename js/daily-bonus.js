@@ -171,49 +171,47 @@ function claimDailyBonus() {
         // Применяем награду
         applyReward(reward);
 
-// ✅ ИСПРАВЛЕНО: Фиксируем начало нового игрового дня для лидерборда ВНУТРИ gameState
-if (window.gameState) {
-    if (!window.gameState.dailyProgress) {
-        window.gameState.dailyProgress = { history: [] };
-    }
-    const dp = window.gameState.dailyProgress;
-    
-    // Считаем текущие общие значения из источника правды
-    const totalDamage = window.gameState.totalDamageDealt || 0;
-    let currentTotalBlocks = 0;
-    if (window.gameState.achievementsV2) {
-        Object.values(window.gameState.achievementsV2).forEach(planetAch => {
-            const metrics = planetAch?.metrics || {};
-            currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-        });
-    }
-
-    // Сохраняем предыдущий день в историю (если это не самый первый запуск)
-    if (dp.currentDayStart && dp.dayStartDamage !== undefined) {
-        const yesterdayDamage = Math.max(0, totalDamage - dp.dayStartDamage);
-        const yesterdayBlocks = Math.max(0, currentTotalBlocks - (dp.dayStartBlocks || 0));
-        
-        if (yesterdayDamage > 0 || yesterdayBlocks > 0) {
-            dp.history.push({
-                date: new Date(dp.currentDayStart).toISOString().split('T')[0],
-                timestamp: dp.currentDayStart,
-                damage: yesterdayDamage,
-                blocks: yesterdayBlocks // ✅ Сохраняем и блоки для вкладки "Блоков"
-            });
-            // Оставляем только 7 дней
-            if (dp.history.length > 7) {
-                dp.history = dp.history.slice(-7);
+        // ✅ ИСПРАВЛЕНО: Фиксируем начало нового дня ВНУТРИ gameState (чтобы сохранялось в облако!)
+        if (window.gameState) {
+            if (!window.gameState.dailyProgress) {
+                window.gameState.dailyProgress = { history: [] };
             }
+            const dp = window.gameState.dailyProgress;
+            
+            const totalDamage = window.gameState.totalDamageDealt || 0;
+            let currentTotalBlocks = 0;
+            if (window.gameState.achievementsV2) {
+                Object.values(window.gameState.achievementsV2).forEach(planetAch => {
+                    const metrics = planetAch?.metrics || {};
+                    currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+                });
+            }
+
+            // Сохраняем предыдущий день в историю
+            if (dp.currentDayStart && dp.dayStartDamage !== undefined) {
+                const yesterdayDamage = Math.max(0, totalDamage - dp.dayStartDamage);
+                const yesterdayBlocks = Math.max(0, currentTotalBlocks - (dp.dayStartBlocks || 0));
+                
+                if (yesterdayDamage > 0 || yesterdayBlocks > 0) {
+                    dp.history.push({
+                        date: new Date(dp.currentDayStart).toISOString().split('T')[0],
+                        timestamp: dp.currentDayStart,
+                        damage: yesterdayDamage,
+                        blocks: yesterdayBlocks
+                    });
+                    if (dp.history.length > 7) {
+                        dp.history = dp.history.slice(-7);
+                    }
+                }
+            }
+            
+            // Начинаем новый день: сбрасываем точку отсчёта
+            dp.currentDayStart = Date.now();
+            dp.dayStartDamage = totalDamage;
+            dp.dayStartBlocks = currentTotalBlocks;
+            
+            console.log('📅 [DAILY-BONUS] Новый день. Точка отсчёта: урон=', dp.dayStartDamage, 'блоки=', dp.dayStartBlocks);
         }
-    }
-    
-    // Начинаем новый день: сбрасываем точку отсчёта
-    dp.currentDayStart = Date.now();
-    dp.dayStartDamage = totalDamage;
-    dp.dayStartBlocks = currentTotalBlocks;
-    
-    console.log('📅 [DAILY-BONUS] Новый игровой день начался. Точка отсчёта: урон=', dp.dayStartDamage, 'блоки=', dp.dayStartBlocks);
-}
         
         // Обновляем данные
         data.lastClaimDate = today;
