@@ -82,19 +82,51 @@ function calculateRank(totalUnlocked) {
 function createPlanetModule(config, nameTemplates) {
     
     // ⚙️ Генератор уровней
-    function generateLevel(metric, tier) {
+     function generateLevel(metric, tier) {
         const cfg = config.metrics[metric];
         if (!cfg) return null;
         
         const seed = `${config.id}:${metric}:${tier}`;
         let target;
-        if (cfg.type === 'record_min') {
-            target = Math.max(1000, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
+        let reward; // ✅ ОБЪЯВЛЯЕМ ЗДЕСЬ, чтобы переменная была видна во всей функции
+        
+        // ✅ PRESTIGE-СИСТЕМА: после 100 тира
+        if (tier > 100) {
+            const prestigeTier = tier - 100;
+            
+            if (cfg.type === 'record_min') {
+                // Для рекордов минимума (speed): требования УМЕНЬШАЮТСЯ
+                target = Math.max(100, Math.round(cfg.base * Math.pow(0.95, prestigeTier) * jit(seed, 0.10)));
+            } else if (cfg.type === 'record_max') {
+                // Для рекордов максимума (combo): растут медленно
+                target = Math.max(1, Math.round(cfg.base * Math.pow(1.3, prestigeTier) * jit(seed, 0.10)));
+            } else {
+                // Для cumulative (blocks, damage, crystals): растут быстро
+                target = Math.max(1, Math.round(cfg.base * Math.pow(1.8, prestigeTier) * jit(seed, 0.10)));
+            }
+            
+            // Milestone-награды: каждые 10 тиров большая награда
+            const isMilestone = prestigeTier % 10 === 0;
+            const milestoneLevel = Math.floor(prestigeTier / 10);
+            
+            if (isMilestone) {
+                reward = 50000 * Math.pow(2, milestoneLevel);
+            } else {
+                reward = 1000 * Math.pow(1.5, milestoneLevel);
+            }
+            // Потолок награды: 10M кристаллов (защита от Infinity)
+            reward = Math.min(reward, 10000000);
+            
         } else {
-            target = Math.max(1, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
+            // Старая система (до 100 тира)
+            if (cfg.type === 'record_min') {
+                target = Math.max(1000, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
+            } else {
+                target = Math.max(1, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
+            }
+            reward = Math.max(1, Math.round(cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier) * jit(seed + ':r', 0.05)));
         }
         
-        const reward = Math.max(1, Math.round(cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier) * jit(seed + ':r', 0.05)));
         const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
         
         return {
@@ -155,70 +187,105 @@ function createPlanetModule(config, nameTemplates) {
     
     // ✅ ИСПРАВЛЕНО: УМНОЕ обновление прогресса (Delta Mode)
     // mode: 'add' (накопление), 'max' (рекорд), 'min' (анти-рекорд), 'set' (жесткая установка)
-    function updateMetric(metric, value, mode = 'add') {
-        if (!window.gameState) return;
-        if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
-        if (!window.gameState.achievementsV2[config.id]) {
-            window.gameState.achievementsV2[config.id] = { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };
+   function updateMetric(metric, value, mode = 'add') {
+    if (!window.gameState) return;
+    if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
+    if (!window.gameState.achievementsV2[config.id]) {
+        window.gameState.achievementsV2[config.id] = { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };
+    }
+    const planet = window.gameState.achievementsV2[config.id];
+    if (!planet.metrics[metric]) planet.metrics[metric] = { level: 0, progress: 0 };
+    const state = planet.metrics[metric];
+    
+    //  ЛОГИКА СОХРАНЕНИЯ БЕЗ ОБНУЛЕНИЯ
+    if (mode === 'add') {
+        state.progress += value;
+    } else if (mode === 'max') {
+        if (value > state.progress) state.progress = value;
+    } else if (mode === 'min') {
+        if (state.progress === 0 || value < state.progress) state.progress = value;
+    } else {
+        state.progress = value;
+    }
+    
+    // ✅ ЗАЩИТА ОТ ЛАВИНЫ: ограничиваем количество разблокировок за один вызов
+    const MAX_UNLOCKS_PER_CALL = 5;
+    let unlockedAny = false;
+    let totalReward = 0;
+    
+    // Считаем сколько тиров нужно разблокировать
+    let tempLevel = state.level;
+    let tiersToUnlock = 0;
+    while (isLevelComplete(metric, tempLevel, state.progress)) {
+        tiersToUnlock++;
+        tempLevel++;
+        if (tiersToUnlock > 1000) break; // Защита от бесконечного цикла
+    }
+    
+    if (tiersToUnlock > MAX_UNLOCKS_PER_CALL) {
+        // ✅ ГИБРИДНЫЙ ПОДХОД: разблокируем только финальный тир с суммарной наградой
+        const finalTier = tempLevel - 1;
+        
+        // Считаем суммарную награду за все пропущенные тиры
+        for (let tier = state.level; tier < finalTier; tier++) {
+            const level = generateLevel(metric, tier);
+            if (level) {
+                totalReward += level.reward;
+            }
         }
-        const planet = window.gameState.achievementsV2[config.id];
-        if (!planet.metrics[metric]) planet.metrics[metric] = { level: 0, progress: 0 };
         
-        const state = planet.metrics[metric];
+        // Разблокируем финальный тир
+        state.level = finalTier;
+        planet.totalUnlocked += tiersToUnlock;
+        unlockedAny = true;
         
-        //  ЛОГИКА СОХРАНЕНИЯ БЕЗ ОБНУЛЕНИЯ
-        if (mode === 'add') {
-            state.progress += value; // Прибавляем дельту к сохранённому
-        } else if (mode === 'max') {
-            if (value > state.progress) state.progress = value; // Обновляем только если это новый рекорд
-        } else if (mode === 'min') {
-            if (state.progress === 0 || value < state.progress) state.progress = value; // Рекорд минимума (время)
-        } else {
-            state.progress = value; // mode === 'set' (прямая установка)
+        console.log(`🏆 [ACH-V2] ${config.id}.${metric} tier ${finalTier} unlocked! +${totalReward} 💎 (включая ${tiersToUnlock - 1} пропущенных достижений)`);
+        
+        if (window.EventBus) {
+            window.EventBus.emit('achievement:v2:unlocked', {
+                planet: config.id, metric, tier: finalTier, 
+                level: generateLevel(metric, finalTier), 
+                reward: totalReward,
+                skippedTiers: tiersToUnlock - 1
+            });
         }
-        
-        let unlockedAny = false;
-        let totalReward = 0;
-        
-        // Проверяем разблокировку на основе обновлённого state.progress
+    } else {
+        // Обычная разблокировка (меньше 5 тиров)
         while (isLevelComplete(metric, state.level, state.progress)) {
             const level = generateLevel(metric, state.level);
             if (!level) break;
-            
             state.level++;
             planet.totalUnlocked++;
             unlockedAny = true;
             totalReward += level.reward;
-            
             console.log(`🏆 [ACH-V2] ${config.id}.${metric} tier ${state.level - 1} unlocked! +${level.reward} 💎`);
-            
             if (window.EventBus) {
                 window.EventBus.emit('achievement:v2:unlocked', {
                     planet: config.id, metric, tier: state.level - 1, level, reward: level.reward
                 });
             }
         }
-        
-        // ✅ Начисляем кристаллы + обновляем UI
-        if (totalReward > 0) {
-            window.gameState.coins = (window.gameState.coins || 0) + totalReward;
-            if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(totalReward);
-            if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
-            if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
-            if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
-            if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
-            if (window.telegramHaptic?.success) window.telegramHaptic.success();
-            else if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-            if (typeof window.saveGame === 'function') window.saveGame();
-        }
-        
-        if (unlockedAny) {
-            planet.rank = planet.totalUnlocked;
-            if (window.EventBus) {
-                window.EventBus.emit('achievement:v2:rankChanged', { planet: config.id, rank: planet.rank });
-            }
+    }
+    
+    // ✅ Начисляем кристаллы + обновляем UI
+    if (totalReward > 0) {
+        window.gameState.coins = (window.gameState.coins || 0) + totalReward;
+        if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(totalReward);
+        if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+        if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+        if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
+        if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
+        if (window.telegramHaptic?.success) window.telegramHaptic.success();
+        else if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        if (typeof window.saveGame === 'function') window.saveGame();
+    }
+    if (unlockedAny) {
+        planet.rank = planet.totalUnlocked;
+        if (window.EventBus) {
+            window.EventBus.emit('achievement:v2:rankChanged', { planet: config.id, rank: planet.rank });
         }
     }
+}
     
     //  Обёртка для обратной совместимости (если где-то вызывается старое имя)
     function updateMetricProgress(metric, newValue) {
