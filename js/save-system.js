@@ -25,7 +25,7 @@ let isLoadingFromCloud = false;
 let cloudLoadCompleted = false;
 let cloudLoadStartTime = 0;
 let firstSaveTimer = null;
-const CLOUD_LOAD_TIMEOUT = 30000; // 30 секунд
+const CLOUD_LOAD_TIMEOUT = 10000; // 10 секунд
 const FIRST_SAVE_DELAY = 15000;   // 15 секунд
 
 // ============================================
