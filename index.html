@@ -133,7 +133,13 @@
         <p data-i18n="welcome.features.2">🚀 Улучшения — увеличивайте силу, криты и активируйте помощника</p>
         <p data-i18n="welcome.features.3">✨ Редкие блоки — дают бонусы и огромные награды!</p>
 
-        <button id="continueBtn" class="btn" data-i18n="ui.continue">Продолжить</button>
+        <button id="continueBtn" class="btn-primary" disabled>
+    <span class="btn-text">Продолжить</span>
+    <div class="btn-loading-overlay" style="display:none;">
+        <div class="btn-loading-bar" style="width:0%"></div>
+    </div>
+    <span class="btn-status">⏳ Загрузка...</span>
+</button>
         <button id="startBtn" class="btn" data-i18n="welcome.newGameBtn">Новая игра</button>
 <button id="leaderboardBtn" class="leaderboard-btn" style="margin-top:15px;">🏆 Таблица лидеров</button>
     </div>
