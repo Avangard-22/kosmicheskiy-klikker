@@ -458,3 +458,52 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
     70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
+
+/* Стили для кнопки "Продолжить" с индикатором загрузки */
+#continueBtn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+#continueBtn.loading {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    cursor: wait;
+}
+
+#continueBtn.ready {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    cursor: pointer;
+}
+
+#continueBtn.error {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    cursor: not-allowed;
+}
+
+.btn-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 1;
+}
+
+.btn-loading-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    transition: width 0.3s ease;
+}
+
+.btn-status {
+    display: block;
+    font-size: 0.7em;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+#continueBtn:disabled {
+    opacity: 0.7;
+}
