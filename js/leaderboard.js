@@ -632,112 +632,108 @@ initDailyProgress: function() {
         // Перезагружаем таблицу с новым периодом
         await this.loadAndRender('distance', period);
     },
-    loadAndRender: async function(period, subPeriod = 'total') {
-        const list = document.getElementById('lbList');
-        list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
+loadAndRender: async function(period, subPeriod = 'total') {
+    const list = document.getElementById('lbList');
+    list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
+    
+    console.log('🔍 [LEADERBOARD] Загрузка периода:', period, 'под-период:', subPeriod);
+    
+    const result = await this.fetchLeaderboard(period);
+    console.log('🔍 [LEADERBOARD] Результат:', result);
+    
+    if (!result?.success || !result.data || result.data.length === 0) {
+        list.innerHTML = '<div class="lb-empty"> Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
+        document.getElementById('lbMyPosition').style.display = 'none';
+        return;
+    }
+    
+    const entries = result.data;
+    const myUserId = window.getUserId ? window.getUserId() : null;
+    const myUsername = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
+    
+    console.log(' [LEADERBOARD] Текущий пользователь:', { userId: myUserId, username: myUsername });
+    
+    let html = '';
+    let myPosition = null;
+    let myDistance = 0;
+    
+    const planetEmojis = {
+        mercury: '☿', venus: '♀', earth: '', mars: '♂',
+        jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆', pluto: ''
+    };
+    
+    entries.forEach((entry, idx) => {
+        const rank = idx + 1;
+        const isMe = myUserId && String(entry.userId) === String(myUserId);
         
-        // Определяем какой под-период использовать для отображения
-        let displayPeriod = period;
-        if (period === 'blocks' || period === 'distance') {
-            displayPeriod = subPeriod;
+        let rankClass = '';
+        let rankDisplay = '';
+        if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
+        else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
+        else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
+        else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
+        
+        if (isMe) {
+            rankClass += ' is-me';
+            myPosition = rank;
+            myDistance = entry[period] || 0;
+            console.log('🔍 [LEADERBOARD] Найдён мой результат:', myDistance, 'для периода:', period);
         }
         
-        console.log(' [LEADERBOARD] Загрузка периода:', period, 'под-период:', subPeriod, 'displayPeriod:', displayPeriod);
+        const distance = entry[period] || 0;
+        const planetEmoji = planetEmojis[entry.level] || '🪐';
+        const formattedDistance = this.formatDistance(distance, period);
         
-        const result = await this.fetchLeaderboard(period);
-        
-        console.log('🔍 [LEADERBOARD] Результат:', result);
-        
-        if (!result?.success || !result.data || result.data.length === 0) {
-            list.innerHTML = '<div class="lb-empty">📭 Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
-            document.getElementById('lbMyPosition').style.display = 'none';
-            return;
-        }
-        
-        const entries = result.data;
-        const myUserId = window.getUserId ? window.getUserId() : null;
-        const myUsername = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
-        
-        console.log('🔍 [LEADERBOARD] Текущий пользователь:', { userId: myUserId, username: myUsername });
-        
-        let html = '';
-        let myPosition = null;
-        let myDistance = 0;
-        
-        const planetEmojis = {
-            mercury: '☿', venus: '♀', earth: '🌍', mars: '♂',
-            jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆', pluto: ''
-        };
-        
-        entries.forEach((entry, idx) => {
-            const rank = idx + 1;
-            
-            // ✅ ВАЖНО: Сравниваем userId как строки
-            const isMe = myUserId && String(entry.userId) === String(myUserId);
-            
-            let rankClass = '';
-            let rankDisplay = '';
-            if (rank === 1) { rankClass = 'top-1'; rankDisplay = '👑'; }
-            else if (rank === 2) { rankClass = 'top-2'; rankDisplay = '🥈'; }
-            else if (rank === 3) { rankClass = 'top-3'; rankDisplay = '🥉'; }
-            else { rankClass = ''; rankDisplay = `<span class="lb-rank-number">#${rank}</span>`; }
-            
-            if (isMe) {
-                rankClass += ' is-me';
-                myPosition = rank;
-                myDistance = entry[period] || 0; // ✅ Сохраняем результат
-                console.log('🔍 [LEADERBOARD] Найдён мой результат:', myDistance, 'для периода:', period);
-            }
-            
-            const distance = entry[period] || 0;
-            const planetEmoji = planetEmojis[entry.level] || '🪐';
-            
-            const formattedDistance = this.formatDistance(distance, period);
-            
-            html += `
-                <div class="lb-entry ${rankClass}">
-                    <div class="lb-rank">${rankDisplay}</div>
-                    <div class="lb-info">
-                        <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
-                        <div class="lb-level">${planetEmoji} ${entry.level || 'mercury'}</div>
-                    </div>
-                    <div class="lb-distance">${formattedDistance}</div>
+        html += `
+            <div class="lb-entry ${rankClass}">
+                <div class="lb-rank">${rankDisplay}</div>
+                <div class="lb-info">
+                    <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
+                    <div class="lb-level">${planetEmoji} ${entry.level || 'mercury'}</div>
                 </div>
-            `;
-        });
+                <div class="lb-distance">${formattedDistance}</div>
+            </div>
+        `;
+    });
+    
+    list.innerHTML = html;
+    
+    // ✅ Обновляем блок "Ваша позиция"
+    const myPosBlock = document.getElementById('lbMyPosition');
+    myPosBlock.style.display = 'flex';
+    
+    if (myPosition) {
+        document.getElementById('lbMyRank').textContent = `#${myPosition}`;
+        document.getElementById('lbMyRank').style.color = '#4FC3F7';
+    } else {
+        document.getElementById('lbMyRank').textContent = 'вне топ-50';
+        document.getElementById('lbMyRank').style.color = '#999';
+    }
+    
+    // ✅ Обновляем "Ваш результат" — ИСПРАВЛЕНО: используем subPeriod вместо blockPeriod
+    console.log('🔍 [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
+    
+    if (myDistance > 0) {
+        // ✅ Сервер вернул данные — используем их
+        console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
+    } else {
+        // ⚠️ Сервер не вернул данные — используем локальный расчет
+        console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
+        let localValue = 0;
         
-        list.innerHTML = html;
-        
-        // ✅ Обновляем блок "Ваша позиция"
-        const myPosBlock = document.getElementById('lbMyPosition');
-        myPosBlock.style.display = 'flex';
-        
-        if (myPosition) {
-            document.getElementById('lbMyRank').textContent = `#${myPosition}`;
-            document.getElementById('lbMyRank').style.color = '#4FC3F7';
-        } else {
-            document.getElementById('lbMyRank').textContent = 'вне топ-50';
-            document.getElementById('lbMyRank').style.color = '#999';
+        if (period === 'blocks' || period === 'distance') {
+            // Для блоков и расстояния с под-периодами
+            const localDistances = this.calculateDistances(subPeriod || 'total');
+            localValue = period === 'blocks' ? localDistances.blocks : localDistances.distance;
+        } else if (period === 'time') {
+            const localDistances = this.calculateDistances('total');
+            localValue = localDistances.time;
         }
         
-// ✅ Обновляем "Ваш результат" — ВСЕГДА используем локальный расчет для accurate данных
-const localDistances = this.calculateDistances(period === 'blocks' ? (blockPeriod || 'total') : period);
-let localValue = 0;
-
-if (period === 'blocks') {
-    localValue = localDistances.blocks;
-} else if (period === 'distance') {
-    localValue = localDistances.distance;
-} else if (period === 'time') {
-    localValue = localDistances.time;
-} else {
-    // Для других периодов используем данные с сервера
-    localValue = myDistance;
-}
-
-console.log('🔍 [LEADERBOARD] Ваш результат:', { period, blockPeriod, value: localValue });
-document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
-    },
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
+    }
+},
     
     escapeHtml: function(text) {
         const div = document.createElement('div');
