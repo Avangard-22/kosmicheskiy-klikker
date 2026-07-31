@@ -302,7 +302,7 @@ hitBlock: function(block, damage) {
 if (navigator.vibrate) navigator.vibrate(30); // Короткая вибрация 30мс
 if (window.telegramHaptic) window.telegramHaptic.light();
 this.playSound('clickSound');
-     
+    
     // ── UX: Визуальная анимация удара ──
     block.style.transform = 'translateX(-50%) scale(0.85)';
     setTimeout(() => { block.style.transform = 'translateX(-50%) scale(1)'; }, 100);
