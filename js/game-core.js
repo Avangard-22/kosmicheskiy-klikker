@@ -983,19 +983,32 @@ setTimeout(() => this.createMovingBlock(), 500);
         console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
         console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
 
-        UI.updateHUD();
-        UI.updateUpgradeButtons();
-        UI.updateProgressBar();
-        this.setLocation(window.gameState.currentLocation);
-        this.startGame(false);
+UI.updateHUD();
+UI.updateUpgradeButtons();
+UI.updateProgressBar();
+this.setLocation(window.gameState.currentLocation);
+this.startGame(false);
 
-        if (window.showTooltip && window.formatString) {
-            const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
-                coins: Math.floor(window.gameState.coins || 0).toLocaleString()
-            });
-            window.showTooltip(t);
-            setTimeout(window.hideTooltip, 3000);
-        }
+// ✅ НОВОЕ: Запускаем первое автосохранение через 15 секунд ПОСЛЕ появления блока
+if (window.gameState?.gameActive) {
+    setTimeout(() => {
+        console.log('⏰ [CORE] Первое автосохранение через 15 сек после активации');
+        setTimeout(() => {
+            if (typeof window.saveGame === 'function') {
+                window.saveGame();
+                console.log('💾 [CORE] Первое автосохранение выполнено');
+            }
+        }, 15000); // 15 секунд
+    }, 500); // Ждём появления первого блока
+}
+
+if (window.showTooltip && window.formatString) {
+    const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
+        coins: Math.floor(window.gameState.coins || 0).toLocaleString()
+    });
+    window.showTooltip(t);
+    setTimeout(window.hideTooltip, 3000);
+}
     },
 
     restartGame: function() {
