@@ -297,12 +297,11 @@ hitBlock: function(block, damage) {
         return;
     }
     
-    // ── UX: Вибрация и звук (специфично для Core, не переносим) ──
-    const now = Date.now();
-    if (!this.lastHapticTime || now - this.lastHapticTime > 150) {
-        if (navigator.vibrate) navigator.vibrate(50);
-        if (window.telegramHaptic) window.telegramHaptic.light();
-        this.lastHapticTime = now;
+// ── UX: Вибрация и звук (специфично для Core, не переносим) ──
+// ✅ НОВОЕ: Вибрация ВСЕГДА срабатывает при ударе (независимо от звука)
+if (navigator.vibrate) navigator.vibrate(30); // Короткая вибрация 30мс
+if (window.telegramHaptic) window.telegramHaptic.light();
+this.playSound('clickSound');
     }
     this.playSound('clickSound');
     
