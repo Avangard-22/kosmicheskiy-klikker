@@ -439,23 +439,43 @@ window.flushCloudSave = function() {
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
-    
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
-    const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury');
+    
+    // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: НЕ сохраняем пустое/дефолтное состояние!
+    const hasRealData = (
+        (gs?.coins || 0) > 100 ||           // Хотя бы 100 кристаллов
+        (gs?.totalDamageDealt || 0) > 1000 ||  // Хотя бы 1000 урона
+        (gs?.clickUpgradeLevel || 0) > 0 ||    // Хотя бы 1 апгрейд
+        (gs?.currentLocation && gs.currentLocation !== 'mercury') || // Или другая планета
+        (Object.keys(gs?.achievementsV2 || {}).length > 0) // Или есть достижения
+    );
+    
     const isNewGame = gs?._isNewGame === true;
     
     if (!hasRealData && !isNewGame) {
-        console.log('☁️ [SAVE] Пропуск: нет реальных данных и это не новая игра');
-        return;
+        console.warn('⚠️ [SAVE] ОТМЕНА СОХРАНЕНИЯ: gameState пустой или дефолтный!');
+        console.log('📊 Текущее состояние:', {
+            coins: gs?.coins,
+            damage: gs?.totalDamageDealt,
+            upgrades: gs?.clickUpgradeLevel,
+            location: gs?.currentLocation,
+            achievements: Object.keys(gs?.achievementsV2 || {}).length
+        });
+        return;  // ✅ НЕ СОХРАНЯЕМ ПУСТОЕ СОСТОЯНИЕ!
     }
     
     isSyncing = true;
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
+            console.log('☁️ [SAVE] Сохраняем в облако:', {
+                coins: cloudData.crystals,
+                damage: cloudData.score,
+                location: cloudData.level
+            });
             const result = await window.telegramCloud.saveProgress(cloudData);
             if (result?.success) {
                 lastCloudSync = now;
@@ -465,6 +485,7 @@ async function cloudSaveAsync() {
             }
         }
     } catch (e) {
+        console.error('❌ [SAVE] Ошибка сохранения:', e);
         showSaveIndicator('❌', 'Ошибка сети', '#f44336');
     } finally {
         isSyncing = false;
@@ -513,6 +534,7 @@ window.cloudInit = async function() {
     try {
         const loaded = await window.loadGame();
         if (loaded) {
+            console.log('✅ [INIT] Данные загружены из облака');
             if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
             if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
             if (window.showTooltip) {
@@ -520,7 +542,9 @@ window.cloudInit = async function() {
                 setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
         } else {
-            await cloudSaveAsync();
+            console.log('️ [INIT] Облако пустое — начинаем новую игру');
+            // ✅ НЕ вызываем cloudSaveAsync() если игра только началась!
+            // Игрок сам нажмёт "Сохранить" или игра сохранится автоматически
         }
         
         // ✅ НОВОЕ: Сигнализируем о готовности gameState
@@ -529,7 +553,8 @@ window.cloudInit = async function() {
             console.log('📡 [SAVE] Эмитировано событие save:ready');
         }
     } catch (e) {
-        console.warn(e);
+        console.error('❌ [INIT] Ошибка инициализации:', e);
+        console.warn('⚠️ Начинаем новую игру из-за ошибки');
     }
 };
 
