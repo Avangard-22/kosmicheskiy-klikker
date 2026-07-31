@@ -28,7 +28,12 @@ window.GAME_CORE = {
     isGamePaused: false,
     autoClickInterval: null,
     magnetInterval: null,
-    blockSpeed: CFG.isMobile ? 25 : 20,
+   // ✅ НОВОЕ: Определяем, запущено ли через Telegram WebApp
+const isTelegramWebApp = window.Telegram?.WebApp?.initData !== undefined;
+const isBrowser = !isTelegramWebApp;
+
+// Скорость: Telegram App = быстро, Браузер = медленно
+blockSpeed: isBrowser ? 12 : (CFG.isMobile ? 25 : 20),
    deviceHealthMult: 1.0,  // ✅ НОВОЕ: множитель здоровья от детектора устройства
     lastHapticTime: 0,  // ✅ НОВОЕ: для throttling вибрации
 
