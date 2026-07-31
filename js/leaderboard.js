@@ -53,23 +53,7 @@ const Leaderboard = {
         
         let totalDamage = gs.totalDamageDealt || 0;
         
-        // 1. Получаем totalDamage и восстанавливаем, если 0 (fallback из достижений)
-        if (totalDamage === 0 && gs.achievementsV2) {
-            let fallbackDamage = 0;
-            let fallbackBlocks = 0;
-            Object.values(gs.achievementsV2).forEach(planetAch => {
-                const metrics = planetAch?.metrics || {};
-                fallbackDamage += metrics.damage?.progress || 0;
-                fallbackBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-            });
-            const recoveredValue = fallbackDamage > 0 ? fallbackDamage : fallbackBlocks;
-            if (recoveredValue > 0) {
-                totalDamage = recoveredValue;
-                gs.totalDamageDealt = recoveredValue;
-            }
-        }
-
-        // 2. ✅ Для "24 часа" и "7 дней" читаем из gameState.dailyProgress
+        // ✅ Для "24 часа" и "7 дней" читаем dailyProgress ИЗ gameState
         if (period === 'daily' || period === 'weekly') {
             const dp = gs.dailyProgress;
             
@@ -78,16 +62,14 @@ const Leaderboard = {
                 return { blocks: 0, distance: 0, time: 0 };
             }
             
-            const currentTotalBlocks = (() => {
-                let b = 0;
-                if (gs.achievementsV2) {
-                    Object.values(gs.achievementsV2).forEach(planetAch => {
-                        const metrics = planetAch?.metrics || {};
-                        b += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
-                    });
-                }
-                return b;
-            })();
+            // Считаем текущие общие блоки из источника правды
+            let currentTotalBlocks = 0;
+            if (gs.achievementsV2) {
+                Object.values(gs.achievementsV2).forEach(planetAch => {
+                    const metrics = planetAch?.metrics || {};
+                    currentTotalBlocks += (metrics.blocks?.progress || 0) + (metrics.rare?.progress || 0);
+                });
+            }
 
             const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
             const todayBlocks = Math.max(0, currentTotalBlocks - (dp.dayStartBlocks || 0));
@@ -100,7 +82,7 @@ const Leaderboard = {
                 };
             }
             
-            // За 7 дней (сумма истории + сегодня)
+            // За 7 дней
             let weeklyDamage = todayDamage;
             let weeklyBlocks = todayBlocks;
             const now = Date.now();
@@ -122,7 +104,7 @@ const Leaderboard = {
             };
         }
         
-        // 3. ✅ Для "Всё время"
+        // ✅ Для "Всё время"
         let totalTime = 0;
         if (window.gameMetrics && window.gameMetrics.planetStats) {
             Object.values(window.gameMetrics.planetStats).forEach(planet => {
@@ -700,35 +682,34 @@ const Leaderboard = {
             document.getElementById('lbMyRank').style.color = '#999';
         }
         
-        // ✅ Обновляем "Ваш результат"
-        // ПРИОРИТЕТ: используем myDistance из таблицы лидеров (данные с сервера)
-        // Локальный расчет — только если myDistance === 0
-        
-        console.log(' [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
-        
-        if (myDistance > 0) {
-            // ✅ Сервер вернул данные — используем их
-            console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
-        } else {
-            // ️ Сервер не вернул данные (myDistance === 0) — используем локальный расчет
-            console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
-            
-            let localValue = 0;
-            if (period === 'blocks') {
-                const localDistances = this.calculateDistances(subPeriod || 'total');
-                localValue = localDistances.blocks;
-            } else if (period === 'distance') {
-                // Для расстояния с под-периодами используем calculateDistances
-                const localDistances = this.calculateDistances(subPeriod || 'total');
-                localValue = localDistances.distance;
-            } else if (period === 'time') {
-                const localDistances = this.calculateDistances('total');
-                localValue = localDistances.time;
-            }
-            
-            document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
+    // ✅ Обновляем "Ваш результат"
+    // ВАЖНО: Для "blocks" и "distance" с под-периодами (daily/weekly) МЫ ВСЕГДА используем локальный расчет,
+    // потому что сервер возвращает ТОЛЬКО общие значения (total), а не дневные/недельные.
+    console.log('🔍 [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
+    
+    if ((period === 'blocks' || period === 'distance') && (subPeriod === 'daily' || subPeriod === 'weekly')) {
+        // Принудительный локальный расчет для 24ч и 7 дней
+        const localDistances = this.calculateDistances(subPeriod);
+        const localValue = period === 'blocks' ? localDistances.blocks : localDistances.distance;
+        console.log('✅ [LEADERBOARD] Используем локальный расчет для', subPeriod, ':', localValue);
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
+    } else if (period === 'time') {
+        const localDistances = this.calculateDistances('total');
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(localDistances.time, 'time');
+    } else if (myDistance > 0) {
+        // Для "total" или если сервер вернул корректные данные
+        console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
+    } else {
+        console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
+        let localValue = 0;
+        if (period === 'blocks') {
+            localValue = this.calculateDistances('total').blocks;
+        } else if (period === 'distance') {
+            localValue = this.calculateDistances('total').distance;
         }
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
+    }
     },
     
     escapeHtml: function(text) {
