@@ -1233,17 +1233,21 @@ function onGameReady() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ✅ ИСПРАВЛЕНО: Мы ВСЕГДА ждём save:ready, даже если gameState уже создан (он создаётся пустым при инициализации save-system)
-    console.log('⏳ [CORE] Ожидание завершения загрузки из облака (save:ready)...');
-    
-    if (window.EventBus) {
+    // Если gameState уже есть — запускаем сразу
+    if (window.gameState && Object.keys(window.gameState).length > 0) {
+        console.log('✅ [CORE] gameState уже доступен, запускаем инициализацию');
+        onGameReady();
+    } else if (window.EventBus) {
+        // Иначе ждём события save:ready
+        console.log('⏳ [CORE] Ждём save:ready...');
         window.EventBus.once('save:ready', () => {
-            console.log('✅ [CORE] Сигнал save:ready получен. Запускаем игру.');
+            console.log('✅ [CORE] save:ready получен, запускаем инициализацию');
             onGameReady();
         });
     } else {
-        console.warn('⚠️ [CORE] EventBus недоступен, используем fallback (не рекомендуется)');
-        setTimeout(onGameReady, 2000);
+        // Fallback: если EventBus недоступен, используем старый способ
+        console.warn('⚠️ [CORE] EventBus недоступен, fallback на прямую инициализацию');
+        onGameReady();
     }
 });
 
