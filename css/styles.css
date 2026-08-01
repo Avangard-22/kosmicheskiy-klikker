@@ -458,29 +458,41 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
     70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
-
 /* Стили для кнопки "Продолжить" с индикатором загрузки */
 #continueBtn {
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
+    min-width: 200px;
+    height: 50px;
 }
 
-#continueBtn.loading {
-    background: linear-gradient(135deg, #FF9800, #F57C00);
+#continueBtn:disabled {
+    opacity: 0.7;
     cursor: wait;
 }
 
+/* Состояние загрузки — оранжевый градиент */
+#continueBtn.loading {
+    background: linear-gradient(135deg, #FF9800, #F57C00) !important;
+    color: #fff;
+}
+
+/* Состояние готовности — зелёный градиент */
 #continueBtn.ready {
-    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    background: linear-gradient(135deg, #4CAF50, #388E3C) !important;
+    color: #fff;
     cursor: pointer;
 }
 
+/* Состояние ошибки — красный */
 #continueBtn.error {
-    background: linear-gradient(135deg, #f44336, #d32f2f);
+    background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+    color: #fff;
     cursor: not-allowed;
 }
 
+/* Оверлей загрузки */
 .btn-loading-overlay {
     position: absolute;
     top: 0;
@@ -489,21 +501,32 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
     bottom: 0;
     background: rgba(0, 0, 0, 0.3);
     z-index: 1;
+    pointer-events: none;
 }
 
+/* Полоса прогресса */
 .btn-loading-bar {
     height: 100%;
     background: linear-gradient(90deg, #4CAF50, #8BC34A);
-    transition: width 0.3s ease;
+    transition: width 0.2s linear;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
 }
 
+/* Текст статуса */
 .btn-status {
     display: block;
     font-size: 0.7em;
     margin-top: 4px;
-    opacity: 0.8;
+    opacity: 0.9;
+    font-family: 'Orbitron', sans-serif;
 }
 
-#continueBtn:disabled {
-    opacity: 0.7;
+/* Анимация пульсации для готовой кнопки */
+@keyframes continuePulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+}
+
+#continueBtn.ready {
+    animation: continuePulse 2s infinite;
 }
