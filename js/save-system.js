@@ -523,68 +523,61 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
-        // ✅ Устанавливаем флаг загрузки
         isLoadingFromCloud = true;
         cloudLoadCompleted = false;
-        cloudLoadStartTime = Date.now();
-        
-        // ✅ Обновляем UI кнопки
+        const startTime = Date.now();
+        const TIMEOUT_MS = 30000; // 30 секунд
+
         updateContinueButton('loading', 0);
-        
-        // ✅ Ждём инициализации telegramCloud (максимум 3 секунды)
+
+        // ✅ Симуляция прогресса загрузки (растёт до 90% за 30 секунд)
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            if (elapsed >= TIMEOUT_MS) {
+                clearInterval(progressInterval);
+                updateContinueButton('timeout', 100);
+                isLoadingFromCloud = false;
+                cloudLoadCompleted = true;
+                throw new Error('Cloud load timeout');
+            }
+            const fakeProgress = Math.min(90, (elapsed / TIMEOUT_MS) * 90);
+            updateContinueButton('loading', fakeProgress);
+        }, 100);
+
+        // Ждём инициализации telegramCloud
         let retries = 0;
         while (!window.telegramCloud && retries < 30) {
             await new Promise(r => setTimeout(r, 100));
             retries++;
         }
-        
+
         if (!window.telegramCloud?.isAvailable) {
-            console.warn('⚠️ [LOAD] Облако недоступно.');
-            isLoadingFromCloud = false;
-            cloudLoadCompleted = true;
-            updateContinueButton('error', 0);
-            return false;
+            throw new Error('Telegram Cloud unavailable');
         }
-        
-        // ✅ Запускаем таймер прогресса загрузки (визуальный)
-        const progressInterval = setInterval(() => {
-            const elapsed = Date.now() - cloudLoadStartTime;
-            const progress = Math.min(90, (elapsed / CLOUD_LOAD_TIMEOUT) * 100);
-            updateContinueButton('loading', progress);
-            
-            // ✅ Проверка на таймаут
-            if (elapsed >= CLOUD_LOAD_TIMEOUT) {
-                clearInterval(progressInterval);
-                isLoadingFromCloud = false;
-                cloudLoadCompleted = true;
-                updateContinueButton('timeout', 100);
-                throw new Error('Cloud load timeout');
-            }
-        }, 100);
-        
-        // ✅ Пытаемся загрузить
+
+        // Делаем реальный запрос
         const result = await window.telegramCloud.loadProgress();
-        clearInterval(progressInterval);
-        
+        clearInterval(progressInterval); // Останавливаем симуляцию
+
         if (result?.success && result.data) {
             console.log('☁️ [LOAD] Данные успешно загружены из облака');
             applyCloudData(result.data);
+            updateContinueButton('ready', 100); // Мгновенно заполняем до 100%
             isLoadingFromCloud = false;
             cloudLoadCompleted = true;
-            updateContinueButton('ready', 100);
             return true;
         } else {
             console.log('☁️ [LOAD] Облако пустое. Начинаем новую игру.');
+            updateContinueButton('ready', 100); // Разрешаем начать новую игру
             isLoadingFromCloud = false;
             cloudLoadCompleted = true;
-            updateContinueButton('ready', 100); // Разрешаем начать новую игру
             return false;
         }
     } catch (e) {
         console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
+        updateContinueButton('error', 100);
         isLoadingFromCloud = false;
         cloudLoadCompleted = true;
-        updateContinueButton('error', 0);
         return false;
     }
 };
@@ -595,58 +588,38 @@ window.loadGame = async function() {
 function updateContinueButton(status, progress) {
     const btn = document.getElementById('continueBtn');
     if (!btn) return;
-    
-    const btnText = btn.querySelector('.btn-text');
-    const btnStatus = btn.querySelector('.btn-status');
-    const loadingOverlay = btn.querySelector('.btn-loading-overlay');
-    const loadingBar = btn.querySelector('.btn-loading-bar');
-    
-    if (!btnText || !btnStatus || !loadingOverlay || !loadingBar) return;
-    
-    switch (status) {
-        case 'loading':
-            btn.disabled = true;
-            btn.classList.remove('ready', 'error');
-            btn.classList.add('loading');
-            btnText.textContent = 'Продолжить';
-            btnStatus.textContent = '⏳ Загрузка...';
-            loadingOverlay.style.display = 'block';
-            loadingBar.style.width = progress + '%';
-            break;
-            
-        case 'ready':
-            btn.disabled = false;
-            btn.classList.remove('loading', 'error');
-            btn.classList.add('ready');
-            btnText.textContent = 'Продолжить';
-            btnStatus.textContent = '✅ Готово';
-            loadingOverlay.style.display = 'block';
-            loadingBar.style.width = '100%';
-            setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-                btnStatus.textContent = '';
-            }, 500);
-            break;
-            
-        case 'error':
-        case 'timeout':
-            btn.disabled = true;
-            btn.classList.remove('loading', 'ready');
-            btn.classList.add('error');
-            btnText.textContent = 'Ошибка';
-            btnStatus.textContent = status === 'timeout' 
-                ? '⏰ Превышено время (30 сек)' 
-                : '❌ Ошибка загрузки';
-            loadingOverlay.style.display = 'none';
-            
-            setTimeout(() => {
-                alert('Ошибка загрузки сохранения. Пожалуйста, перезагрузите страницу.');
-            }, 100);
-            break;
+
+    const progressBar = btn.querySelector('.btn-progress-fill');
+    const statusText = btn.querySelector('.btn-status');
+
+    if (status === 'loading') {
+        btn.disabled = true;
+        btn.classList.remove('ready', 'error');
+        if (progressBar) progressBar.style.width = progress + '%';
+        if (statusText) statusText.textContent = `⏳ Загрузка сохранения... ${Math.round(progress)}%`;
+    } 
+    else if (status === 'ready') {
+        btn.disabled = false;
+        btn.classList.remove('error');
+        btn.classList.add('ready');
+        if (progressBar) progressBar.style.width = '100%';
+        if (statusText) {
+            statusText.textContent = '✅ Готово к игре';
+            setTimeout(() => { if(statusText) statusText.style.opacity = '0'; }, 2000);
+        }
+    } 
+    else if (status === 'error' || status === 'timeout') {
+        btn.disabled = true;
+        btn.classList.remove('ready');
+        btn.classList.add('error');
+        if (progressBar) progressBar.style.width = '100%';
+        if (statusText) statusText.textContent = status === 'timeout' ? '⏰ Превышено время (30с)' : '❌ Ошибка сети';
+        
+        setTimeout(() => {
+            alert('Ошибка загрузки сохранения. Пожалуйста, проверьте интернет и перезагрузите страницу.');
+        }, 100);
     }
 }
-
-// Экспортируем функцию для использования в game-core.js
 window.updateContinueButton = updateContinueButton;
 
 window.cloudInit = async function() {
