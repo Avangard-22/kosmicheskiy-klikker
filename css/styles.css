@@ -458,75 +458,65 @@ body{font-family:'Orbitron','Segoe UI',sans-serif;margin:0;padding:0;overflow:hi
     70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
     100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
-/* Стили для кнопки "Продолжить" с индикатором загрузки */
-#continueBtn {
+/* Стили для кнопки "Продолжить" с прогресс-баром */
+.btn-continue {
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
-    min-width: 200px;
-    height: 50px;
-}
-
-#continueBtn:disabled {
-    opacity: 0.7;
-    cursor: wait;
-}
-
-/* Состояние загрузки — оранжевый градиент */
-#continueBtn.loading {
-    background: linear-gradient(135deg, #FF9800, #F57C00) !important;
-    color: #fff;
-}
-
-/* Состояние готовности — зелёный градиент */
-#continueBtn.ready {
-    background: linear-gradient(135deg, #4CAF50, #388E3C) !important;
-    color: #fff;
-    cursor: pointer;
-}
-
-/* Состояние ошибки — красный */
-#continueBtn.error {
-    background: linear-gradient(135deg, #f44336, #d32f2f) !important;
-    color: #fff;
+    background: #555555; /* Серый цвет по умолчанию */
+    color: #ffffff;
+    border: 2px solid #777777;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: bold;
+    border-radius: 12px;
     cursor: not-allowed;
+    width: 100%;
+    max-width: 320px;
+    transition: border-color 0.3s, background 0.3s;
+    margin: 10px auto;
+    display: block;
 }
 
-/* Оверлей загрузки */
-.btn-loading-overlay {
+/* Слой прогресса (заполнение зеленым) */
+.btn-progress-fill {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    width: 0%;
+    transition: width 0.2s linear; /* Плавное заполнение */
     z-index: 1;
+}
+
+/* Текст поверх прогресс-бара */
+.btn-text, .btn-status {
+    position: relative;
+    z-index: 2;
+    display: block;
+    text-align: center;
     pointer-events: none;
 }
 
-/* Полоса прогресса */
-.btn-loading-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #4CAF50, #8BC34A);
-    transition: width 0.2s linear;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
-}
-
-/* Текст статуса */
 .btn-status {
-    display: block;
-    font-size: 0.7em;
-    margin-top: 4px;
-    opacity: 0.9;
-    font-family: 'Orbitron', sans-serif;
+    font-size: 0.65em;
+    margin-top: 6px;
+    opacity: 0.8;
+    font-weight: normal;
 }
 
-/* Анимация пульсации для готовой кнопки */
-@keyframes continuePulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
-    50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+/* Состояние: ГОТОВО (полностью зелёная) */
+.btn-continue.ready {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
 }
 
-#continueBtn.ready {
-    animation: continuePulse 2s infinite;
+/* Состояние: ОШИБКА (красная) */
+.btn-continue.error {
+    background: #f44336;
+    border-color: #f44336;
+    cursor: not-allowed;
 }
