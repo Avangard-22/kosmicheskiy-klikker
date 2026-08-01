@@ -18,15 +18,6 @@ let isSyncing = false;
 let isOperationLocked = false;
 let pendingOperations = [];
 let cloudSaveTimeout = null;
- // ============================================
-// СОСТОЯНИЕ ЗАГРУЗКИ
-// ============================================
-let isLoadingFromCloud = false;
-let cloudLoadCompleted = false;
-let cloudLoadStartTime = 0;
-let firstSaveTimer = null;
-const CLOUD_LOAD_TIMEOUT = 30000; // 30 секунд
-const FIRST_SAVE_DELAY = 15000;   // 15 секунд
 
 // ============================================
 // 🔒 БЛОКИРОВКА СИНХРОНИЗАЦИИ
@@ -402,12 +393,6 @@ window.saveGame = function() {
     try {
         if (!window.gameState) return false;
         
-        // ✅ ЖЕСТКАЯ БЛОКИРОВКА: Запрещаем любое сохранение, пока идёт загрузка
-        if (isLoadingFromCloud && !cloudLoadCompleted) {
-            console.log('⏳ [SAVE] ОТМЕНА: идёт загрузка из облака, сохранение заблокировано');
-            return false;
-        }
-        
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
             saveBtn.classList.add('save-pending');
@@ -453,12 +438,6 @@ window.flushCloudSave = function() {
 // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
-    // ✅ ЖЕСТКАЯ БЛОКИРОВКА: Дублируем защиту на уровне самого запроса
-    if (isLoadingFromCloud && !cloudLoadCompleted) {
-        console.log('⏳ [SAVE] Пропуск: загрузка из облака ещё не завершена');
-        return;
-    }
-
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
@@ -523,126 +502,59 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
-        isLoadingFromCloud = true;
-        cloudLoadCompleted = false;
-        const startTime = Date.now();
-        const TIMEOUT_MS = 30000; // 30 секунд
-
-        updateContinueButton('loading', 0);
-
-        // ✅ Симуляция прогресса загрузки (растёт до 90% за 30 секунд)
-        const progressInterval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
-            if (elapsed >= TIMEOUT_MS) {
-                clearInterval(progressInterval);
-                updateContinueButton('timeout', 100);
-                isLoadingFromCloud = false;
-                cloudLoadCompleted = true;
-                throw new Error('Cloud load timeout');
-            }
-            const fakeProgress = Math.min(90, (elapsed / TIMEOUT_MS) * 90);
-            updateContinueButton('loading', fakeProgress);
-        }, 100);
-
-        // Ждём инициализации telegramCloud
+        // ✅ Ждём инициализации telegramCloud (максимум 1 секунду), чтобы избежать гонки потоков
         let retries = 0;
-        while (!window.telegramCloud && retries < 30) {
+        while (!window.telegramCloud && retries < 10) {
             await new Promise(r => setTimeout(r, 100));
             retries++;
         }
 
         if (!window.telegramCloud?.isAvailable) {
-            throw new Error('Telegram Cloud unavailable');
+            console.warn('⚠️ [LOAD] Облако недоступно (не Telegram или ошибка инициализации). Начинаем новую игру.');
+            return false;
         }
-
-        // Делаем реальный запрос
+        
         const result = await window.telegramCloud.loadProgress();
-        clearInterval(progressInterval); // Останавливаем симуляцию
-
+        
         if (result?.success && result.data) {
             console.log('☁️ [LOAD] Данные успешно загружены из облака');
             applyCloudData(result.data);
-            updateContinueButton('ready', 100); // Мгновенно заполняем до 100%
-            isLoadingFromCloud = false;
-            cloudLoadCompleted = true;
             return true;
         } else {
             console.log('☁️ [LOAD] Облако пустое. Начинаем новую игру.');
-            updateContinueButton('ready', 100); // Разрешаем начать новую игру
-            isLoadingFromCloud = false;
-            cloudLoadCompleted = true;
             return false;
         }
     } catch (e) {
         console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
-        updateContinueButton('error', 100);
-        isLoadingFromCloud = false;
-        cloudLoadCompleted = true;
         return false;
     }
 };
 
-// ============================================
-// УПРАВЛЕНИЕ КНОПКОЙ "ПРОДОЛЖИТЬ"
-// ============================================
-function updateContinueButton(status, progress) {
-    const btn = document.getElementById('continueBtn');
-    if (!btn) return;
-
-    const progressBar = btn.querySelector('.btn-progress-fill');
-    const statusText = btn.querySelector('.btn-status');
-
-    if (status === 'loading') {
-        btn.disabled = true;
-        btn.classList.remove('ready', 'error');
-        if (progressBar) progressBar.style.width = progress + '%';
-        if (statusText) statusText.textContent = `⏳ Загрузка сохранения... ${Math.round(progress)}%`;
-    } 
-    else if (status === 'ready') {
-        btn.disabled = false;
-        btn.classList.remove('error');
-        btn.classList.add('ready');
-        if (progressBar) progressBar.style.width = '100%';
-        if (statusText) {
-            statusText.textContent = '✅ Готово к игре';
-            setTimeout(() => { if(statusText) statusText.style.opacity = '0'; }, 2000);
-        }
-    } 
-    else if (status === 'error' || status === 'timeout') {
-        btn.disabled = true;
-        btn.classList.remove('ready');
-        btn.classList.add('error');
-        if (progressBar) progressBar.style.width = '100%';
-        if (statusText) statusText.textContent = status === 'timeout' ? '⏰ Превышено время (30с)' : '❌ Ошибка сети';
-        
-        setTimeout(() => {
-            alert('Ошибка загрузки сохранения. Пожалуйста, проверьте интернет и перезагрузите страницу.');
-        }, 100);
-    }
-}
-window.updateContinueButton = updateContinueButton;
-
 window.cloudInit = async function() {
     try {
         const loaded = await window.loadGame();
-        
         if (loaded) {
+            console.log('✅ [INIT] Данные загружены из облака');
             if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
             if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
             if (window.showTooltip) {
                 window.showTooltip('☁️ Прогресс синхронизирован!');
                 setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
+        } else {
+            console.log('️ [INIT] Облако пустое — начинаем новую игру');
+            // ✅ НЕ вызываем cloudSaveAsync() если игра только началась!
+            // Игрок сам нажмёт "Сохранить" или игра сохранится автоматически
         }
         
-        // ✅ НЕ сохраняем сразу! Ждём активации кнопки пользователем
-        
+        // ✅ НОВОЕ: Сигнализируем о готовности gameState
         if (window.EventBus) {
             window.EventBus.emit('save:ready');
             console.log('📡 [SAVE] Эмитировано событие save:ready');
         }
     } catch (e) {
-        console.error('❌ [CLOUD-INIT] Критическая ошибка:', e);
+        console.error('❌ [INIT] Ошибка инициализации:', e);
+        console.warn('⚠️ Начинаем новую игру из-за ошибки');
     }
 };
 
@@ -712,10 +624,7 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
 function startAutoSave() {
     if (autoSaveTimer) clearInterval(autoSaveTimer);
     autoSaveTimer = setInterval(() => {
-        // ✅ Сохраняем только если игра активна И загрузка из облака полностью завершена
-        if (window.gameState && window.gameState.gameActive && cloudLoadCompleted) {
-            window.saveGame();
-        }
+        if (window.gameState && window.gameState.gameActive) window.saveGame();
     }, AUTO_SAVE_INTERVAL);
 }
 
