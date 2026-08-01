@@ -402,6 +402,12 @@ window.saveGame = function() {
     try {
         if (!window.gameState) return false;
         
+        // ✅ ЖЕСТКАЯ БЛОКИРОВКА: Запрещаем любое сохранение, пока идёт загрузка
+        if (isLoadingFromCloud && !cloudLoadCompleted) {
+            console.log('⏳ [SAVE] ОТМЕНА: идёт загрузка из облака, сохранение заблокировано');
+            return false;
+        }
+        
         const saveBtn = document.getElementById('saveBtn');
         if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
             saveBtn.classList.add('save-pending');
@@ -447,6 +453,12 @@ window.flushCloudSave = function() {
 // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
+    // ✅ ЖЕСТКАЯ БЛОКИРОВКА: Дублируем защиту на уровне самого запроса
+    if (isLoadingFromCloud && !cloudLoadCompleted) {
+        console.log('⏳ [SAVE] Пропуск: загрузка из облака ещё не завершена');
+        return;
+    }
+
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
@@ -728,7 +740,10 @@ function showSaveIndicator(icon = '💾', text = 'Сохранено', color = '
 function startAutoSave() {
     if (autoSaveTimer) clearInterval(autoSaveTimer);
     autoSaveTimer = setInterval(() => {
-        if (window.gameState && window.gameState.gameActive) window.saveGame();
+        // ✅ Сохраняем только если игра активна И загрузка из облака полностью завершена
+        if (window.gameState && window.gameState.gameActive && cloudLoadCompleted) {
+            window.saveGame();
+        }
     }, AUTO_SAVE_INTERVAL);
 }
 
