@@ -589,7 +589,7 @@ window.loadGame = async function() {
     }
 };
 
- // ============================================
+// ============================================
 // УПРАВЛЕНИЕ КНОПКОЙ "ПРОДОЛЖИТЬ"
 // ============================================
 function updateContinueButton(status, progress) {
@@ -609,7 +609,7 @@ function updateContinueButton(status, progress) {
             btn.classList.remove('ready', 'error');
             btn.classList.add('loading');
             btnText.textContent = 'Продолжить';
-            btnStatus.textContent = ' Загрузка...';
+            btnStatus.textContent = '⏳ Загрузка...';
             loadingOverlay.style.display = 'block';
             loadingBar.style.width = progress + '%';
             break;
@@ -635,11 +635,10 @@ function updateContinueButton(status, progress) {
             btn.classList.add('error');
             btnText.textContent = 'Ошибка';
             btnStatus.textContent = status === 'timeout' 
-                ? '⏰ Превышено время загрузки (30 сек)' 
-                : '❌ Ошибка соединения';
+                ? '⏰ Превышено время (30 сек)' 
+                : '❌ Ошибка загрузки';
             loadingOverlay.style.display = 'none';
             
-            // Показываем сообщение
             setTimeout(() => {
                 alert('Ошибка загрузки сохранения. Пожалуйста, перезагрузите страницу.');
             }, 100);
