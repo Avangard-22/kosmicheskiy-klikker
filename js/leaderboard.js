@@ -217,12 +217,12 @@ const Leaderboard = {
                 <button class="lb-tab active" data-period="time">Время<br><small style="font-size:0.7em;opacity:0.7">в игре</small></button>
             </div>
             <div class="lb-subtabs" id="lbBlockSubtabs" style="display:none;">
-                <button class="lb-subtab" data-block-period="daily">24 часа</button>
+                <button class="lb-subtab" data-block-period="daily">Сутки</button>
                 <button class="lb-subtab" data-block-period="weekly">7 дней</button>
                 <button class="lb-subtab active" data-block-period="total">Всё время</button>
             </div>
             <div class="lb-subtabs" id="lbDistanceSubtabs" style="display:none;">
-                <button class="lb-subtab" data-distance-period="daily">24 часа</button>
+                <button class="lb-subtab" data-distance-period="daily">Сутки</button>
                 <button class="lb-subtab" data-distance-period="weekly">7 дней</button>
                 <button class="lb-subtab active" data-distance-period="total">Всё время</button>
             </div>
