@@ -1,4 +1,4 @@
- // js/save-system.js (v4.1 — ТОЛЬКО серверное сохранение)
+// js/save-system.js (v4.0 — ТОЛЬКО серверное сохранение)
 (function() {
 'use strict';
 
@@ -72,13 +72,8 @@ planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей план�
     unlockedLocations: ['mercury'],
     boboSkin: 'default',
     dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
-    dailyProgress: null, // ✅ ЧИСТОЕ РЕШЕНИЕ: хранится ВНУТРИ gameState и сохраняется на сервер автоматически
     
-    // ✅ НОВОЕ: Динамические цены магазина (сохраняются в облако)
-    shopPurchaseCount: 0,
-    shopPriceMultiplier: 1.0,
-    
-    // ✅ НОВОЕ: Состояние системы достижений v2
+    // ✅ НОВОЕ: Состояние системы достижений v2 (создаётся динамически в ensureAchievementsV2Structure)
     achievementsV2: {}
     // skipPenaltyState создаётся динамически в ensureSkipPenaltyState()
 };
@@ -107,27 +102,18 @@ const DEFAULT_GAME_METRICS = {
 // УТИЛИТЫ
 // ============================================
 function deepMerge(defaults, saved) {
-    // Если saved не объект — возвращаем как есть
     if (typeof saved !== 'object' || saved === null) return saved;
     if (Array.isArray(saved)) return [...saved];
-    
-    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: создаём результат из saved, а не из defaults
-    // Это гарантирует, что данные из облака полностью заменят дефолтные
-    const result = Object.assign({}, saved);
-    
-    // Добавляем отсутствующие поля из defaults (для обратной совместимости)
-    if (defaults) {
-        for (const key in defaults) {
-            if (defaults.hasOwnProperty(key) && !(key in result)) {
-                if (typeof defaults[key] === 'object' && defaults[key] !== null && !Array.isArray(defaults[key])) {
-                    result[key] = deepMerge(defaults[key], result[key] || {});
-                } else {
-                    result[key] = defaults[key];
-                }
+    const result = Object.assign({}, defaults || {});
+    for (const key in saved) {
+        if (saved.hasOwnProperty(key)) {
+            if (typeof saved[key] === 'object' && saved[key] !== null && !Array.isArray(saved[key])) {
+                result[key] = deepMerge(defaults ? defaults[key] : {}, saved[key]);
+            } else {
+                result[key] = saved[key];
             }
         }
     }
-    
     return result;
 }
 
@@ -320,8 +306,6 @@ function extractCloudData() {
     const username = (typeof window.getTelegramUsername === 'function') 
         ? window.getTelegramUsername()
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
-    
-    // ✅ dailyProgress теперь часть gameState, он сохранится автоматически внутри full_game_state
     return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
@@ -371,15 +355,13 @@ function applyCloudData(cloudData) {
         console.warn('⚠️ [LOAD] full_game_metrics отсутствует в облачных данных');
     }
     
+    reconstructMetricsFromAchievements();
     
+    // ✅ НОВОЕ: Гарантируем полную структуру после загрузки
     ensurePlanetStatsStructure();
     ensureAchievementsV2Structure();
     ensureSkipPenaltyState();
-    
-    // ✅ dailyProgress восстанавливается автоматически функцией deepMerge выше, 
-    // так как он теперь является частью full_game_state.
 }
-
 
 // ============================================
 // ПУБЛИЧНЫЙ API СОХРАНЕНИЯ
@@ -439,43 +421,23 @@ window.flushCloudSave = function() {
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
+    
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
-    
-    // ✅ КРИТИЧЕСКАЯ ПРОВЕРКА: НЕ сохраняем пустое/дефолтное состояние!
-    const hasRealData = (
-        (gs?.coins || 0) > 100 ||           // Хотя бы 100 кристаллов
-        (gs?.totalDamageDealt || 0) > 1000 ||  // Хотя бы 1000 урона
-        (gs?.clickUpgradeLevel || 0) > 0 ||    // Хотя бы 1 апгрейд
-        (gs?.currentLocation && gs.currentLocation !== 'mercury') || // Или другая планета
-        (Object.keys(gs?.achievementsV2 || {}).length > 0) // Или есть достижения
-    );
-    
+    const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury');
     const isNewGame = gs?._isNewGame === true;
     
     if (!hasRealData && !isNewGame) {
-        console.warn('⚠️ [SAVE] ОТМЕНА СОХРАНЕНИЯ: gameState пустой или дефолтный!');
-        console.log('📊 Текущее состояние:', {
-            coins: gs?.coins,
-            damage: gs?.totalDamageDealt,
-            upgrades: gs?.clickUpgradeLevel,
-            location: gs?.currentLocation,
-            achievements: Object.keys(gs?.achievementsV2 || {}).length
-        });
-        return;  // ✅ НЕ СОХРАНЯЕМ ПУСТОЕ СОСТОЯНИЕ!
+        console.log('☁️ [SAVE] Пропуск: нет реальных данных и это не новая игра');
+        return;
     }
     
     isSyncing = true;
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
-            console.log('☁️ [SAVE] Сохраняем в облако:', {
-                coins: cloudData.crystals,
-                damage: cloudData.score,
-                location: cloudData.level
-            });
             const result = await window.telegramCloud.saveProgress(cloudData);
             if (result?.success) {
                 lastCloudSync = now;
@@ -485,7 +447,6 @@ async function cloudSaveAsync() {
             }
         }
     } catch (e) {
-        console.error('❌ [SAVE] Ошибка сохранения:', e);
         showSaveIndicator('❌', 'Ошибка сети', '#f44336');
     } finally {
         isSyncing = false;
@@ -502,22 +463,15 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
-        // ✅ Ждём инициализации telegramCloud (максимум 1 секунду), чтобы избежать гонки потоков
-        let retries = 0;
-        while (!window.telegramCloud && retries < 10) {
-            await new Promise(r => setTimeout(r, 100));
-            retries++;
-        }
-
         if (!window.telegramCloud?.isAvailable) {
-            console.warn('⚠️ [LOAD] Облако недоступно (не Telegram или ошибка инициализации). Начинаем новую игру.');
+            console.warn('⚠️ [LOAD] Облако недоступно. Начинаем новую игру.');
             return false;
         }
         
         const result = await window.telegramCloud.loadProgress();
         
         if (result?.success && result.data) {
-            console.log('☁️ [LOAD] Данные успешно загружены из облака');
+            console.log('☁️ [LOAD] Данные загружены из облака');
             applyCloudData(result.data);
             return true;
         } else {
@@ -526,6 +480,7 @@ window.loadGame = async function() {
         }
     } catch (e) {
         console.error('❌ [LOAD] Ошибка загрузки из облака:', e);
+        console.warn('⚠️ [LOAD] Начинаем новую игру из-за ошибки облака');
         return false;
     }
 };
@@ -534,7 +489,6 @@ window.cloudInit = async function() {
     try {
         const loaded = await window.loadGame();
         if (loaded) {
-            console.log('✅ [INIT] Данные загружены из облака');
             if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
             if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
             if (window.showTooltip) {
@@ -542,9 +496,7 @@ window.cloudInit = async function() {
                 setTimeout(() => window.hideTooltip && window.hideTooltip(), 2500);
             }
         } else {
-            console.log('️ [INIT] Облако пустое — начинаем новую игру');
-            // ✅ НЕ вызываем cloudSaveAsync() если игра только началась!
-            // Игрок сам нажмёт "Сохранить" или игра сохранится автоматически
+            await cloudSaveAsync();
         }
         
         // ✅ НОВОЕ: Сигнализируем о готовности gameState
@@ -553,8 +505,7 @@ window.cloudInit = async function() {
             console.log('📡 [SAVE] Эмитировано событие save:ready');
         }
     } catch (e) {
-        console.error('❌ [INIT] Ошибка инициализации:', e);
-        console.warn('⚠️ Начинаем новую игру из-за ошибки');
+        console.warn(e);
     }
 };
 
