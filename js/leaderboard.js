@@ -164,15 +164,28 @@ if (period === 'daily' || period === 'weekly') {
             // ✅ Отправляем dailyProgress для server-side расчёта
             const dailyProgress = window.gameState?.dailyProgress || null;
             
-            const result = await window.telegramCloud.submitLeaderboard({
-                blocks: distances.blocks,
-                distance: distances.distance,
-                time: distances.time,
-                username: username,
-                userId: userId,
-                level: window.gameState?.currentLocation || 'mercury',
-                dailyProgress: dailyProgress
-            });
+const totalDist = this.calculateDistances('total');
+const dailyDist = this.calculateDistances('daily');
+const weeklyDist = this.calculateDistances('weekly');
+
+const result = await window.telegramCloud.submitLeaderboard({
+    // Все время
+    blocks: totalDist.blocks,
+    distance: totalDist.distance,
+    time: totalDist.time,
+    // 24 часа
+    daily_blocks: dailyDist.blocks,
+    daily_distance: dailyDist.distance,
+    // 7 дней
+    weekly_blocks: weeklyDist.blocks,
+    weekly_distance: weeklyDist.distance,
+    // Мета
+    username: username,
+    userId: userId,
+    level: window.gameState?.currentLocation || 'mercury',
+    dailyProgress: dailyProgress
+});
+
 
             
             if (result?.success) {
