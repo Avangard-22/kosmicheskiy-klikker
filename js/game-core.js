@@ -179,17 +179,12 @@ this.animateBlock(block);
     animateBlock: function(block) {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
-        let lastTime = performance.now();
-        const move = (now) => {
+        const move = () => {
             if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
-                lastTime = performance.now(); // Сброс при паузе — нет скачка
                 requestAnimationFrame(move); return;
             }
-            const dt = Math.min((now - lastTime) / 1000, 0.1); // Макс 100мс
-            lastTime = now;
-            pos += this.getCurrentSpeed() * dt;
+            pos += this.getCurrentSpeed() / 30;
             block.style.bottom = pos + 'px';
-         
          if (pos > window.innerHeight) {
     // ── СТАРЫЙ ШТРАФ: дебаф на апгрейды (сохраняем как есть) ──
     if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
@@ -280,9 +275,8 @@ this.animateBlock(block);
 }
             requestAnimationFrame(move);
         };
-        requestAnimationFrame(move);  // ✅ Передаёт timestamp в now
+        move();
     },
-
 
 // ЧТО: Делегируем математику урона/критов/метрик в CombatSystem.applyHit()
 // КУДА: game-core.js → GAME_CORE.hitBlock()
