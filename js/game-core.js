@@ -179,12 +179,17 @@ this.animateBlock(block);
     animateBlock: function(block) {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
-        const move = () => {
+        let lastTime = performance.now();
+        const move = (now) => {
             if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
+                lastTime = performance.now(); // Сброс при паузе — нет скачка
                 requestAnimationFrame(move); return;
             }
-            pos += this.getCurrentSpeed() / 30;
+            const dt = Math.min((now - lastTime) / 1000, 0.1); // Макс 100мс
+            lastTime = now;
+            pos += this.getCurrentSpeed() * dt;
             block.style.bottom = pos + 'px';
+
          if (pos > window.innerHeight) {
     // ── СТАРЫЙ ШТРАФ: дебаф на апгрейды (сохраняем как есть) ──
     if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
@@ -831,6 +836,111 @@ setLocation: function(loc) {
     UI.updateProgressBar();
 },
 
+     /**
+     * ✅ НОВОЕ: Предзагрузка данных из облака ПОКА ИГРОК НА ТИТУЛЬНОМ ЭКРАНЕ
+     * Прогресс-бар на кнопке «Продолжить» → при 100% кнопка активна
+     * Первое сохранение блокируется на 15 сек после нажатия
+     */
+    preloadCloudData: async function() {
+        const btn = document.getElementById('continueBtn');
+        if (!btn) return;
+        
+        // Создаём overlay прогресс-бар внутри кнопки
+        let overlay = document.getElementById('continueBtnOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'continueBtnOverlay';
+            overlay.className = 'btn-progress-overlay';
+            overlay.innerHTML = '<div class="btn-progress-fill"></div><span class="btn-progress-text">⏳ Загрузка...</span>';
+            btn.style.position = 'relative';
+            btn.style.overflow = 'hidden';
+            btn.appendChild(overlay);
+        }
+        
+        const fill = overlay.querySelector('.btn-progress-fill');
+        const text = overlay.querySelector('.btn-progress-text');
+        
+        // Блокируем кнопку
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        this._cloudLoadActive = false; // Флаг: данные загружены
+        
+        const setProgress = (pct, msg) => {
+            if (fill) fill.style.width = pct + '%';
+            if (text) text.textContent = msg || `${Math.round(pct)}%`;
+        };
+        
+        // Имитация прогресса (пока идёт загрузка)
+        let fakeProgress = 0;
+        const fakeTimer = setInterval(() => {
+            fakeProgress = Math.min(fakeProgress + Math.random() * 8, 85);
+            setProgress(fakeProgress);
+        }, 150);
+        
+        try {
+            // Ждём telegramCloud
+            let retries = 0;
+            while (!window.telegramCloud && retries < 20) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+            
+            if (!window.telegramCloud?.isAvailable) {
+                clearInterval(fakeTimer);
+                setProgress(100, 'Нет облака');
+                // Нет облака — разрешаем новую игру
+                btn.disabled = false;
+                btn.classList.remove('btn-loading');
+                this._cloudLoadActive = true;
+                return;
+            }
+            
+            setProgress(50, '☁️ Загрузка...');
+            
+            const result = await window.telegramCloud.loadProgress();
+            
+            clearInterval(fakeTimer);
+            
+            if (result?.success && result.data) {
+                // Есть данные — накатываем
+                setProgress(70, '💾 Восстановление...');
+                await new Promise(r => setTimeout(r, 200)); // Даём UI обновиться
+                
+                if (typeof window.applyCloudData === 'function') {
+                    window.applyCloudData(result.data);
+                } else if (typeof window.loadGame === 'function') {
+                    await window.loadGame();
+                }
+                
+                setProgress(90, '✅ Готово!');
+                await new Promise(r => setTimeout(r, 150));
+                
+                this._cloudLoadActive = true;
+                console.log('☁️ [PRELOAD] Данные загружены из облака');
+            } else {
+                // Облако пустое — новая игра
+                setProgress(100, '🚀 Новая игра');
+                this._cloudLoadActive = true;
+                console.log('☁️ [PRELOAD] Облако пустое — новая игра');
+            }
+            
+            // Активируем кнопку
+            setProgress(100, '▶ Продолжить');
+            btn.disabled = false;
+            btn.classList.remove('btn-loading');
+            btn.classList.add('btn-ready');
+            
+        } catch (e) {
+            clearInterval(fakeTimer);
+            console.error('❌ [PRELOAD] Ошибка:', e);
+            setProgress(100, '▶ Продолжить');
+            btn.disabled = false;
+            btn.classList.remove('btn-loading');
+            this._cloudLoadActive = true;
+        }
+    },
+
+ 
     startGame: function(reset = true) {
         console.log('🚀 Start, reset =', reset);
         if (reset) {
@@ -902,99 +1012,37 @@ setTimeout(() => this.createMovingBlock(), 500);
      * - cloudInit сам загружает данные из облака
      * - gameState инициализируется дефолтными значениями до cloudInit
      */
-    continueGame: async function() {
-        console.log('🔄 [GAME] Starting continueGame...');
-
-        // ✅ Инициализируем gameState дефолтными значениями
-        // (на случай, если облако пустое — игра начнётся с нуля)
-        if (!window.gameState || Object.keys(window.gameState).length === 0) {
-         window.gameState = {
-             coins: 0,
-             clickPower: 1,
-             critChance: 0.001,
-             critMultiplier: 2.0,
-             currentLocation: 'mercury',
-             totalDamageDealt: 0,
-         planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей планете
-             clickUpgradeLevel: 0,
-             critChanceUpgradeLevel: 0,
-             critMultiplierUpgradeLevel: 0,
-             helperUpgradeLevel: 0,
-             helperActivations: 0,
-             helperActive: false,
-             helperTimeLeft: 0,
-             helperDamageBonus: 0,
-             boboCoinBonus: 0,
-             comboCount: 0,
-             lastDestroyTime: 0,
-             gameActive: false,
-             gamePaused: false,
-             achievements: {},
-             shopItems: {},
-             permanentBonuses: {},
-             unlockedLocations: ['mercury'],
-             boboSkin: 'default',
-             dailyBonus: {
-                 lastClaimDate: null,
-                 currentDay: 1,
-                 totalClaimed: 0,
-                 streak: 0
-             },
-             // ✅ НОВОЕ: Система достижений v2
-             achievementsV2: {
-                 mercury: { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false }
-             }
-         };
-            console.log('🔄 [GAME] gameState инициализирован дефолтными значениями');
+       continueGame: async function() {
+        console.log('🔄 [GAME] continueGame — данные уже загружены в preloadCloudData');
+        
+        // ✅ Блокируем сохранения на 15 сек (защита от перезаписи)
+        if (typeof window.startSaveBlock === 'function') {
+            window.startSaveBlock(15000);
         }
-
-        if (!window.gameMetrics || Object.keys(window.gameMetrics).length === 0) {
-            window.gameMetrics = {
-                startTime: 0,
-                blocksDestroyed: 0,
-                upgradesBought: 0,
-                totalClicks: 0,
-                totalCrits: 0,
-                totalCoinsEarned: 0,
-                helpersBought: 0,
-                boostersUsed: 0,
-                maxCombo: 0,
-                rareBlocksDestroyed: 0,
-                sessions: 0
-            };
+        
+        // Убираем overlay с кнопки
+        const overlay = document.getElementById('continueBtnOverlay');
+        if (overlay) {
+            overlay.classList.add('btn-loaded');
+            setTimeout(() => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 500);
         }
-
-        // ✅ Загружаем из облака (асинхронно)
-        // cloudInit сам вызывает loadGame() внутри себя
-        if (typeof window.cloudInit === 'function') {
-            console.log('☁️ [GAME] cloudInit вызывается...');
-            try {
-                await window.cloudInit();
-                console.log('☁️ [GAME] cloudInit завершён');
-            } catch (e) {
-                console.error('☁️ [GAME] cloudInit error:', e);
-            }
-        } else {
-            console.warn('⚠️ [GAME] cloudInit function NOT found');
-        }
-
-        // ✅ Запускаем игру с загруженными данными
-        console.log('✅ [GAME] Load successful, starting game...');
-        console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
-        console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
-
+        
+        const ws = document.getElementById('welcomeScreen');
+        if (ws) ws.style.display = 'none';
+        
+        // Данные уже в gameState (из preloadCloudData)
         UI.updateHUD();
         UI.updateUpgradeButtons();
         UI.updateProgressBar();
         this.setLocation(window.gameState.currentLocation);
         this.startGame(false);
-
+        
         if (window.showTooltip && window.formatString) {
             const t = window.formatString('Игра загружена! Кристаллы: {coins}', {
                 coins: Math.floor(window.gameState.coins || 0).toLocaleString()
             });
             window.showTooltip(t);
-            setTimeout(window.hideTooltip, 3000);
+            setTimeout(() => window.hideTooltip && window.hideTooltip(), 3000);
         }
     },
 
@@ -1082,17 +1130,17 @@ setTimeout(() => this.createMovingBlock(), 500);
 
         const contBtn = document.getElementById('continueBtn');
         if (contBtn) {
-            contBtn.addEventListener('click', () => {
-                const ws = document.getElementById('welcomeScreen');
-                if (ws) ws.style.display = "none";
-                this.continueGame();
-            });
-            contBtn.addEventListener('touchstart', e => {
+            // ✅ Кнопка заблокирована до завершения preloadCloudData
+            contBtn.disabled = true;
+            
+            const handleContinue = (e) => {
                 e.preventDefault();
-                const ws = document.getElementById('welcomeScreen');
-                if (ws) ws.style.display = "none";
+                if (contBtn.disabled) return; // Не кликабельна пока грузится
                 this.continueGame();
-            }, { passive: false });
+            };
+            
+            contBtn.addEventListener('click', handleContinue);
+            contBtn.addEventListener('touchstart', handleContinue, { passive: false });
         }
 
         const add = (id, fn) => {
@@ -1220,22 +1268,33 @@ function onGameReady() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Если gameState уже есть — запускаем сразу
-    if (window.gameState && Object.keys(window.gameState).length > 0) {
-        console.log('✅ [CORE] gameState уже доступен, запускаем инициализацию');
-        onGameReady();
-    } else if (window.EventBus) {
-        // Иначе ждём события save:ready
-        console.log('⏳ [CORE] Ждём save:ready...');
-        window.EventBus.once('save:ready', () => {
-            console.log('✅ [CORE] save:ready получен, запускаем инициализацию');
-            onGameReady();
-        });
+    console.log('🚀 [CORE] DOMContentLoaded');
+    
+    // 1. Инициализируем UI (создаём кнопки, обработчики)
+    onGameReady();
+    
+    // 2. Запускаем предзагрузку из облака (прогресс-бар на «Продолжить»)
+    //    НЕ блокирует UI — работает асинхронно
+    if (window.gameState && Object.keys(window.gameState).length > 1) {
+        // gameState уже есть (из save-system.js init) — проверяем есть ли реальные данные
+        const hasData = (window.gameState.coins || 0) > 0 || (window.gameState.totalDamageDealt || 0) > 0;
+        if (hasData) {
+            // Уже загружено — активируем кнопку сразу
+            const btn = document.getElementById('continueBtn');
+            if (btn) { btn.disabled = false; btn.classList.add('btn-ready'); }
+            console.log('✅ [CORE] gameState уже загружен');
+        } else {
+            // Пустой gameState — загружаем из облака
+            this.preloadCloudData();
+        }
     } else {
-        // Fallback: если EventBus недоступен, используем старый способ
-        console.warn('⚠️ [CORE] EventBus недоступен, fallback на прямую инициализацию');
-        onGameReady();
+        this.preloadCloudData();
+    }
+    
+    // 3. Новая игра — не требует загрузки, кнопка сразу активна
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+        // startBtn работает сразу — никакой блокировки
     }
 });
 
-})();
