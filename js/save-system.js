@@ -19,28 +19,6 @@ let isOperationLocked = false;
 let pendingOperations = [];
 let cloudSaveTimeout = null;
 
-// ══════════════════════════════════════════════
-// 🔒 ЗАТВОР СОХРАНЕНИЙ
-// Пока игрок на титульном экране — сохранения ЗАПРЕЩЕНЫ,
-// иначе дефолтный gameState перезапишет облако.
-// Разблокировка: continueGame (после загрузки) или startGame (новая игра)
-// ══════════════════════════════════════════════
-let titleScreenActive = true;      // true пока не нажата «Продолжить»
-let postLoadBlockUntil = 0;        // защитный период после загрузки (15с)
-
-window.unlockSaves = function(postLoadDelayMs = 0) {
-    titleScreenActive = false;
-    postLoadBlockUntil = Date.now() + (postLoadDelayMs || 0);
-    console.log('🔓 [SAVE] Сохранения разрешены' + 
-                (postLoadDelayMs ? ' (защитный период ' + postLoadDelayMs + 'мс)' : ''));
-};
-
-window.canSave = function() {
-    if (titleScreenActive) return false;                // титульный экран
-    if (Date.now() < postLoadBlockUntil) return false;  // защита после загрузки
-    return true;
-};
-
 // ============================================
 // 🔒 БЛОКИРОВКА СИНХРОНИЗАЦИИ
 // ============================================
@@ -443,17 +421,11 @@ function debouncedCloudSave() {
 }
 
 window.flushCloudSave = function() {
-    // 🔒 ЗАТВОР: закрытие вкладки на титульном экране НЕ должно затирать облако!
-    if (!window.canSave()) {
-        console.warn('🔒 [SAVE] flushCloudSave пропущен: титульный экран, облако не тронуто');
-        return;
-    }
     if (cloudSaveTimeout) {
         clearTimeout(cloudSaveTimeout);
         cloudSaveTimeout = null;
     }
     if (window.telegramCloud?.saveProgressCritical) {
-
         const cloudData = extractCloudData();
         if (cloudData) window.telegramCloud.saveProgressCritical(cloudData);
     } else {
@@ -466,14 +438,8 @@ window.flushCloudSave = function() {
 // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
-    // 🔒 ЗАТВОР: на титульном экране / в защитном периоде — не сохраняем
-    if (!window.canSave()) {
-        console.warn('🔒 [SAVE] Пропуск: сохранения заблокированы (титульный экран / защита)');
-        return;
-    }
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
     const now = Date.now();
-
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
