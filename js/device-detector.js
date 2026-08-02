@@ -141,45 +141,28 @@ const DeviceDetector = {
         if (!this.deviceInfo) this.detect();
         
         const settings = {
-            // Базовые настройки для всех
-            blockSpeed: 20,
-            blockHealth: 1,
+            // ✅ ЧЕСТНАЯ СЛОЖНОСТЬ: скорость зависит ТОЛЬКО от высоты экрана.
+            // Блок пересекает экран за фиксированное время: 14с (мобилка) / 11с (десктоп)
+            blockSpeed: Math.floor((window.innerHeight || 700) / (window.GAME_CONFIG?.isMobile ? 14 : 11)),
+            blockHealth: 1,  // ✅ Одинаковое HP на всех устройствах
             particleDensity: 1,
             fpsTarget: 60
         };
         
-        // 🔧 Адаптация под Realme 10 Pro 5G и подобные
-        if (this.deviceInfo.brand === 'Realme' && this.deviceInfo.model.includes('10')) {
-            console.log(' [DEVICE] Realme 10 Pro detected - applying optimizations');
-            settings.blockSpeed = 35; // Увеличиваем скорость
-            settings.blockHealth = 1.3; // Увеличиваем здоровье блоков
-            settings.particleDensity = 0.7; // Уменьшаем частицы
-            return settings;
-        }
-        
-        // Адаптация по tiers
+        // ✅ Адаптация ГРАФИКИ по производительности (не влияет на сложность!)
         switch (this.performanceTier) {
             case 'high':
-                // Высокая производительность
-                settings.blockSpeed = 25;
-                settings.blockHealth = 1.2;
                 settings.particleDensity = 1;
                 settings.fpsTarget = 60;
                 break;
                 
             case 'medium':
-                // Средняя производительность
-                settings.blockSpeed = 30;
-                settings.blockHealth = 1.1;
                 settings.particleDensity = 0.8;
                 settings.fpsTarget = 60;
                 break;
                 
             case 'low':
             default:
-                // Низкая производительность
-                settings.blockSpeed = 40;
-                settings.blockHealth = 1.5;
                 settings.particleDensity = 0.5;
                 settings.fpsTarget = 30;
                 break;
@@ -187,6 +170,7 @@ const DeviceDetector = {
         
         return settings;
     },
+
     
     // 🎨 Получение настроек графики
     getGraphicsSettings: function() {
