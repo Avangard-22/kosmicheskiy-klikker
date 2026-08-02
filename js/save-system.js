@@ -433,6 +433,18 @@ window.flushCloudSave = function() {
     }
 };
 
+// ✅ БЛОКИРОВКА СОХРАНЕНИЙ (первые 15 сек после входа в игру)
+let saveBlockUntil = 0;
+
+window.startSaveBlock = function(ms) {
+    saveBlockUntil = Date.now() + ms;
+    console.log('🔒 [SAVE] Saves blocked for ' + ms + 'ms (until ' + new Date(saveBlockUntil).toLocaleTimeString() + ')');
+};
+
+window.isSaveBlocked = function() {
+    return Date.now() < saveBlockUntil;
+};
+ 
 // ЧТО: Асинхронное сохранение в облако с проверкой _isNewGame
 // КУДА: save-system.js → cloudSaveAsync()
 // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
@@ -440,6 +452,10 @@ window.flushCloudSave = function() {
 async function cloudSaveAsync() {
     if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
     const now = Date.now();
+    if (now < saveBlockUntil) {
+        console.log('🔒 [SAVE] Blocked — ' + Math.ceil((saveBlockUntil - now) / 1000) + 's remaining');
+        return;
+    }
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
