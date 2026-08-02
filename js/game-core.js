@@ -176,107 +176,98 @@ this.animateBlock(block);
     });
 },
 
-    animateBlock: function(block) {
-        if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
-        let pos = parseFloat(block.style.bottom) || 0;
-        const move = () => {
-            if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
-                requestAnimationFrame(move); return;
-            }
-            pos += this.getCurrentSpeed() / 30;
-            block.style.bottom = pos + 'px';
-         if (pos > window.innerHeight) {
-    // ── СТАРЫЙ ШТРАФ: дебаф на апгрейды (сохраняем как есть) ──
-    if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
-    
-    // ✅ Сброс серии критов
-    if (window.gameMetrics) {
-        window.gameMetrics.currentCritStreak = 0;
-    }
-    
-    // ═══════════════════════════════════════════════════
-    // 📉 НОВОЕ: ПРОТОКОЛ ОТКАТА (активируется после 30%)
-    // ═══════════════════════════════════════════════════
-    const gs = window.gameState;
-    if (gs) {
-        const planet = gs.currentLocation || 'mercury';
-        const planetDamage = gs.planetDamageDealt || 0;
-        const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU || 
-                         CFG.astronomicalUnits?.[planet] || 0.38710;
-        const targetDamage = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
-        const progressPercent = targetDamage > 0 ? (planetDamage / targetDamage) * 100 : 0;
-        
-        // Инициализируем состояние протокола если его нет
-        if (!gs.skipPenaltyState) {
-            gs.skipPenaltyState = {
-                activated: false,
-                skipCount: 0,
-                rollbackCount: 0,
-                activationDistance: 0,
-                totalRolledBack: 0
-            };
+animateBlock: function(block) {
+    if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
+
+    let pos = parseFloat(block.style.bottom) || 0;
+    let lastTime = performance.now();
+
+    const move = (now) => {
+        // 1. Блок уничтожен или игра остановлена → ПРЕРЫВАЕМ цикл навсегда (НЕ зомби!)
+        if (!window.gameState?.gameActive || this.currentBlock !== block) {
+            return;   // ← вместо requestAnimationFrame(move)
         }
-        
-        const state = gs.skipPenaltyState;
-        
-        // 🔓 Активация протокола при достижении 30%
-        if (!state.activated && progressPercent >= 30) {
-            state.activated = true;
-            state.activationDistance = planetDamage;
-            console.log(`📊 [PENALTY] Протокол отката активирован на ${progressPercent.toFixed(1)}% (якорь: ${planetDamage.toFixed(0)})`);
+
+        // 2. Пауза → ждём, но блок ещё актуален, сбрасываем таймер
+        if (this.isGamePaused) {
+            lastTime = performance.now();
+            requestAnimationFrame(move);
+            return;
         }
-        
-        // Если протокол активирован — считаем пропуски
-        if (state.activated) {
-            state.skipCount++;
-            
-            // 📉 Каждые 6 пропусков — откат
-            if (state.skipCount >= 6) {
-                const MAX_ROLLBACKS = 10;
-                const MAX_ROLLBACK_PERCENT = 0.5; // 50% от якоря
-                
-                if (state.rollbackCount < MAX_ROLLBACKS) {
-                    const maxRollback = state.activationDistance * MAX_ROLLBACK_PERCENT;
-                    const remainingRollback = maxRollback - state.totalRolledBack;
-                    
-                    if (remainingRollback > 0) {
-                        // Случайный процент 5-15%
-                        const rollbackPercent = 5 + Math.random() * 10;
-                        let rollbackAmount = planetDamage * (rollbackPercent / 100);
-                        
-                        // Ограничиваем оставшимся лимитом
-                        rollbackAmount = Math.min(rollbackAmount, remainingRollback);
-                        
-                        // Применяем откат (не ниже 0)
-                        gs.planetDamageDealt = Math.max(0, planetDamage - rollbackAmount);
-                        state.totalRolledBack += rollbackAmount;
-                        state.rollbackCount++;
-                        
-                        // Обновляем прогресс-бар
-                        if (window.GAME_UI?.updateProgressBar) {
-                            window.GAME_UI.updateProgressBar();
+
+        // 3. Защита от NaN
+        if (!now) now = performance.now();
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        const speed = this.getCurrentSpeed() || 0;
+        pos += speed * dt;
+        block.style.bottom = pos + 'px';
+
+        // 4. Блок улетел за экран → штраф + новый блок
+        if (pos > window.innerHeight) {
+            if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
+            if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
+
+            const gs = window.gameState;
+            if (gs) {
+                const planet = gs.currentLocation || 'mercury';
+                const planetDamage = gs.planetDamageDealt || 0;
+                const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU ||
+                                 CFG.astronomicalUnits?.[planet] || 0.38710;
+                const targetDamage = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
+                const progressPercent = targetDamage > 0 ? (planetDamage / targetDamage) * 100 : 0;
+
+                if (!gs.skipPenaltyState) {
+                    gs.skipPenaltyState = {
+                        activated: false, skipCount: 0, rollbackCount: 0,
+                        activationDistance: 0, totalRolledBack: 0
+                    };
+                }
+                const state = gs.skipPenaltyState;
+
+                if (!state.activated && progressPercent >= 30) {
+                    state.activated = true;
+                    state.activationDistance = planetDamage;
+                }
+
+                if (state.activated) {
+                    state.skipCount++;
+                    if (state.skipCount >= 6) {
+                        const MAX_ROLLBACKS = 10;
+                        const MAX_ROLLBACK_PERCENT = 0.5;
+                        if (state.rollbackCount < MAX_ROLLBACKS) {
+                            const maxRollback = state.activationDistance * MAX_ROLLBACK_PERCENT;
+                            const remainingRollback = maxRollback - state.totalRolledBack;
+                            if (remainingRollback > 0) {
+                                const rollbackPercent = 5 + Math.random() * 10;
+                                let rollbackAmount = planetDamage * (rollbackPercent / 100);
+                                rollbackAmount = Math.min(rollbackAmount, remainingRollback);
+                                gs.planetDamageDealt = Math.max(0, planetDamage - rollbackAmount);
+                                state.totalRolledBack += rollbackAmount;
+                                state.rollbackCount++;
+                                if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+                                this.showRollbackCard(rollbackPercent, rollbackAmount, state.rollbackCount, MAX_ROLLBACKS);
+                            }
                         }
-                        
-                        // Показываем карточку отката
-                        this.showRollbackCard(rollbackPercent, rollbackAmount, state.rollbackCount, MAX_ROLLBACKS);
-                        
-                        console.log(`⚠️ [PENALTY] Откат #${state.rollbackCount}/${MAX_ROLLBACKS}: -${rollbackPercent.toFixed(1)}% (-${rollbackAmount.toFixed(0)} damage)`);
+                        state.skipCount = 0;
                     }
                 }
-                
-                // Сбрасываем счётчик пропусков (даже если лимит достигнут)
-                state.skipCount = 0;
             }
+
+            if (window.gameState?.gameActive) {
+                setTimeout(() => this.createMovingBlock(), 500);
+            }
+            return; // ← НЕ вызываем requestAnimationFrame — новый блок создаст свою цепочку
         }
-    }
-    
-    if (window.gameState?.gameActive) setTimeout(() => this.createMovingBlock(), 500);
-    return;
-}
-            requestAnimationFrame(move);
-        };
-        move();
-    },
+
+        // 5. Продолжаем анимацию
+        requestAnimationFrame(move);
+    };
+
+    requestAnimationFrame(move);
+},
+
 
 // ЧТО: Делегируем математику урона/критов/метрик в CombatSystem.applyHit()
 // КУДА: game-core.js → GAME_CORE.hitBlock()
