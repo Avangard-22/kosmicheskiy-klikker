@@ -55,11 +55,12 @@ const Leaderboard = {
         
 // 3. ✅ Для "24 часа" и "7 дней"
 if (period === 'daily' || period === 'weekly') {
-    if (!gm.dailyProgress) {
+    if (!gs.dailyProgress) {
         return { blocks: 0, distance: 0, time: 0 };
     }
     
-    const dp = gm.dailyProgress;
+    const dp = gs.dailyProgress;
+
     const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
     const todayBlocks = Math.floor(todayDamage); // 1 урон = 1 блок
     
@@ -116,54 +117,8 @@ if (period === 'daily' || period === 'weekly') {
         };
     },
 
-    // ✅ НОВОЕ: Инициализация dailyProgress при загрузке
-initDailyProgress: function() {
-    const gm = window.gameMetrics;
-    const gs = window.gameState;
-    if (!gm || !gs) return;
-    
-    if (!gm.dailyProgress) {
-        gm.dailyProgress = {
-            currentDayStart: Date.now(),
-            dayStartDamage: gs.totalDamageDealt || 0,
-            dayStartBlocks: 0,
-            history: []
-        };
-        console.log('📅 [LEADERBOARD] dailyProgress инициализирован');
-    }
-    
-    // ✅ ПРОВЕРКА СМЕНЫ СУТОК
-    const lastDate = new Date(gm.dailyProgress.currentDayStart).toISOString().split('T')[0];
-    const currentDate = new Date().toISOString().split('T')[0];
-    
-    if (lastDate !== currentDate) {
-        console.log(`📅 [LEADERBOARD] Смена суток: ${lastDate} → ${currentDate}`);
-        
-        // Сохраняем вчерашний прогресс в историю
-        const yesterdayDamage = Math.max(0, (gs.totalDamageDealt || 0) - gm.dailyProgress.dayStartDamage);
-        const yesterdayBlocks = gm.dailyProgress.dayStartBlocks || 0;
-        
-        gm.dailyProgress.history.push({
-            date: lastDate,
-            timestamp: gm.dailyProgress.currentDayStart,
-            damage: yesterdayDamage,
-            blocks: yesterdayBlocks
-        });
-        
-        // Оставляем только 7 дней
-        if (gm.dailyProgress.history.length > 7) {
-            gm.dailyProgress.history = gm.dailyProgress.history.slice(-7);
-        }
-        
-        // Начинаем новый день
-        gm.dailyProgress.currentDayStart = Date.now();
-        gm.dailyProgress.dayStartDamage = gs.totalDamageDealt || 0;
-        gm.dailyProgress.dayStartBlocks = 0;
-        
-        // Сохраняем
-        if (typeof window.saveGame === 'function') window.saveGame();
-    }
-},
+    // ✅ НОВОЕ: Инициализация dailyProgress при загрузке — daily-bonus.js сам управляет dailyProgress
+
     
     lastSubmitTime: 0,
     
@@ -713,26 +668,24 @@ loadAndRender: async function(period, subPeriod = 'total') {
     // ✅ Обновляем "Ваш результат" — ИСПРАВЛЕНО: используем subPeriod вместо blockPeriod
     console.log('🔍 [LEADERBOARD] myDistance:', myDistance, 'period:', period, 'subPeriod:', subPeriod);
     
-    if (myDistance > 0) {
-        // ✅ Сервер вернул данные — используем их
-        console.log('✅ [LEADERBOARD] Используем данные с сервера:', myDistance);
+// ✅ daily/weekly — ВСЕГДА локальный расчёт (сервер хранит только totals)
+if (period === 'blocks' || period === 'distance') {
+    if (subPeriod === 'daily' || subPeriod === 'weekly') {
+        const local = this.calculateDistances(subPeriod);
+        const val = period === 'blocks' ? local.blocks : local.distance;
+        console.log(`✅ [LEADERBOARD] Локальный расчёт (${subPeriod}):`, val);
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(val, period);
+    } else if (myDistance > 0) {
         document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance, period);
     } else {
-        // ⚠️ Сервер не вернул данные — используем локальный расчет
-        console.warn('⚠️ [LEADERBOARD] myDistance = 0, используем локальный расчет');
-        let localValue = 0;
-        
-        if (period === 'blocks' || period === 'distance') {
-            // Для блоков и расстояния с под-периодами
-            const localDistances = this.calculateDistances(subPeriod || 'total');
-            localValue = period === 'blocks' ? localDistances.blocks : localDistances.distance;
-        } else if (period === 'time') {
-            const localDistances = this.calculateDistances('total');
-            localValue = localDistances.time;
-        }
-        
-        document.getElementById('lbMyDistance').textContent = this.formatDistance(localValue, period);
+        const local = this.calculateDistances('total');
+        const val = period === 'blocks' ? local.blocks : local.distance;
+        document.getElementById('lbMyDistance').textContent = this.formatDistance(val, period);
     }
+} else {
+    document.getElementById('lbMyDistance').textContent = this.formatDistance(myDistance || 0, period);
+}
+
 },
     
     escapeHtml: function(text) {
@@ -744,14 +697,13 @@ loadAndRender: async function(period, subPeriod = 'total') {
 init: function() {
     this.injectStyles();
     this.createModal();
-    this.initDailyProgress(); // ✅ Инициализируем dailyProgress при старте
     
     setInterval(() => {
         if (window.gameState?.gameActive) {
-            this.initDailyProgress(); // ✅ Проверяем смену суток каждые 30 сек
             this.submitToLeaderboard();
         }
     }, this.config.submitInterval);
+
     
     if (window.EventBus) {
         window.EventBus.on('save:completed', () => {
