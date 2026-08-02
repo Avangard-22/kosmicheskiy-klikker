@@ -176,14 +176,18 @@ this.animateBlock(block);
     });
 },
 
-    animateBlock: function(block) {
+        animateBlock: function(block) {
         if (!window.gameState || !window.gameState.gameActive || this.currentBlock !== block) return;
         let pos = parseFloat(block.style.bottom) || 0;
-        const move = () => {
+        let lastTime = performance.now();
+        const move = (now) => {
             if (this.isGamePaused || !window.gameState?.gameActive || this.currentBlock !== block) {
+                lastTime = performance.now(); // Сброс, чтобы не было скачка при паузе
                 requestAnimationFrame(move); return;
             }
-            pos += this.getCurrentSpeed() / 30;
+            const dt = Math.min((now - lastTime) / 1000, 0.1); // Макс 100мс (защита от фоновых вкладок)
+            lastTime = now;
+            pos += this.getCurrentSpeed() * dt;
             block.style.bottom = pos + 'px';
          if (pos > window.innerHeight) {
     // ── СТАРЫЙ ШТРАФ: дебаф на апгрейды (сохраняем как есть) ──
