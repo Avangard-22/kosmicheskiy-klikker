@@ -58,24 +58,16 @@ if (period === 'daily' || period === 'weekly') {
     // 🔧 Миграция: если dailyProgress в gameMetrics — переносим в gameState
     if (!gs.dailyProgress && window.gameMetrics?.dailyProgress) {
         gs.dailyProgress = window.gameMetrics.dailyProgress;
-        console.log('📅 [LEADERBOARD] dailyProgress мигрирован из gameMetrics → gameState');
     }
     
-    // 🔧 Автоинициализация: если dailyProgress нет нигде — начинаем трекинг сейчас
+    // ❌ НЕ создаём автоматически — dailyProgress создаёт ТОЛЬКО кнопка «Ежедневный бонус»
     if (!gs.dailyProgress) {
-        gs.dailyProgress = {
-            currentDayStart: Date.now(),
-            dayStartDamage: totalDamage,
-            dayStartBlocks: 0,
-            history: []
-        };
-        console.log('📅 [LEADERBOARD] dailyProgress создан автоматически, dayStartDamage:', totalDamage);
+        return { blocks: 0, distance: 0, time: 0 };
     }
     
     const dp = gs.dailyProgress;
     const todayDamage = Math.max(0, totalDamage - (dp.dayStartDamage || 0));
-    
-    console.log('📅 [LEADERBOARD] daily:', { totalDamage, dayStartDamage: dp.dayStartDamage, todayDamage });
+
 
     const todayBlocks = Math.floor(todayDamage); // 1 урон = 1 блок
     
