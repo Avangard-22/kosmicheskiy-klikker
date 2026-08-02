@@ -280,8 +280,9 @@ this.animateBlock(block);
 }
             requestAnimationFrame(move);
         };
-        move();
+        requestAnimationFrame(move);  // ✅ Передаёт timestamp в now
     },
+
 
 // ЧТО: Делегируем математику урона/критов/метрик в CombatSystem.applyHit()
 // КУДА: game-core.js → GAME_CORE.hitBlock()
