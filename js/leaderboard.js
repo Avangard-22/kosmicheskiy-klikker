@@ -146,14 +146,19 @@ if (period === 'daily' || period === 'weekly') {
         });
         
         try {
+            // ✅ Отправляем dailyProgress для server-side расчёта
+            const dailyProgress = window.gameState?.dailyProgress || null;
+            
             const result = await window.telegramCloud.submitLeaderboard({
                 blocks: distances.blocks,
                 distance: distances.distance,
                 time: distances.time,
                 username: username,
                 userId: userId,
-                level: window.gameState?.currentLocation || 'mercury'
+                level: window.gameState?.currentLocation || 'mercury',
+                dailyProgress: dailyProgress
             });
+
             
             if (result?.success) {
                 this.lastSubmitTime = now;
@@ -164,19 +169,20 @@ if (period === 'daily' || period === 'weekly') {
         }
     },
     
-    fetchLeaderboard: async function(period = 'global') {
-        if (!window.telegramCloud?.isAvailable) {
-            return { success: false, data: [], error: 'Cloud unavailable' };
-        }
-        
-        try {
-            const result = await window.telegramCloud.getLeaderboard(period, this.config.maxEntries);
-            return result;
-        } catch (e) {
-            console.warn('️ [LEADERBOARD] Ошибка загрузки:', e);
-            return { success: false, data: [], error: e.message };
-        }
-    },
+fetchLeaderboard: async function(period = 'global', subPeriod = 'total') {
+    if (!window.telegramCloud?.isAvailable) {
+        return { success: false, data: [], error: 'Cloud unavailable' };
+    }
+    
+    try {
+        const result = await window.telegramCloud.getLeaderboard(period, this.config.maxEntries, subPeriod);
+        return result;
+    } catch (e) {
+        console.warn('️ [LEADERBOARD] Ошибка загрузки:', e);
+        return { success: false, data: [], error: e.message };
+    }
+},
+
     
     injectStyles: function() {
         if (document.getElementById('leaderboard-styles')) return;
@@ -593,7 +599,7 @@ loadAndRender: async function(period, subPeriod = 'total') {
     
     console.log('🔍 [LEADERBOARD] Загрузка периода:', period, 'под-период:', subPeriod);
     
-    const result = await this.fetchLeaderboard(period);
+    const result = await this.fetchLeaderboard(period, subPeriod);
     console.log('🔍 [LEADERBOARD] Результат:', result);
     
     if (!result?.success || !result.data || result.data.length === 0) {
@@ -703,7 +709,6 @@ init: function() {
             this.submitToLeaderboard();
         }
     }, this.config.submitInterval);
-
     
     if (window.EventBus) {
         window.EventBus.on('save:completed', () => {
