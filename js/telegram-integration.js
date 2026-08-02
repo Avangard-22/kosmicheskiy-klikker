@@ -155,12 +155,13 @@ if (!isTelegram) {
             return sendToCloud('load', null, initDataFromURL);
         },
         // ✅ ДОБАВЛЕНО: leaderboard методы ВНУТРИ объекта
-        getLeaderboard: async function(period = 'global', limit = 50) {
-            if (!window.isCloudAvailable) {
-                return { success: false, data: [], error: 'Not in Telegram' };
-            }
-            return sendToCloud('leaderboard', { period, limit }, initDataFromURL);
-        },
+ getLeaderboard: async function(period = 'global', limit = 50, subPeriod = 'total') {
+    if (!window.isCloudAvailable) {
+        return { success: false, data: [], error: 'Not in Telegram' };
+    }
+    return sendToCloud('leaderboard', { period, limit, subPeriod }, initDataFromURL);
+},
+
         submitLeaderboard: async function(data) {
             if (!window.isCloudAvailable) {
                 return { success: false, error: 'Not in Telegram' };
@@ -277,9 +278,10 @@ if (!isTelegram) {
             console.log('☁️ [LOAD] Загрузка из облака...');
             return sendToCloud('load', null, tg.initData, false);
         },
-        getLeaderboard: async function(period = 'global', limit = 50) {
-            return sendToCloud('leaderboard', { period, limit }, tg.initData, false);
-        },
+getLeaderboard: async function(period = 'global', limit = 50, subPeriod = 'total') {
+    return sendToCloud('leaderboard', { period, limit, subPeriod }, tg.initData, false);
+},
+
         submitLeaderboard: async function(data) {
             return sendToCloud('leaderboard_submit', data, tg.initData, false);
         }
