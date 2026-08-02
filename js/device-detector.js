@@ -142,8 +142,8 @@ const DeviceDetector = {
         
         const settings = {
             // ✅ ЧЕСТНАЯ СЛОЖНОСТЬ: скорость зависит ТОЛЬКО от высоты экрана.
-            // Блок пересекает экран за фиксированное время: 8с (мобилка) / 11с (десктоп)
-            blockSpeed: Math.floor((window.innerHeight || 700) / (window.GAME_CONFIG?.isMobile ? 8 : 11)),
+            // Блок пересекает экран за фиксированное время: 10с (мобилка) / 11с (десктоп)
+            blockSpeed: Math.floor((window.innerHeight || 700) / (window.GAME_CONFIG?.isMobile ? 10 : 11)),
             blockHealth: 1,  // ✅ Одинаковое HP на всех устройствах
             particleDensity: 1,
             fpsTarget: 60
