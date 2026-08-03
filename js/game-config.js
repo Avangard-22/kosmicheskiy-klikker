@@ -225,28 +225,28 @@ const RARE_BLOCKS = {
         name: 'Золотой',
         chance: 0.03,
         multiplier: 8,
-        healthMultiplier: 1.8,
+        healthMultiplier: 2.0,
         className: 'block-gold'
     },
     RAINBOW: {
         name: 'Радужный',
         chance: 0.02,
         multiplier: 5,
-        healthMultiplier: 1.5,
+        healthMultiplier: 2.5,
         className: 'block-rainbow'
     },
     CRYSTAL: {
         name: 'Кристальный',
         chance: 0.025,
         multiplier: 6,
-        healthMultiplier: 1.6,
+        healthMultiplier: 3.0,
         className: 'block-crystal'
     },
     MYSTERY: {
         name: 'Загадочный',
         chance: 0.015,
         multiplier: 10,
-        healthMultiplier: 2.0,
+        healthMultiplier: 5.0,
         className: 'block-mystery'
     }
 };
