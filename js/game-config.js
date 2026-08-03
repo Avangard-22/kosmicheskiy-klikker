@@ -231,7 +231,7 @@ const RARE_BLOCKS = {
     RAINBOW: {
         name: 'Радужный',
         chance: 0.02,
-        multiplier: 5,
+        multiplier: 10,
         healthMultiplier: 2.5,
         className: 'block-rainbow'
     },
@@ -245,7 +245,7 @@ const RARE_BLOCKS = {
     MYSTERY: {
         name: 'Загадочный',
         chance: 0.015,
-        multiplier: 10,
+        multiplier: 15,
         healthMultiplier: 5.0,
         className: 'block-mystery'
     }
