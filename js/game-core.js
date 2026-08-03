@@ -72,7 +72,7 @@ calculateClickPower: function() {
 
     getCurrentSpeed: function() {
         if (!window.gameState) return this.blockSpeed;
-        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 3 ? 0.85 : 1);
+        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 1 ? 0.85 : 1);
         return speed * this.getBonus('getSpeedMultiplier', 1);
     },
 
