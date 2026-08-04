@@ -28,7 +28,8 @@ const CONFIG = {
         crystals:    { base: 300,   growth: 1.60, rewardBase: 35,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 4,     growth: 1.50, rewardBase: 120,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 1400,  growth: 1.55, rewardBase: 60,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
-        upgrades:    { base: 7,     growth: 1.45, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
+     boboCrystals:{ base: 750, growth: 1.60, rewardBase: 40, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
+     upgrades:    { base: 7,     growth: 1.45, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 90,    growth: 1.30, rewardBase: 60,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
@@ -46,7 +47,8 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.venus.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.venus.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.venus.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
-    upgrades:    { key: 'achievements.venus.metrics.upgrades',    fallback: 'Улучшений куплено' },
+    boboCrystals:{ key: 'achievements.venus.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },
+ upgrades:    { key: 'achievements.venus.metrics.upgrades',    fallback: 'Улучшений куплено' },
     time:        { key: 'achievements.venus.metrics.time',        fallback: 'Секунд на планете' },
     days: { key: 'achievements.venus.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.venus.metrics.critStreak',  fallback: 'Серия критов подряд' }
