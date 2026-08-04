@@ -271,6 +271,15 @@ const BALANCE_CONFIG = {
     critChanceCap: 0.50,     // шанс крита не выше 50%
     critMultiplierCap: 10,   // множитель крита не выше x10
 
+        // ✅ НОВОЕ: Настройки масштабирования ХП блоков
+    hpScaling: {
+        targetClicks: 70,     // Базовое число кликов на блок
+        critWeight: 0.6,      // Учитываем 60% урона критов (40% идут в профит игроку)
+        boboWeight: 0.4,      // Учитываем 40% урона Bobo (чтобы он был полезен)
+        boboHitRate: 7.5,     // 1 удар Bobo (1.5с) = 7.5 кликам (при 5 кликах/сек)
+        boboLevelCap: 25      // Ограничение влияния Bobo на ХП (чтобы 1.5^lvl не сломал игру)
+    },
+
     // ✅ НОВОЕ: Дневная HP-рампа (применяется в combat-system.js — calculateBlockHealth)
     dailyRamp: {
         enabled: true,
