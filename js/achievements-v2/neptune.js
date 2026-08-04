@@ -30,7 +30,8 @@ const CONFIG = {
         crystals:    { base: 1900,  growth: 1.60, rewardBase: 85,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 14,    growth: 1.50, rewardBase: 320,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 10000, growth: 1.55, rewardBase: 160,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
-        upgrades:    { base: 26,    growth: 1.45, rewardBase: 125,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
+     boboCrystals:{ base: 4600, growth: 1.60, rewardBase: 90, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
+     upgrades:    { base: 26,    growth: 1.45, rewardBase: 125,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 540,   growth: 1.30, rewardBase: 160,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
@@ -51,7 +52,8 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.neptune.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.neptune.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.neptune.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
-    upgrades:    { key: 'achievements.neptune.metrics.upgrades',    fallback: 'Улучшений куплено' },
+   boboCrystals:{ key: 'achievements.neptune.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },
+ upgrades:    { key: 'achievements.neptune.metrics.upgrades',    fallback: 'Улучшений куплено' },
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.neptune.metrics.time',        fallback: 'Секунд на планете' },
