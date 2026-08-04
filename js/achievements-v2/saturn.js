@@ -34,7 +34,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 300,   growth: 1.30, rewardBase: 120,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-        speed:       { base: 12000, growth: 0.85, rewardBase: 260,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
+               days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 10,    growth: 1.40, rewardBase: 320,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -55,7 +55,7 @@ const NAME_TEMPLATES = {
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.saturn.metrics.time',        fallback: 'Секунд на планете' },
-    speed:       { key: 'achievements.saturn.metrics.speed',       fallback: 'Рекорд скорости (мс)' },
+   days: { key: 'achievements.saturn.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.saturn.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
