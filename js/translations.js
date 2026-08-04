@@ -562,26 +562,59 @@ window.updateLanguageFlag = function() {
     if (btn) btn.textContent = FLAGS[currentLanguage] || '🌍';
 };
 
-// === КНОПКА ПРОДОЛЖИТЬ ===
+// ✅ НОВОЕ: «Продолжить» активна ТОЛЬКО при подтверждённом сейве с сервера.
+// Проверка один раз при загрузке + таймаут 10с: нет ответа сервера → кнопка неактивна.
+window._continueCheckState = 'pending';    // 'pending' | 'yes' | 'no'
+window._continueCheckStarted = false;
+
 window.updateContinueButton = function() {
     const btn = document.getElementById('continueBtn');
     if (!btn) return;
-    let hasSaveData = false;
-    try {
-        hasSaveData = typeof window.hasSave === 'function'
-            ? window.hasSave()
-            : localStorage.getItem('cosmicClickerSave') !== null;
-    } catch (e) {}
-    if (hasSaveData) {
-        btn.classList.add('save-available');
-        btn.classList.remove('no-save');
-        window.applyTranslation(btn, 'ui.continue');
-    } else {
-        btn.classList.remove('save-available');
-        btn.classList.add('no-save');
-        window.applyTranslation(btn, 'ui.newGame');
-    }
+
+    const apply = (hasSaveData) => {
+        if (hasSaveData) {
+            btn.classList.add('save-available');
+            btn.classList.remove('no-save');
+            window.applyTranslation(btn, 'ui.continue');
+        } else {
+            btn.classList.remove('save-available');
+            btn.classList.add('no-save');
+            window.applyTranslation(btn, 'ui.newGame');
+        }
+    };
+
+    // Уже знаем результат — применяем без повторных запросов к серверу
+    if (window._continueCheckState === 'yes') { apply(true); return; }
+    if (window._continueCheckState === 'no')  { apply(false); return; }
+
+    // Проверка ещё идёт — подтверждённого сейва нет → кнопка НЕ активна
+    apply(false);
+
+    // Запускаем проверку облака один раз (защита от дублей при переключении языка)
+    if (window._continueCheckStarted) return;
+    window._continueCheckStarted = true;
+
+    // ⏰ Таймаут 10 секунд: сервер не ответил → «Продолжить» остаётся неактивной
+    const timeoutId = setTimeout(() => {
+        window._continueCheckState = 'no';
+        apply(false);
+        console.warn('⏰ [CONTINUE] Сервер не ответил за 10с — кнопка «Продолжить» неактивна');
+    }, 10000);
+
+    Promise.resolve()
+        .then(() => (typeof window.hasSave === 'function') ? window.hasSave() : false)
+        .then((has) => {
+            clearTimeout(timeoutId);
+            window._continueCheckState = has ? 'yes' : 'no';
+            apply(!!has);
+        })
+        .catch(() => {
+            clearTimeout(timeoutId);
+            window._continueCheckState = 'no';
+            apply(false);
+        });
 };
+
 
 // === ОБНОВЛЕНИЕ ВСЕХ ТЕКСТОВ (с универсальным обработчиком data-i18n) ===
 window.updateAllUITexts = function() {
