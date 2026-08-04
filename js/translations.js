@@ -234,7 +234,7 @@ const translations = {
         boboCrystals:{ ru: 'Кристаллов от Bobo',    en: 'Bobo Crystals',        zh: 'Bobo 水晶' },
         upgrades:    { ru: 'Улучшений куплено',     en: 'Upgrades Purchased',   zh: '购买的升级' },
         time:        { ru: 'Секунд на планете',     en: 'Seconds on Planet',    zh: '在星球上的秒数' },
-        speed:       { ru: 'Рекорд скорости (мс)',  en: 'Speed Record (ms)',    zh: '速度记录(毫秒)' },
+        days:        { ru: 'Дней в игре',          en: 'Days in Game',         zh: '天数' },
         critStreak:  { ru: 'Серия критов подряд',   en: 'Crit Streak',          zh: '连续暴击' }
     };
     
