@@ -32,7 +32,9 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 60,    growth: 1.30, rewardBase: 50,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-        speed:       { base: 30000, growth: 0.85, rewardBase: 120,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
+          days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'cumulative', emoji: '📅',
+                       targets: [1, 3, 7, 14, 30, 60, 100, 180, 250, 365],
+                       rewards: [500, 750, 1000, 1500, 2500, 4000, 7000, 12000, 20000, 50000] },
         critStreak:  { base: 3,     growth: 1.40, rewardBase: 150,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -48,7 +50,7 @@ const NAME_TEMPLATES = {
     boboDmg:     { key: 'achievements.mercury.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
     upgrades:    { key: 'achievements.mercury.metrics.upgrades',    fallback: 'Улучшений куплено' },
     time:        { key: 'achievements.mercury.metrics.time',        fallback: 'Секунд на планете' },
-    speed:       { key: 'achievements.mercury.metrics.speed',       fallback: 'Рекорд скорости (мс)' },
+     days:        { key: 'achievements.mercury.metrics.days',        fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.mercury.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
