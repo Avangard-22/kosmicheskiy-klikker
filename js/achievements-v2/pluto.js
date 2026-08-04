@@ -1,6 +1,6 @@
  // js/achievements-v2/pluto.js
 // ═══════════════════════════════════════════════════
-// ♇ ПЛУТОН v1.0 — Конфиг планеты (9-я от Солнца)
+// ♇ ПЛУТОН v2.0 — Конфиг планеты (9-я от Солнца)
 // ЧТО: Только данные (метрики, шаблоны имён, параметры)
 // ЗАЧЕМ: Фабрика создаст модуль автоматически
 // ОСОБЕННОСТЬ: Финальная планета — карликовая, самая дальняя
@@ -35,7 +35,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 720,   growth: 1.30, rewardBase: 180,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-               days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
+        days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 16,    growth: 1.40, rewardBase: 440,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -52,12 +52,12 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.pluto.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.pluto.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.pluto.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
- boboCrystals:{ key: 'achievements.pluto.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },   
- upgrades:    { key: 'achievements.pluto.metrics.upgrades',    fallback: 'Улучшений куплено' },
+    boboCrystals:{ key: 'achievements.pluto.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },   
+    upgrades:    { key: 'achievements.pluto.metrics.upgrades',    fallback: 'Улучшений куплено' },
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.pluto.metrics.time',        fallback: 'Секунд на планете' },
-   days: { key: 'achievements.pluto.metrics.days', fallback: 'Дней в игре' },
+    days:        { key: 'achievements.pluto.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.pluto.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
