@@ -265,7 +265,27 @@ const BALANCE_CONFIG = {
     comboMultiplier: 0.25,
     randomBonusRange: { min: 0.8, max: 1.5 },
     penaltyMin: 0.05,
-    penaltyMax: 0.45
+    penaltyMax: 0.45,
+
+    // ✅ НОВОЕ: Капы критов (применяются в combat-system.js — crit roll)
+    critChanceCap: 0.50,     // шанс крита не выше 50%
+    critMultiplierCap: 10,   // множитель крита не выше x10
+
+    // ✅ НОВОЕ: Дневная HP-рампа (применяется в combat-system.js — calculateBlockHealth)
+    dailyRamp: {
+        enabled: true,
+        blocksPerStep: 100,     // каждые 100 уничтоженных блоков в сутки → +1 шаг
+        hpPercentPerStep: 5,    // +5% к HP блока за шаг
+        maxSteps: 30            // потолок: +150% HP в сутки
+    },
+
+    // ✅ НОВОЕ: boboCrystals — метрика достижений V2 (единый каталог)
+    // Метрика добавлена во все 9 конфигов планет (mercury…pluto, Этап 1 №5)
+    boboCrystals: {
+        enabled: true,
+        rewardBase: 50,         // базовая награда за тир (совпадает с конфигами планет)
+        emoji: '💰'
+    }
 };
 
 // === СТОИМОСТЬ УЛУЧШЕНИЙ ===
