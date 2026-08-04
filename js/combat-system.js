@@ -129,6 +129,11 @@ return { finalDamage: Math.max(0, dmg), isCrit };
         reward = Math.floor(reward * getBonus('getRewardMultiplier', 1));
         if (window.GAME_CORE?.permanentRewardMult > 1) reward = Math.floor(reward * window.GAME_CORE.permanentRewardMult);
 
+        // ✅ НОВОЕ: Буст 30 дней (daily-bonus.js) — +500% к кристаллам, пока активен
+        if (window.dailyBonusSystem?.isBoostActive()) {
+            reward = Math.floor(reward * 6); // +500% = ×6
+        }
+
         let isRare = false;
         for (const k in CFG.rareBlocks) {
             if (block?.classList.contains(CFG.rareBlocks[k].className)) {
