@@ -375,7 +375,15 @@ window.saveGame = function() {
     try {
         if (!window.gameState) return false;
         
+        // ✅ НОВОЕ: Запрет сохранения на главном экране
+        // Игра не запущена (welcome screen) и это не сброс «Новой игры» → не сохраняем
+        if (!window.gameState.gameActive && !window.gameState._isNewGame) {
+            console.warn('⚠️ [SAVE] Главный экран — сохранение отменено');
+            return false;
+        }
+        
         const saveBtn = document.getElementById('saveBtn');
+
         if (saveBtn && !saveBtn.classList.contains('save-pulse-success')) {
             saveBtn.classList.add('save-pending');
         }
