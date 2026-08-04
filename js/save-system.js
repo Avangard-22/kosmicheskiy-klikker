@@ -306,6 +306,13 @@ function extractCloudData() {
     const username = (typeof window.getTelegramUsername === 'function') 
         ? window.getTelegramUsername()
         : (window.telegramUser?.username || window.telegramUser?.first_name || 'Anonymous');
+   // ✅ РЕЛИЗ: Санитайзим full_game_state — НЕ отправляем legacy/временные поля
+    const cleanState = JSON.parse(JSON.stringify(window.gameState));
+    delete cleanState.achievements;          // V1 достижения (система переведена на V2)
+    delete cleanState._dailyProgressBackup;  // бэкап daily-bonus (мёртвый)
+    delete cleanState.dailyProgress;         // старый daily-bonus (мёртвый)
+    delete cleanState._isNewGame;            // временный флаг сброса
+
     return {
         crystals: Math.floor(window.gameState.coins || 0),
         level: currentLevel,
@@ -313,7 +320,7 @@ function extractCloudData() {
         bobo_skin: window.gameState.boboSkin || 'default',
         username: username,
         timestamp: Date.now(),
-        full_game_state: JSON.parse(JSON.stringify(window.gameState)),
+        full_game_state: cleanState,
         full_game_metrics: JSON.parse(JSON.stringify(window.gameMetrics || {}))
     };
 }
@@ -334,6 +341,10 @@ function applyCloudData(cloudData) {
         window.gameState.helperActive = false;
         window.gameState.helperTimeLeft = 0;
         window.gameState.comboCount = 0;
+     delete window.gameState.achievements;
+    delete window.gameState._dailyProgressBackup;
+    delete window.gameState.dailyProgress;
+    delete window.gameState._isNewGame;
         
         // ✅ Лог для отладки: проверяем, загрузились ли достижения v2
         const achV2 = window.gameState.achievementsV2 || {};
