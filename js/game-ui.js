@@ -131,37 +131,28 @@ updateHUD: function() {
 
 updateUpgradeButtons: function() {
     if (!window.gameState) return;
-    
-    // ✅ НОВОЕ: Получаем планетарный коэффициент стоимости
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    
-    const setBtn = (id, baseCost, title) => {
+
+    // ✅ ЕДИНЫЙ ИСТОЧНИК ЦЕН: GAME_FEATURES.getUpgradeCost(type)
+    // getUpgradeCost уже включает планетарный коэффициент costMult
+    const getCost = (type) => window.GAME_FEATURES?.getUpgradeCost
+        ? window.GAME_FEATURES.getUpgradeCost(type)
+        : 0;
+
+    const setBtn = (id, cost, title, maxed) => {
         const btn = document.getElementById(id);
         if (!btn) return;
-        
-        // ✅ Применяем планетарный коэффициент
-        const cost = Math.floor(baseCost * costMult);
-        
         const costEl = btn.querySelector('.upgrade-cost');
-        if (costEl) costEl.textContent = formatNumber(cost); // ✅
-        const avail = window.gameState.coins >= cost;
+        if (costEl) costEl.textContent = maxed ? 'MAX' : formatNumber(cost);
+        const avail = !maxed && window.gameState.coins >= cost;
         btn.className = `upgrade-btn ${avail ? 'btn-available' : 'btn-unavailable'}`;
         btn.title = title;
-        btn.style.opacity = avail ? '1' : '0.7';
+        btn.style.opacity = avail ? '1' : '0.6';
     };
-    
+
     // Сила удара
-    setBtn(
-        'upgradeClickBtn',
-        Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel)),
-        'Увеличить силу удара'
-    );
-    
+    setBtn('upgradeClickBtn', getCost('clickPower'), 'Увеличить силу удара');
+
     // ✅ BOBO (с блокировкой во время активности + таймер)
-    const baseHelperCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel));
-    const activationBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
-    const helperCost = Math.floor(baseHelperCost * (1 + activationBonus * 0.2) * costMult);
     const helperBtn = document.getElementById('upgradeHelperBtn');
     if (helperBtn) {
         const costEl = helperBtn.querySelector('.upgrade-cost');
@@ -172,34 +163,35 @@ updateUpgradeButtons: function() {
             helperBtn.title = 'Bobo активен: ' + seconds + 'с';
             helperBtn.style.opacity = '0.6';
         } else {
-            const avail = window.gameState.coins >= helperCost;
-            if (costEl) costEl.textContent = formatNumber(helperCost); // ✅
+            const cost = getCost('helper');
+            const avail = window.gameState.coins >= cost;
+            if (costEl) costEl.textContent = formatNumber(cost);
             helperBtn.className = 'upgrade-btn ' + (avail ? 'btn-available' : 'btn-unavailable');
             helperBtn.title = 'Активировать Bobo';
             helperBtn.style.opacity = avail ? '1' : '0.7';
         }
     }
-    
-    // Шанс крита
+
+    // Шанс крита (потолок 50%)
+    const critAtCap = (window.gameState.critChance || 0) >= (CFG.balanceConfig.critChanceCap || 1);
     setBtn(
         'upgradeCritChanceBtn',
-        Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel)),
-        'Увеличить шанс крита'
+        getCost('critChance'),
+        critAtCap ? 'Крит: максимум 50%' : 'Увеличить шанс крита',
+        critAtCap
     );
-    
-    // Множитель крита
+
+    // Множитель крита (потолок x10)
+    const multAtCap = (window.gameState.critMultiplier || 2) >= (CFG.balanceConfig.critMultiplierCap || 999);
     setBtn(
         'upgradeCritMultBtn',
-        Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel)),
-        'Увеличить множитель крита'
+        getCost('critMultiplier'),
+        multAtCap ? 'Множитель: максимум x10' : 'Увеличить множитель крита',
+        multAtCap
     );
-    
+
     // Урон Bobo
-    setBtn(
-        'upgradeHelperDmgBtn',
-        Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel)),
-        'Увеличить урон Bobo'
-    );
+    setBtn('upgradeHelperDmgBtn', getCost('helperDamage'), 'Увеличить урон Bobo');
 },
 
     // ==========================================
