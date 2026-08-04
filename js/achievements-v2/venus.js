@@ -28,12 +28,12 @@ const CONFIG = {
         crystals:    { base: 300,   growth: 1.60, rewardBase: 35,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 4,     growth: 1.50, rewardBase: 120,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 1400,  growth: 1.55, rewardBase: 60,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
-     boboCrystals:{ base: 750, growth: 1.60, rewardBase: 40, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
-     upgrades:    { base: 7,     growth: 1.45, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
+        boboCrystals:{ base: 750, growth: 1.60, rewardBase: 40, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
+        upgrades:    { base: 7,     growth: 1.45, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 90,    growth: 1.30, rewardBase: 60,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-              days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
+        days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 4,     growth: 1.40, rewardBase: 180,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
