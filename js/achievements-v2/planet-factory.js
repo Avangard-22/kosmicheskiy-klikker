@@ -82,53 +82,66 @@ function calculateRank(totalUnlocked) {
 function createPlanetModule(config, nameTemplates) {
     
     // ⚙️ Генератор уровней
-     function generateLevel(metric, tier) {
+    function generateLevel(metric, tier) {
         const cfg = config.metrics[metric];
         if (!cfg) return null;
-        
+
         const seed = `${config.id}:${metric}:${tier}`;
-        let target;
-        let reward; // ✅ ОБЪЯВЛЯЕМ ЗДЕСЬ, чтобы переменная была видна во всей функции
-        
-        // ✅ PRESTIGE-СИСТЕМА: после 100 тира
-        if (tier > 100) {
-            const prestigeTier = tier - 100;
-            
-            if (cfg.type === 'record_min') {
-                // Для рекордов минимума (speed): требования УМЕНЬШАЮТСЯ
-                target = Math.max(100, Math.round(cfg.base * Math.pow(0.95, prestigeTier) * jit(seed, 0.10)));
-            } else if (cfg.type === 'record_max') {
-                // Для рекордов максимума (combo): растут медленно
-                target = Math.max(1, Math.round(cfg.base * Math.pow(1.3, prestigeTier) * jit(seed, 0.10)));
-            } else {
-                // Для cumulative (blocks, damage, crystals): растут быстро
-                target = Math.max(1, Math.round(cfg.base * Math.pow(1.8, prestigeTier) * jit(seed, 0.10)));
-            }
-            
-            // Milestone-награды: каждые 10 тиров большая награда
-            const isMilestone = prestigeTier % 10 === 0;
-            const milestoneLevel = Math.floor(prestigeTier / 10);
-            
-            if (isMilestone) {
-                reward = 50000 * Math.pow(2, milestoneLevel);
-            } else {
-                reward = 1000 * Math.pow(1.5, milestoneLevel);
-            }
-            // Потолок награды: 10M кристаллов (защита от Infinity)
-            reward = Math.min(reward, 10000000);
-            
-        } else {
-            // Старая система (до 100 тира)
-            if (cfg.type === 'record_min') {
-                target = Math.max(1000, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
-            } else {
-                target = Math.max(1, Math.round(cfg.base * Math.pow(cfg.growth, tier) * jit(seed, 0.10)));
-            }
-            reward = Math.max(1, Math.round(cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier) * jit(seed + ':r', 0.05)));
+        let target, reward;
+
+        // ✅ СПЕЦ-КЕЙС: метрики с фиксированным массивом таргетов (например, days)
+        if (cfg.targets) {
+            // Тиров ровно столько, сколько элементов в массиве (у days — 10)
+            if (tier >= cfg.targets.length) return null;
+            target = cfg.targets[tier];
+            reward = (cfg.rewards && cfg.rewards[tier] !== undefined) ? cfg.rewards[tier] : (cfg.rewardBase || 0);
+            const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
+            return {
+                id: `${config.prefix}_${metric}_t${tier}`,
+                tier, target, reward,
+                nameKey: tmpl.key,
+                nameFallback: tmpl.fallback.replace('{N}', tier + 1),
+                metric, metricType: 'cumulative', emoji: cfg.emoji
+            };
         }
-        
+
+        // ══ 1. ТАРГЕТ: фазовая прогрессия (только cumulative / record_max) ══
+        const t49 = cfg.base * Math.pow(cfg.growth, 49);
+
+        if (tier < 50) {
+            target = cfg.base * Math.pow(cfg.growth, tier);
+        } else if (tier < 500) {
+            target = t49 + (tier - 49) * (50 * cfg.base);
+        } else {
+            const t499 = t49 + (499 - 49) * (50 * cfg.base);
+            target = t499 + (tier - 499) * (100 * cfg.base);
+        }
+
+        target = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(target * jit(seed, 0.10))));
+
+        // ══ 2. НАГРАДА: увеличена, с фазами ══
+        const r49 = cfg.rewardBase * Math.pow(cfg.rewardGrowth, 49);
+
+        if (tier < 50) {
+            reward = cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier);
+        } else if (tier < 500) {
+            reward = r49 + (tier - 49) * (cfg.rewardBase * 20);
+        } else {
+            const r499 = r49 + (499 - 49) * (cfg.rewardBase * 20);
+            reward = r499 + (tier - 499) * (cfg.rewardBase * 100);
+        }
+
+        // 🎁 Майлстоуны после 50-го: каждые 50 тиров ×10, каждые 10 ×3
+        let milestoneMult = 1;
+        if (tier >= 50) {
+            if (tier % 50 === 0) milestoneMult = 10;
+            else if (tier % 10 === 0) milestoneMult = 3;
+        }
+
+        reward = Math.min(50000000, Math.max(1, Math.round(reward * milestoneMult * jit(seed + ':r', 0.05))));
+
         const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
-        
+
         return {
             id: `${config.prefix}_${metric}_t${tier}`,
             tier, target, reward,
@@ -137,6 +150,7 @@ function createPlanetModule(config, nameTemplates) {
             metric, metricType: cfg.type, emoji: cfg.emoji
         };
     }
+
     
     function generateLevels(metric, fromTier, count) {
         const levels = [];
