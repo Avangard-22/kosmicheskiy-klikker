@@ -89,12 +89,36 @@ function createPlanetModule(config, nameTemplates) {
         const seed = `${config.id}:${metric}:${tier}`;
         let target, reward;
 
-        // ✅ СПЕЦ-КЕЙС: метрики с фиксированным массивом таргетов (например, days)
+        // ✅ СПЕЦ-КЕЙС: метрики с фиксированным массивом таргетов
         if (cfg.targets) {
-            // Тиров ровно столько, сколько элементов в массиве (у days — 10)
             if (tier >= cfg.targets.length) return null;
             target = cfg.targets[tier];
             reward = (cfg.rewards && cfg.rewards[tier] !== undefined) ? cfg.rewards[tier] : (cfg.rewardBase || 0);
+            const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
+            return {
+                id: `${config.prefix}_${metric}_t${tier}`,
+                tier, target, reward,
+                nameKey: tmpl.key,
+                nameFallback: tmpl.fallback.replace('{N}', tier + 1),
+                metric, metricType: 'cumulative', emoji: cfg.emoji
+            };
+        }
+
+        // ✅ СПЕЦ-КЕЙС «ДНИ В ИГРЕ»: 1–30 дней (+1), далее +10 до 360, 360 = 1 год, далее +30
+        if (cfg.type === 'days') {
+            // ── Таргеты ──
+            if (tier < 30)      target = tier + 1;                       // уровни 1–30: 1..30 дней
+            else if (tier < 63) target = 30 + (tier - 29) * 10;          // уровни 31–63: 40..360
+            else                target = 360 + (tier - 63) * 30;         // 1 год = 360, далее +30
+
+            // ── Награды ──
+            if (tier < 30)      reward = 5000 + tier * 50;                // 5000..19500
+            else if (tier < 63) reward = 20000 + (tier - 29) * 250;       // 22500..102500
+            else                reward = 1500000 + (tier - 63) * 1000;     // 1500000, 1600000...
+
+            // 🎁 Джекпот каждый год: уровень 64 (1 год), 76 (2 года), 88 (3 года)...
+            if (tier === 63 || (tier > 63 && (tier - 63) % 12 === 0)) reward *= 3;
+
             const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
             return {
                 id: `${config.prefix}_${metric}_t${tier}`,
