@@ -28,6 +28,7 @@ const CONFIG = {
         crystals:    { base: 200,   growth: 1.60, rewardBase: 30,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 3,     growth: 1.50, rewardBase: 100,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 1000,  growth: 1.55, rewardBase: 50,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
+        boboCrystals:{ base: 500,   growth: 1.60, rewardBase: 35,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '💰' },
         upgrades:    { base: 5,     growth: 1.45, rewardBase: 40,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
@@ -46,6 +47,7 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.mercury.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.mercury.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.mercury.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
+    boboCrystals:{ key: 'achievements.mercury.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },
     upgrades:    { key: 'achievements.mercury.metrics.upgrades',    fallback: 'Улучшений куплено' },
     time:        { key: 'achievements.mercury.metrics.time',        fallback: 'Секунд на планете' },
      days:        { key: 'achievements.mercury.metrics.days',        fallback: 'Дней в игре' },
