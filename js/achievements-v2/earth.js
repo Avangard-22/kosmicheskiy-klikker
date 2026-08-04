@@ -29,6 +29,7 @@ const CONFIG = {
         crystals:    { base: 450,   growth: 1.60, rewardBase: 40,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 5,     growth: 1.50, rewardBase: 140,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 2000,  growth: 1.55, rewardBase: 70,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
+        boboCrystals:{ base: 1100, growth: 1.60, rewardBase: 45, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },
         upgrades:    { base: 10,    growth: 1.45, rewardBase: 60,   rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
@@ -50,6 +51,7 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.earth.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.earth.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.earth.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
+    boboCrystals:{ key: 'achievements.earth.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },
     upgrades:    { key: 'achievements.earth.metrics.upgrades',    fallback: 'Улучшений куплено' },
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
