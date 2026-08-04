@@ -48,9 +48,9 @@ const NAME_TEMPLATES = {
     bobo:        { key: 'achievements.venus.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.venus.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
     boboCrystals:{ key: 'achievements.venus.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },
- upgrades:    { key: 'achievements.venus.metrics.upgrades',    fallback: 'Улучшений куплено' },
+    upgrades:    { key: 'achievements.venus.metrics.upgrades',    fallback: 'Улучшений куплено' },
     time:        { key: 'achievements.venus.metrics.time',        fallback: 'Секунд на планете' },
-    days: { key: 'achievements.venus.metrics.days', fallback: 'Дней в игре' },
+    days:        { key: 'achievements.venus.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.venus.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
