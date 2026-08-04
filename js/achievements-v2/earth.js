@@ -33,7 +33,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 120,   growth: 1.30, rewardBase: 70,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-        speed:       { base: 22000, growth: 0.85, rewardBase: 160,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
+        days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 5,     growth: 1.40, rewardBase: 210,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -54,7 +54,7 @@ const NAME_TEMPLATES = {
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.earth.metrics.time',        fallback: 'Секунд на планете' },
-    speed:       { key: 'achievements.earth.metrics.speed',       fallback: 'Рекорд скорости (мс)' },
+    days: { key: 'achievements.earth.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.earth.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
