@@ -32,7 +32,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 90,    growth: 1.30, rewardBase: 60,   rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-        speed:       { base: 25000, growth: 0.85, rewardBase: 140,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
+              days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 4,     growth: 1.40, rewardBase: 180,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -48,7 +48,7 @@ const NAME_TEMPLATES = {
     boboDmg:     { key: 'achievements.venus.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
     upgrades:    { key: 'achievements.venus.metrics.upgrades',    fallback: 'Улучшений куплено' },
     time:        { key: 'achievements.venus.metrics.time',        fallback: 'Секунд на планете' },
-    speed:       { key: 'achievements.venus.metrics.speed',       fallback: 'Рекорд скорости (мс)' },
+    days: { key: 'achievements.venus.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.venus.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
