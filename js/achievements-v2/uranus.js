@@ -35,7 +35,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 420,   growth: 1.30, rewardBase: 140,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-               days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
+        days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 12,    growth: 1.40, rewardBase: 360,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
