@@ -17,7 +17,7 @@ const CONFIG = {
     scale: 1.7,                     // Очень высокая сложность
     masterAU: 30.06896,             // Реальное значение AU Нептуна
     
-    // 12 метрик: увеличенные base относительно Урана
+    // 13 метрик: увеличенные base относительно Урана
     metrics: {
         // ── БОЕВЫЕ ──
         blocks:      { base: 12,    growth: 1.50, rewardBase: 80,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '🔨' },
