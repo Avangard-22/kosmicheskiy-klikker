@@ -156,51 +156,46 @@ window.GAME_FEATURES = {
         if (typeof window.saveGame === 'function') window.saveGame();
     },
 
-/**
- * Покупает улучшение силы клика
- * @returns {void}
- */    
-buyClickPower: function() {
-    const core = getCore();
-    if (!window.gameState || !core) return;
+    // ═══════════════════════════════════════════════
+    // 💰 ЕДИНЫЙ ИСТОЧНИК ЦЕН (используется и в покупке, и в UI)
+    // ═══════════════════════════════════════════════
+    getUpgradeCost: function(type) {
+        if (!window.gameState) return 0;
+        const planet = window.gameState.currentLocation || 'mercury';
+        const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
+        const gs = window.gameState;
 
-    if (window.gameState.clickUpgradeLevel === undefined) window.gameState.clickUpgradeLevel = 0;
-    // ✅ НОВОЕ: Применяем планетарный коэффициент
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    const cost = Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, window.gameState.clickUpgradeLevel) * costMult);
-
-    if (window.gameState.coins >= cost) {
-            window.gameState.coins -= cost;
-            window.gameState.clickUpgradeLevel++;
-            window.gameState.clickPower = core.calculateClickPower();
-
-                   if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
-
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            if (core.playSound) core.playSound('upgradeSound');
-
-            const btn = document.getElementById('upgradeClickBtn');
-            if (btn) {
-                btn.style.transform = 'scale(1.1)';
-                btn.style.boxShadow = '0 0 20px #4CAF50';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
+        switch (type) {
+            case 'clickPower':
+                return Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, gs.clickUpgradeLevel || 0) * costMult);
+            case 'helper': {
+                const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, gs.helperUpgradeLevel || 0));
+                const actBonus = Math.floor((gs.helperActivations || 0) / 10);
+                return Math.floor(baseCost * (1 + actBonus * 0.2) * costMult);
             }
-
-            if (window.showTooltip && window.formatString && window.translations) {
-                window.showTooltip(window.formatString(window.translations[window.currentLanguage].tooltips.clickPowerUpgrade, { power: Math.round(window.gameState.clickPower) }));
-                setTimeout(window.hideTooltip, 1500);
-            }
-            if (typeof window.saveGame === 'function') window.saveGame();
+            case 'critChance':
+                return Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, gs.critChanceUpgradeLevel || 0) * costMult);
+            case 'critMultiplier':
+                return Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, gs.critMultiplierUpgradeLevel || 0) * costMult);
+            case 'helperDamage':
+                // ⚠️ Рост цены 1.8 → 1.5: цена растёт как урон Bobo (1.5^lvl)
+                // Если хочешь старую цену — верни 1.8
+                return Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.5, gs.helperUpgradeLevel || 0) * costMult);
+            default:
+                return 0;
         }
     },
 
-    buyHelper: function() {
+    // ═══════════════════════════════════════════════
+    // 🎮 ЕДИНАЯ ПОКУПКА (вместо 5 дубликатов)
+    // ═══════════════════════════════════════════════
+    buyUpgrade: function(type) {
         const core = getCore();
         if (!window.gameState || !core) return;
+        const gs = window.gameState;
 
-        if (window.gameState.helperActive) {
+        // Bobo уже активен — купить нельзя
+        if (type === 'helper' && gs.helperActive) {
             if (window.showTooltip && window.translations) {
                 window.showTooltip(window.translations[window.currentLanguage].tooltips.helperAlreadyActive || 'Bobo уже активен!');
                 setTimeout(window.hideTooltip, 1500);
@@ -208,138 +203,83 @@ buyClickPower: function() {
             return;
         }
 
-    // ✅ НОВОЕ: Применяем планетарный коэффициент
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, window.gameState.helperUpgradeLevel || 0));
-    const actBonus = Math.floor((window.gameState.helperActivations || 0) / 10);
-    const cost = Math.floor(baseCost * (1 + actBonus * 0.2) * costMult);
+        // Достигнут потолок — не даём тратить кристаллы впустую
+        if (type === 'critChance' && (gs.critChance || 0) >= (CFG.balanceConfig.critChanceCap || 1)) return;
+        if (type === 'critMultiplier' && (gs.critMultiplier || 2) >= (CFG.balanceConfig.critMultiplierCap || 999)) return;
 
-    if (window.gameState.coins >= cost) {
-            window.gameState.coins -= cost;
-            window.gameState.helperActivations = (window.gameState.helperActivations || 0) + 1;
-          
-            if (window.achievementsSystem) window.achievementsSystem.incrementHelpers(1);
+        const cost = this.getUpgradeCost(type);
+        if (gs.coins < cost) return;
+        gs.coins -= cost;
 
-            const btn = document.getElementById('upgradeHelperBtn');
-            if (btn) {
-                btn.style.transform = 'scale(1.1)';
-                btn.style.boxShadow = '0 0 20px #4CAF50';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
-            }
+        const btnMap = {
+            clickPower: 'upgradeClickBtn',
+            helper: 'upgradeHelperBtn',
+            critChance: 'upgradeCritChanceBtn',
+            critMultiplier: 'upgradeCritMultBtn',
+            helperDamage: 'upgradeHelperDmgBtn'
+        };
+        const btn = document.getElementById(btnMap[type]);
 
-            this.activateHelper();
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            if (typeof window.saveGame === 'function') window.saveGame();
+        switch (type) {
+            case 'clickPower':
+                gs.clickUpgradeLevel = (gs.clickUpgradeLevel || 0) + 1;
+                gs.clickPower = core.calculateClickPower();
+                break;
+            case 'helper':
+                gs.helperActivations = (gs.helperActivations || 0) + 1;
+                this.activateHelper(); // сама показывает тултип «Bobo активирован»
+                break;
+            case 'critChance':
+                gs.critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (gs.critChance || 0.001) + 0.001);
+                gs.critChanceUpgradeLevel = (gs.critChanceUpgradeLevel || 0) + 1;
+                break;
+            case 'critMultiplier':
+                gs.critMultiplier = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (gs.critMultiplier || 2) + 0.2);
+                gs.critMultiplierUpgradeLevel = (gs.critMultiplierUpgradeLevel || 0) + 1;
+                break;
+            case 'helperDamage':
+                gs.helperUpgradeLevel = (gs.helperUpgradeLevel || 0) + 1;
+                break;
         }
+
+        // Метрики: Bobo → incrementHelpers (как в оригинале), остальные → incrementUpgrades
+        if (type === 'helper') {
+            if (window.achievementsSystem?.incrementHelpers) window.achievementsSystem.incrementHelpers(1);
+        } else if (window.achievementsSystem?.incrementUpgrades) {
+            window.achievementsSystem.incrementUpgrades(1);
+        }
+
+        UI.updateHUD();
+        UI.updateUpgradeButtons();
+        if (core.playSound) core.playSound('upgradeSound');
+
+        if (btn) {
+            const color = (type === 'critChance' || type === 'critMultiplier') ? '#FFD700' : '#4CAF50';
+            btn.style.transform = 'scale(1.1)';
+            btn.style.boxShadow = `0 0 20px ${color}`;
+            setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
+        }
+
+        // Тултипы (helper пропускаем — их показывает activateHelper)
+        if (type !== 'helper' && window.showTooltip && window.formatString && window.translations) {
+            const t = window.translations[window.currentLanguage].tooltips;
+            let tip = null;
+            if (type === 'clickPower') tip = window.formatString(t.clickPowerUpgrade, { power: Math.round(gs.clickPower) });
+            else if (type === 'critChance') tip = window.formatString(t.critChanceUpgrade, { chance: (gs.critChance * 100).toFixed(1) });
+            else if (type === 'critMultiplier') tip = window.formatString(t.critMultUpgrade, { mult: gs.critMultiplier.toFixed(1) });
+            else if (type === 'helperDamage') tip = window.formatString(t.helperDmgUpgrade, { level: gs.helperUpgradeLevel });
+            if (tip) { window.showTooltip(tip); setTimeout(window.hideTooltip, 1500); }
+        }
+
+        if (typeof window.saveGame === 'function') window.saveGame();
     },
 
-buyCritChance: function() {
-    const core = getCore();
-    if (!window.gameState || !core) return;
-
-    if (window.gameState.critChanceUpgradeLevel === undefined) window.gameState.critChanceUpgradeLevel = 0;
-    // ✅ НОВОЕ: Применяем планетарный коэффициент
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    const cost = Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, window.gameState.critChanceUpgradeLevel) * costMult);
-
-    if (window.gameState.coins >= cost) {
-            window.gameState.coins -= cost;
-            window.gameState.critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (window.gameState.critChance || 0.001) + 0.001);
-            window.gameState.critChanceUpgradeLevel++;
-           
-            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
-
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            if (core.playSound) core.playSound('upgradeSound');
-
-            const btn = document.getElementById('upgradeCritChanceBtn');
-            if (btn) {
-                btn.style.transform = 'scale(1.1)';
-                btn.style.boxShadow = '0 0 20px #FFD700';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
-            }
-
-            if (window.showTooltip && window.formatString && window.translations) {
-                window.showTooltip(window.formatString(window.translations[window.currentLanguage].tooltips.critChanceUpgrade, { chance: (window.gameState.critChance * 100).toFixed(1) }));
-                setTimeout(window.hideTooltip, 1500);
-            }
-            if (typeof window.saveGame === 'function') window.saveGame();
-        }
-    },
-
-buyCritMultiplier: function() {
-    const core = getCore();
-    if (!window.gameState || !core) return;
-
-    if (window.gameState.critMultiplierUpgradeLevel === undefined) window.gameState.critMultiplierUpgradeLevel = 0;
-    // ✅ НОВОЕ: Применяем планетарный коэффициент
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    const cost = Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, window.gameState.critMultiplierUpgradeLevel) * costMult);
-
-    if (window.gameState.coins >= cost) {
-            window.gameState.coins -= cost;
-            window.gameState.critMultiplier = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (window.gameState.critMultiplier || 2) + 0.2);
-            window.gameState.critMultiplierUpgradeLevel++;
-
-           if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
-
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            if (core.playSound) core.playSound('upgradeSound');
-
-            const btn = document.getElementById('upgradeCritMultBtn');
-            if (btn) {
-                btn.style.transform = 'scale(1.1)';
-                btn.style.boxShadow = '0 0 20px #FFD700';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
-            }
-
-            if (window.showTooltip && window.formatString && window.translations) {
-                window.showTooltip(window.formatString(window.translations[window.currentLanguage].tooltips.critMultUpgrade, { mult: window.gameState.critMultiplier.toFixed(1) }));
-                setTimeout(window.hideTooltip, 1500);
-            }
-            if (typeof window.saveGame === 'function') window.saveGame();
-        }
-    },
-
-buyHelperDamage: function() {
-    const core = getCore();
-    if (!window.gameState || !core) return;
-
-    if (window.gameState.helperUpgradeLevel === undefined) window.gameState.helperUpgradeLevel = 0;
-    // ✅ НОВОЕ: Применяем планетарный коэффициент
-    const planet = window.gameState.currentLocation || 'mercury';
-    const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
-    const cost = Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.8, window.gameState.helperUpgradeLevel) * costMult);
-
-    if (window.gameState.coins >= cost) {
-            window.gameState.coins -= cost;
-            window.gameState.helperUpgradeLevel++;
-
-           if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
-
-            UI.updateHUD();
-            UI.updateUpgradeButtons();
-            if (core.playSound) core.playSound('upgradeSound');
-
-            const btn = document.getElementById('upgradeHelperDmgBtn');
-            if (btn) {
-                btn.style.transform = 'scale(1.1)';
-                btn.style.boxShadow = '0 0 20px #4CAF50';
-                setTimeout(() => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = ''; }, 300);
-            }
-
-            if (window.showTooltip && window.formatString && window.translations) {
-                window.showTooltip(window.formatString(window.translations[window.currentLanguage].tooltips.helperDmgUpgrade, { level: window.gameState.helperUpgradeLevel }));
-                setTimeout(window.hideTooltip, 1500);
-            }
-            if (typeof window.saveGame === 'function') window.saveGame();
-        }
-    }
+    // ⚠️ ТОНКИЕ ОБЁРТКИ — ОБЯЗАТЕЛЬНЫ: их вызывают game-core.js (строки 1097–1101)!
+    // Без них игра упадёт с «FEAT.buyClickPower is not a function»
+    buyClickPower:    function() { return this.buyUpgrade('clickPower'); },
+    buyHelper:        function() { return this.buyUpgrade('helper'); },
+    buyCritChance:    function() { return this.buyUpgrade('critChance'); },
+    buyCritMultiplier:function() { return this.buyUpgrade('critMultiplier'); },
+    buyHelperDamage:  function() { return this.buyUpgrade('helperDamage'); }
 };
 })();
