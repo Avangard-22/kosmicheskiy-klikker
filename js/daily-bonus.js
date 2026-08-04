@@ -108,8 +108,27 @@ function getBoostName(boostId) {
 // ==========================================
 // 📅 ISO-ДАТЫ (защита от тайм-тревела)
 // ==========================================
-const getToday = () => new Date().toISOString().split('T')[0];
+const getToday = () => {
+    const msk = new Date(Date.now() + 3 * 3600 * 1000); // UTC+3 (МСК)
+    return msk.toISOString().split('T')[0];
+};
 
+    // ⏰ Таймер буста: тикает ТОЛЬКО пока игра открыта (страница жива)
+function startBoostTimer() {
+    if (window.__boostTimer) return;
+    window.__boostTimer = setInterval(() => {
+        const b = window.gameState?.boost30d;
+        if (!b || !b.active) return;
+        b.remainingMs -= 1000;
+        if (b.remainingMs <= 0) {
+            b.active = false;
+            b.remainingMs = 0;
+            console.log('⏰ [DAILY] Буст 30 дней завершён');
+            if (typeof window.saveGame === 'function') window.saveGame();
+        }
+    }, 1000);
+}
+    
 // ==========================================
 // 🎁 ПОЛУЧЕНИЕ БОНУСА
 // ==========================================
@@ -158,6 +177,18 @@ function claimDailyBonus() {
         }
     } else {
         data.streak = 1;
+    }
+    
+    // ✅ НОВОЕ: метрика «Дней в игре» (текущая планета)
+    if (window.achievementsSystem?.incrementPlanetDays) {
+        window.achievementsSystem.incrementPlanetDays(window.gameState.currentLocation || 'mercury');
+    }
+    
+    // 🎁 Каждые 30 дней подряд без пропуска → буст: +500% кристаллы, +5 сила (3 игровых часа)
+    if (data.streak > 0 && data.streak % 30 === 0) {
+        window.gameState.boost30d = { active: true, remainingMs: 3 * 3600 * 1000 };
+        console.log('🚀 [DAILY] Буст 30 дней! +500% кристаллы, +5 сила (3 игровых часа)');
+        if (window.telegramHaptic?.success) window.telegramHaptic.success();
     }
     
     // Генерируем награду (детерминированно!)
@@ -460,7 +491,11 @@ document.head.appendChild(style);
 // ==========================================
 window.dailyBonusSystem = {
     claimDailyBonus,
-    generateReward, // для отладки    getToday
+    generateReward, // для отладки
+    getToday,
+    isBoostActive: () => !!(window.gameState?.boost30d?.active),
+    getRemainingMs: () => window.gameState?.boost30d?.remainingMs || 0,
+    getClickPowerBonus: () => (window.gameState?.boost30d?.active ? 5 : 0)
 };
 
 // ЧТО: Замена хаотичного setTimeout на гарантированную синхронизацию через EventBus
@@ -468,6 +503,9 @@ window.dailyBonusSystem = {
 // ЗАЧЕМ: Вместо гадания "через 500мс gameState появится?" мы подписываемся
 //        на событие save:ready и инициализируемся ТОЛЬКО когда gameState гарантированно есть.
 function init() {
+    // ✅ НОВОЕ: таймер буста запускается сразу (сам проверяет активность)
+    startBoostTimer();
+    
     // Если gameState уже есть — запускаем сразу
     if (window.gameState && Object.keys(window.gameState).length > 0) {
         createBonusIcon();
