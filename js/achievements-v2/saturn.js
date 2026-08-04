@@ -52,12 +52,12 @@ const NAME_TEMPLATES = {
     crystals:    { key: 'achievements.saturn.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.saturn.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.saturn.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
- boboCrystals:{ key: 'achievements.saturn.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },   
- upgrades:    { key: 'achievements.saturn.metrics.upgrades',    fallback: 'Улучшений куплено' },
+    boboCrystals:{ key: 'achievements.saturn.metrics.boboCrystals',fallback: 'Кристаллов от Bobo' },   
+    upgrades:    { key: 'achievements.saturn.metrics.upgrades',    fallback: 'Улучшений куплено' },
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.saturn.metrics.time',        fallback: 'Секунд на планете' },
-   days: { key: 'achievements.saturn.metrics.days', fallback: 'Дней в игре' },
+    days:        { key: 'achievements.saturn.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.saturn.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
