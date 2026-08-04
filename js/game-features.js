@@ -247,9 +247,8 @@ buyCritChance: function() {
 
     if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
-            window.gameState.critChance = Math.min(1.0, window.gameState.critChance + 0.001);
+            window.gameState.critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (window.gameState.critChance || 0.001) + 0.001);
             window.gameState.critChanceUpgradeLevel++;
-
            
             if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
 
@@ -284,7 +283,7 @@ buyCritMultiplier: function() {
 
     if (window.gameState.coins >= cost) {
             window.gameState.coins -= cost;
-            window.gameState.critMultiplier += 0.2;
+            window.gameState.critMultiplier = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (window.gameState.critMultiplier || 2) + 0.2);
             window.gameState.critMultiplierUpgradeLevel++;
 
            if (window.achievementsSystem) window.achievementsSystem.incrementUpgrades(1);
