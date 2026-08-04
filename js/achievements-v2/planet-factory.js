@@ -174,7 +174,6 @@ function createPlanetModule(config, nameTemplates) {
             metric, metricType: cfg.type, emoji: cfg.emoji
         };
     }
-
     
     function generateLevels(metric, fromTier, count) {
         const levels = [];
