@@ -17,7 +17,7 @@ const CONFIG = {
     scale: 1.5,                     // Высокая сложность (кольца Сатурна)
     masterAU: 9.53707,              // Реальное значение AU Сатурна
     
-    // 12 метрик: увеличенные base относительно Юпитера
+    // 13 метрик: увеличенные base относительно Юпитера
     metrics: {
         // ── БОЕВЫЕ ──
         blocks:      { base: 8,     growth: 1.50, rewardBase: 60,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '🔨' },
