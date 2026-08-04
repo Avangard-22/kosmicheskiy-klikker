@@ -130,20 +130,20 @@ function updatePlanetTime(planet, seconds) {
     debouncedSave();
 }
 
-function updatePlanetSpeed(planet, milliseconds) {
-    if (!milliseconds || milliseconds <= 0) return;
+function incrementPlanetDays(planet) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    gm.planetStats[planet].days = (gm.planetStats[planet].days || 0) + 1;
     
-    const current = gm.planetStats[planet].fastestBlock || 0;
-    if (current === 0 || milliseconds < current) {
-        gm.planetStats[planet].fastestBlock = milliseconds;
-        const module = getPlanetModule(planet);
-        if (module) module.updateMetric('speed', milliseconds, 'min'); // ✅ Режим 'min' для рекорда времени
-        debouncedSave();
-    }
+    const module = getPlanetModule(planet);
+    if (module) module.updateMetric('days', 1, 'add'); // ✅ Счётчик дней (cumulative)
+    debouncedSave();
 }
+
+// ⚠️ ВРЕМЕННАЯ заглушка: не даёт игре упасть, пока game-core.js ещё вызывает updatePlanetSpeed.
+// УДАЛИТЬ после патча game-core.js (удаление вызова на строках 406–410).
+function updatePlanetSpeed() {}
 
 function updatePlanetCritStreak(planet, streak) {
     if (!streak || streak <= 0) return;
@@ -232,7 +232,8 @@ window.achievementsSystem = {
     incrementPlanetBoboDamage: incrementPlanetBoboDamage,
     incrementPlanetUpgrades: incrementPlanetUpgrades,
     updatePlanetTime: updatePlanetTime,
-    updatePlanetSpeed: updatePlanetSpeed,
+    updatePlanetSpeed: updatePlanetSpeed,   // ⚠️ временная заглушка — убрать вместе с game-core.js
+    incrementPlanetDays: incrementPlanetDays,
     updatePlanetCritStreak: updatePlanetCritStreak,
     incrementTotalDamage: incrementTotalDamage,
     incrementCoinsEarned: incrementCoinsEarned,
