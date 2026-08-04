@@ -17,7 +17,7 @@ const CONFIG = {
     scale: 1.6,                    // Ледяной гигант, высокая сложность
     masterAU: 19.19126,            // Реальное значение AU Урана
     
-    // 12 метрик: увеличенные base относительно Сатурна
+    // 13 метрик: увеличенные base относительно Сатурна
     metrics: {
         // ── БОЕВЫЕ ──
         blocks:      { base: 10,    growth: 1.50, rewardBase: 70,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '🔨' },
