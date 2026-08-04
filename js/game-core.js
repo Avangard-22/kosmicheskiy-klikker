@@ -64,10 +64,14 @@ window.GAME_CORE = {
 // lvl 75+:     +0.5 за уровень (100 → ∞)
 calculateClickPower: function() {
     const lvl = window.gameState.clickUpgradeLevel || 0;
-    if (lvl <= 0) return 1;
-    if (lvl <= 25) return 1 + lvl * 2;
-    if (lvl <= 74) return 51 + (lvl - 25);
-    return 100 + (lvl - 74) * 0.5;
+    let power;
+    if (lvl <= 0) power = 1;
+    else if (lvl <= 25) power = 1 + lvl * 2;
+    else if (lvl <= 74) power = 51 + (lvl - 25);
+    else power = 100 + (lvl - 74) * 0.5;
+    // ✅ НОВОЕ: Буст 30 дней — +5 к силе клика (daily-bonus.js)
+    power += (window.dailyBonusSystem && window.dailyBonusSystem.isBoostActive()) ? 5 : 0;
+    return power;
 },
 
     getCurrentSpeed: function() {
