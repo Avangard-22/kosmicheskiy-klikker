@@ -30,8 +30,8 @@ const CONFIG = {
         crystals:    { base: 2500,  growth: 1.60, rewardBase: 95,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '💎' },
         bobo:        { base: 16,    growth: 1.50, rewardBase: 360,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🤖' },
         boboDmg:     { base: 14000, growth: 1.55, rewardBase: 180,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🔧' },
-     boboCrystals:{ base: 6000, growth: 1.60, rewardBase: 100, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
-     upgrades:    { base: 30,    growth: 1.45, rewardBase: 140,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
+        boboCrystals:{ base: 6000, growth: 1.60, rewardBase: 100, rewardGrowth: 1.10, type: 'cumulative', emoji: '💰' },   
+        upgrades:    { base: 30,    growth: 1.45, rewardBase: 140,  rewardGrowth: 1.10, type: 'cumulative',  emoji: '🛒' },
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 720,   growth: 1.30, rewardBase: 180,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
