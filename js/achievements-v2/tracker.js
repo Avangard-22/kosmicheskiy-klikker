@@ -25,7 +25,20 @@ function getPlanetModule(planet) {
 
 function incrementPlanetBlocks(planet, c) {
     if (!c) c = 1;
+
+    // ✅ НОВОЕ: Дневной счётчик для HP-рампы (сброс по дате МСК)
+    const gs = window.gameState;
+    if (gs) {
+        const today = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+        if (gs.dailyHpRampDate !== today) {
+            gs.dailyHpRampDate = today;
+            gs.dailyBlocksDestroyed = 0;
+        }
+        gs.dailyBlocksDestroyed = (gs.dailyBlocksDestroyed || 0) + c;
+    }
+
     var gm = window.gameMetrics || (window.gameMetrics = {});
+
     if (!gm.planetStats) gm.planetStats = {};
     if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
     gm.planetStats[planet].blocks = (gm.planetStats[planet].blocks || 0) + c;
