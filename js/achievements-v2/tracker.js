@@ -96,6 +96,18 @@ function incrementPlanetCrystals(planet, amount) {
     debouncedSave();
 }
 
+    function incrementPlanetBoboCrystals(planet, amount) {
+    if (!amount) return;
+    var gm = window.gameMetrics || (window.gameMetrics = {});
+    if (!gm.planetStats) gm.planetStats = {};
+    if (!gm.planetStats[planet]) gm.planetStats[planet] = {};
+    gm.planetStats[planet].boboCrystals = (gm.planetStats[planet].boboCrystals || 0) + amount;
+    
+    const module = getPlanetModule(planet);
+    if (module) module.updateMetric('boboCrystals', amount, 'add');
+    debouncedSave();
+}
+  
 function incrementPlanetBobo(planet) {
     var gm = window.gameMetrics || (window.gameMetrics = {});
     if (!gm.planetStats) gm.planetStats = {};
@@ -238,6 +250,7 @@ window.achievementsSystem = {
     updatePlanetCombo: updatePlanetCombo,
     incrementPlanetRareBlocks: incrementPlanetRareBlocks,
     incrementPlanetCrystals: incrementPlanetCrystals,
+    incrementPlanetBoboCrystals: incrementPlanetBoboCrystals,
     incrementPlanetBobo: incrementPlanetBobo,
     incrementPlanetBoboDamage: incrementPlanetBoboDamage,
     incrementPlanetUpgrades: incrementPlanetUpgrades,
