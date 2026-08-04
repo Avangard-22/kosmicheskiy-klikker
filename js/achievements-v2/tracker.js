@@ -141,9 +141,6 @@ function incrementPlanetDays(planet) {
     debouncedSave();
 }
 
-// ⚠️ ВРЕМЕННАЯ заглушка: не даёт игре упасть, пока game-core.js ещё вызывает updatePlanetSpeed.
-// УДАЛИТЬ после патча game-core.js (удаление вызова на строках 406–410).
-function updatePlanetSpeed() {}
 
 function updatePlanetCritStreak(planet, streak) {
     if (!streak || streak <= 0) return;
@@ -232,7 +229,6 @@ window.achievementsSystem = {
     incrementPlanetBoboDamage: incrementPlanetBoboDamage,
     incrementPlanetUpgrades: incrementPlanetUpgrades,
     updatePlanetTime: updatePlanetTime,
-    updatePlanetSpeed: updatePlanetSpeed,   // ⚠️ временная заглушка — убрать вместе с game-core.js
     incrementPlanetDays: incrementPlanetDays,
     updatePlanetCritStreak: updatePlanetCritStreak,
     incrementTotalDamage: incrementTotalDamage,
