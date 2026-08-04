@@ -57,7 +57,7 @@ const NAME_TEMPLATES = {
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.uranus.metrics.time',        fallback: 'Секунд на планете' },
-    days: { key: 'achievements.uranus.metrics.days', fallback: 'Дней в игре' },
+    days:        { key: 'achievements.uranus.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.uranus.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
