@@ -23,8 +23,8 @@ if (window.RandomEvents && typeof window.RandomEvents.getDamageMultiplier === 'f
 }
 
 let isCrit = false;
-let critChance = Math.min(1, (window.gameState.critChance || 0.001) * getBonus('getCritChanceMultiplier', 1));
-let critMult = (window.gameState.critMultiplier || 2) * getBonus('getCritMultMultiplier', 1);
+let critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (window.gameState.critChance || 0.001) * getBonus('getCritChanceMultiplier', 1));
+let critMult = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (window.gameState.critMultiplier || 2) * getBonus('getCritMultMultiplier', 1));
 if (Math.random() < critChance) { dmg = Math.round(dmg * critMult); isCrit = true; }
 else dmg = Math.round(dmg);
 return { finalDamage: Math.max(0, dmg), isCrit };
@@ -99,6 +99,20 @@ return { finalDamage: Math.max(0, dmg), isCrit };
         // Перманентное снижение HP от магазина/перков
         if (window.GAME_CORE?.permanentBlockHpMult && window.GAME_CORE.permanentBlockHpMult < 1) {
             hp = Math.floor(hp * window.GAME_CORE.permanentBlockHpMult);
+        }
+
+        // ✅ НОВОЕ: Дневная HP-рампа (BALANCE_CONFIG.dailyRamp) — анти-фарм
+        // Чем больше блоков уничтожено за сутки, тем толще новые блоки
+        const ramp = CFG.balanceConfig.dailyRamp;
+        if (ramp && ramp.enabled) {
+            const blocksToday = window.gameState.dailyBlocksDestroyed || 0;
+            const steps = Math.min(
+                Math.floor(blocksToday / (ramp.blocksPerStep || 100)),
+                ramp.maxSteps || 30
+            );
+            if (steps > 0) {
+                hp = Math.floor(hp * (1 + steps * ((ramp.hpPercentPerStep || 5) / 100)));
+            }
         }
         
         return Math.max(1, hp);
