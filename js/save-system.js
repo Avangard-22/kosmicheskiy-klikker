@@ -525,22 +525,28 @@ window.resetGame = function() {
     window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
     window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
     window.gameMetrics.startTime = Date.now();
-    
-    // ✅ Флаг новой игры для принудительного сохранения в облако
     window.gameState._isNewGame = true;
-    
-    // ❌ УБРАНО: localStorage.removeItem (не используем localStorage)
-    
-    // Отправляем пустой прогресс в облако
+
+    // ✅ Сброс с ОБЯЗАТЕЛЬНОЙ перезаписью облака: ждём ответ, проверяем success,
+    //    передаём серверу явный флаг reset (чтобы он перезаписал game_state_json даже пустым)
     if (window.telegramCloud?.saveProgress) {
         const emptyData = extractCloudData();
         if (emptyData) {
+            emptyData.reset = true;   // ✅ сервер обязан перезаписать game_state_json
             window.telegramCloud.saveProgress(emptyData)
-                .then(() => console.log('☁️ [RESET] Облако очищено'))
+                .then((result) => {
+                    if (result?.success) {
+                        console.log('☁️ [RESET] Облако перезаписано: новая игра подтверждена');
+                        // ✅ Снимаем флаг ТОЛЬКО после подтверждения
+                        window.gameState._isNewGame = false;
+                    } else {
+                        console.error('❌ [RESET] Облако НЕ перезаписано:', result?.error);
+                    }
+                })
                 .catch((e) => console.error('❌ [RESET] Ошибка очистки облака:', e));
         }
     }
-    console.log('🔄 Прогресс обнулен в облаке');
+    console.log('🔄 Прогресс обнулён локально');
 };
 
 window.hasSave = async function() {
