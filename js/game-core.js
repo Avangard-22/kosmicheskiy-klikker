@@ -394,11 +394,6 @@ if (isAuto && planet && window.achievementsSystem?.incrementPlanetBoboCrystals) 
     window.achievementsSystem.incrementPlanetBoboCrystals(planet, destroyResult.reward || 0);
 }
 
-// ✅ НОВОЕ: Метрика speed (рекорд скорости уничтожения блока)
-if (block?.dataset.spawnTime && planet && window.achievementsSystem?.updatePlanetSpeed) {
-    const speed = Date.now() - parseInt(block.dataset.spawnTime);
-    window.achievementsSystem.updatePlanetSpeed(planet, speed);
-}
     this.showRewardText(destroyResult.reward || 0, block);
     // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
     if (getFeat().createExplosion) getFeat().createExplosion(block);
