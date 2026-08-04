@@ -72,49 +72,59 @@ return { finalDamage: Math.max(0, dmg), isCrit };
      };
  },
 
-        calculateBlockHealth: function() {
-        const planet = window.gameState.currentLocation;
-        const au = CFG.astronomicalUnits[planet] || 0;
-        const clickPower = window.gameState.clickPower || 1;
-        const targetClicks = CFG.balanceConfig.targetClicks; // 70
-        
-        // ✅ ИСПРАВЛЕНО: Первый блок на новой планете всегда 80-110 HP
-        if (!window.gameState?.planetFirstBlockCleared) {
-            const firstBlockHP = 80 + Math.floor(Math.random() * 31); // 80-110
-            return firstBlockHP;
+    calculateBlockHealth: function() {
+        if (!window.gameState) return 80;
+
+        // 1. Первый блок планеты (фиксированный, рампа не действует)
+        if (!window.gameState.planetFirstBlockCleared) {
+            return 80 + Math.floor(Math.random() * 31); // 80-110
         }
-        
-        // ✅ ВАРИАНТ Б: Логарифмическая формула (слабое влияние AU)
-        // Меркурий (0.387 AU) × 1.03, Плутон (39.48 AU) × 1.37
-        const auMult = 1 + Math.log(1 + au) * 0.1;
-        const base = CFG.balanceConfig.baseHealth * auMult;
-        const target = clickPower * targetClicks;
-        
-        const rnd = CFG.balanceConfig.healthRandomRange.min + 
-                    Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
-        
-        let hp = Math.floor(((base + target) / 2) * rnd * 
-                            (window.GAME_CORE?.getBonus?.('getBlockHealthMultiplier', 1) || 1));
-        
-        // Перманентное снижение HP от магазина/перков
+
+        const cfg = CFG.balanceConfig;
+        const scale = cfg.hpScaling || { critWeight: 0.6, boboWeight: 0.4, boboHitRate: 7.5, boboLevelCap: 25 };
+
+        // 2. Базовые показатели игрока (с капами!)
+        const cp = window.gameState.clickPower || 1;
+        const critChance = Math.min(cfg.critChanceCap || 1, window.gameState.critChance || 0);
+        const critMult = Math.min(cfg.critMultiplierCap || 999, window.gameState.critMultiplier || 2);
+
+        // 3. Ожидаемый бонус крита: шанс × (множитель − 1)
+        const expectedCritBonus = critChance * (critMult - 1);
+
+        // 4. Вклад Bobo — ТОЛЬКО пока активен (иначе без него блок непробиваем)
+        let expectedBoboBonus = 0;
+        if (window.gameState.helperActive) {
+            const boboLvl = Math.min(scale.boboLevelCap, window.gameState.helperUpgradeLevel || 0);
+            const boboDmg = Math.pow(1.5, boboLvl);
+            expectedBoboBonus = boboDmg / scale.boboHitRate; // урон Bobo → эквивалент кликов
+        }
+
+        // 5. Эффективный урон за клик (баффы комет НЕ учитываем — HP не прыгает)
+        const eed = cp * (1 + (expectedCritBonus * scale.critWeight) + (expectedBoboBonus * scale.boboWeight));
+
+        // 6. HP
+        const au = CFG.astronomicalUnits[window.gameState.currentLocation] || 0;
+        const auMult = 1 + Math.log(1 + au) * 0.1; // 1.03 Меркурий → 1.37 Плутон
+        let hp = eed * (cfg.targetClicks || 70) * auMult;
+
+        // 7. Рандомизация и внешние множители
+        const rnd = cfg.healthRandomRange.min +
+                    Math.random() * (cfg.healthRandomRange.max - cfg.healthRandomRange.min);
+        hp = Math.floor(hp * rnd * (window.GAME_CORE?.getBonus?.('getBlockHealthMultiplier', 1) || 1));
+
+        // 8. Перманентное снижение HP от магазина/перков
         if (window.GAME_CORE?.permanentBlockHpMult && window.GAME_CORE.permanentBlockHpMult < 1) {
             hp = Math.floor(hp * window.GAME_CORE.permanentBlockHpMult);
         }
 
-        // ✅ НОВОЕ: Дневная HP-рампа (BALANCE_CONFIG.dailyRamp) — анти-фарм
-        // Чем больше блоков уничтожено за сутки, тем толще новые блоки
-        const ramp = CFG.balanceConfig.dailyRamp;
+        // 9. Дневная HP-рампа (сверху, анти-фарм)
+        const ramp = cfg.dailyRamp;
         if (ramp && ramp.enabled) {
             const blocksToday = window.gameState.dailyBlocksDestroyed || 0;
-            const steps = Math.min(
-                Math.floor(blocksToday / (ramp.blocksPerStep || 100)),
-                ramp.maxSteps || 30
-            );
-            if (steps > 0) {
-                hp = Math.floor(hp * (1 + steps * ((ramp.hpPercentPerStep || 5) / 100)));
-            }
+            const steps = Math.min(Math.floor(blocksToday / (ramp.blocksPerStep || 100)), ramp.maxSteps || 30);
+            if (steps > 0) hp = Math.floor(hp * (1 + steps * ((ramp.hpPercentPerStep || 5) / 100)));
         }
-        
+
         return Math.max(1, hp);
     },
 
