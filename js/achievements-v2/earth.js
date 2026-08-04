@@ -16,7 +16,7 @@ const CONFIG = {
     scale: 1.2,                    // Сложнее Венеры на 20%
     masterAU: 1.00000,             // Реальное значение AU Земли (1 а.е.)
     
-    // 12 метрик: увеличенные base относительно Венеры
+    // 13 метрик: увеличенные base относительно Венеры
     metrics: {
         // ── БОЕВЫЕ ──
         blocks:      { base: 3,     growth: 1.50, rewardBase: 35,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '🔨' },
