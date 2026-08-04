@@ -17,7 +17,7 @@ const CONFIG = {
     scale: 1.8,                     // Максимальная сложность (финал)
     masterAU: 39.48200,             // Реальное значение AU Плутона
     
-    // 12 метрик: максимальные base для финального вызова
+    // 13 метрик: максимальные base для финального вызова
     metrics: {
         // ── БОЕВЫЕ ──
         blocks:      { base: 15,    growth: 1.50, rewardBase: 90,   rewardGrowth: 1.08, type: 'cumulative',  emoji: '🔨' },
