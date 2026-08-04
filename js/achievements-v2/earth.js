@@ -47,7 +47,7 @@ const NAME_TEMPLATES = {
     rare:        { key: 'achievements.earth.metrics.rare',        fallback: 'Редких блоков' },
     damage:      { key: 'achievements.earth.metrics.damage',      fallback: 'Нанесено урона' },
     
-    // ── ЭКОНОМИКА И ПОМОЩНИКИ ──
+     // ── ЭКОНОМИКА И ПОМОЩНИКИ ──
     crystals:    { key: 'achievements.earth.metrics.crystals',    fallback: 'Заработано кристаллов' },
     bobo:        { key: 'achievements.earth.metrics.bobo',        fallback: 'Активаций Bobo' },
     boboDmg:     { key: 'achievements.earth.metrics.boboDmg',     fallback: 'Урона нанесено Bobo' },
