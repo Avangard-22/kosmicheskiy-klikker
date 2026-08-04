@@ -123,6 +123,9 @@ function startBoostTimer() {
         if (b.remainingMs <= 0) {
             b.active = false;
             b.remainingMs = 0;
+                      if (window.gameFunctions?.calculateClickPower) {
+                window.gameState.clickPower = window.gameFunctions.calculateClickPower(); // снимаем +5
+            }
             console.log('⏰ [DAILY] Буст 30 дней завершён');
             if (typeof window.saveGame === 'function') window.saveGame();
         }
@@ -187,6 +190,9 @@ function claimDailyBonus() {
     // 🎁 Каждые 30 дней подряд без пропуска → буст: +500% кристаллы, +5 сила (3 игровых часа)
     if (data.streak > 0 && data.streak % 30 === 0) {
         window.gameState.boost30d = { active: true, remainingMs: 3 * 3600 * 1000 };
+    if (window.gameFunctions?.calculateClickPower) {
+        window.gameState.clickPower = window.gameFunctions.calculateClickPower(); // применяем +5 сразу
+    }
         console.log('🚀 [DAILY] Буст 30 дней! +500% кристаллы, +5 сила (3 игровых часа)');
         if (window.telegramHaptic?.success) window.telegramHaptic.success();
     }
