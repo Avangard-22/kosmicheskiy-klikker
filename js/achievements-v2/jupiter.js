@@ -34,7 +34,7 @@ const CONFIG = {
         
         // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
         time:        { base: 240,   growth: 1.30, rewardBase: 100,  rewardGrowth: 1.07, type: 'cumulative',  emoji: '⏱️' },
-        speed:       { base: 15000, growth: 0.85, rewardBase: 220,  rewardGrowth: 1.12, type: 'record_min',  emoji: '🏃' },
+         days:        { base: 1, growth: 1.0, rewardBase: 500, rewardGrowth: 1.0, type: 'days', emoji: '📅' },
         critStreak:  { base: 8,     growth: 1.40, rewardBase: 280,  rewardGrowth: 1.12, type: 'record_max',  emoji: '🎯' }
     }
 };
@@ -55,7 +55,7 @@ const NAME_TEMPLATES = {
     
     // ── НАВЫК И ЭФФЕКТИВНОСТЬ ──
     time:        { key: 'achievements.jupiter.metrics.time',        fallback: 'Секунд на планете' },
-    speed:       { key: 'achievements.jupiter.metrics.speed',       fallback: 'Рекорд скорости (мс)' },
+    days: { key: 'achievements.jupiter.metrics.days', fallback: 'Дней в игре' },
     critStreak:  { key: 'achievements.jupiter.metrics.critStreak',  fallback: 'Серия критов подряд' }
 };
 
