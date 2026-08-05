@@ -81,7 +81,7 @@ return { finalDamage: Math.max(0, dmg), isCrit };
         }
 
         const cfg = CFG.balanceConfig;
-        const scale = cfg.hpScaling || { critWeight: 0.6, boboWeight: 0.4, boboHitRate: 7.5, boboLevelCap: 25 };
+        const scale = cfg.hpScaling || { critWeight: 0.2, boboWeight: 0.4, boboHitRate: 7.5, boboLevelCap: 25 };
 
         // 2. Базовые показатели игрока (с капами!)
         const cp = window.gameState.clickPower || 1;
