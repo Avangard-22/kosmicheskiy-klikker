@@ -86,23 +86,10 @@ calculateClickPower: function() {
 //        автоматически применяются в игре. Метод-обёртка сохранён для совместимости.
 calculateBlockHealth: function() {
     if (window.CombatSystem && typeof window.CombatSystem.calculateBlockHealth === 'function') {
-        // ✅ НОВОЕ: Применяем множитель от детектора устройства
-        let hp = window.CombatSystem.calculateBlockHealth();
-        if (this.deviceHealthMult && this.deviceHealthMult !== 1.0) {
-            hp = Math.floor(hp * this.deviceHealthMult);
-        }
-        return hp;
+        // HP считается от урона игрока; множитель устройства уже учтён в формуле
+        return window.CombatSystem.calculateBlockHealth();
     }
-    // Fallback на старую логику, если CombatSystem ещё не загружен (защита от race condition)
-    const target = (window.gameState.clickPower || 1) * CFG.balanceConfig.targetClicks;
-    const base = CFG.balanceConfig.baseHealth * (1 + CFG.astronomicalUnits[window.gameState.currentLocation] * 2);
-    const random = CFG.balanceConfig.healthRandomRange.min + Math.random() * (CFG.balanceConfig.healthRandomRange.max - CFG.balanceConfig.healthRandomRange.min);
-    let hp = Math.floor(((base + target) / 2) * random * this.getBonus('getBlockHealthMultiplier', 1));
-    // ✅ НОВОЕ: Применяем множитель от детектора устройства
-    if (this.deviceHealthMult && this.deviceHealthMult !== 1.0) {
-        hp = Math.floor(hp * this.deviceHealthMult);
-    }
-    return hp;
+    return 80;
 },
 
     createMovingBlock: function() {
