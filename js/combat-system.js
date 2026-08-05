@@ -72,52 +72,76 @@ return { finalDamage: Math.max(0, dmg), isCrit };
      };
  },
 
+    // ═══════════════════════════════════════════════════
+    // ❤️ HP БЛОКА — считается от УРОНА ИГРОКА
+    // Участвует ТОЛЬКО прокачка из HUD (клики, криты, Bobo).
+    // Бонусы магазина НЕ участвуют — они помогают ломать, а не раздувать HP.
+    // ═══════════════════════════════════════════════════
+    _expectedDamagePerClick: function() {
+        if (!window.gameState) return 1;
+        const gs = window.gameState;
+        const cfg = CFG.balanceConfig.hpFromPlayer || {};
+
+        // 1. Сила удара — та же ступенчатая прогрессия, что в HUD
+        let clickPower = gs.clickPower || 1;
+        if (typeof window.GAME_CORE?.calculateClickPower === 'function') {
+            clickPower = window.GAME_CORE.calculateClickPower();
+        }
+
+        // 2. Средний урон с критами: base × (1 + шанс × (множитель − 1))
+        const critChance = Math.min(cfg.maxCritChance ?? 0.50, gs.critChance || 0.001);
+        const critMult = Math.min(cfg.maxCritMult ?? 10, gs.critMultiplier || 2);
+        const critFactor = 1 + critChance * (critMult - 1);
+
+        // 3. Вклад Bobo — только пока активен, реальная формула его урона,
+        //    а НЕ экспонента (Math.pow(1.5, lvl) ломала HP)
+        let boboDps = 0;
+        if (gs.helperActive) {
+            const boboDmgPerHit = clickPower
+                * (1 + (gs.helperDamageBonus || 0))
+                * (1 + (gs.helperUpgradeLevel || 0) * 0.2);
+            const interval = ((gs.permanentHelperInterval || 1500) / 1000); // сек
+            boboDps = boboDmgPerHit / interval;
+        }
+
+        const clicksPerSec = cfg.playerClicksPerSec ?? 5;
+        const boboWeight = cfg.boboWeight ?? 0.55;
+        const boboPerClick = (boboDps / clicksPerSec) * boboWeight;
+
+        return clickPower * critFactor + boboPerClick;
+    },
+
     calculateBlockHealth: function() {
         if (!window.gameState) return 80;
 
-        // 1. Первый блок планеты (фиксированный, рампа не действует)
+        // Первый блок планеты — всегда лёгкий (80–110)
         if (!window.gameState.planetFirstBlockCleared) {
-            return 80 + Math.floor(Math.random() * 31); // 80-110
+            return 80 + Math.floor(Math.random() * 31);
         }
 
         const cfg = CFG.balanceConfig;
-        const scale = cfg.hpScaling || { critWeight: 0.2, boboWeight: 0.4, boboHitRate: 7.5, boboLevelCap: 25 };
-
-        // 2. Базовые показатели игрока (с капами!)
-        const cp = window.gameState.clickPower || 1;
-        const critChance = Math.min(cfg.critChanceCap || 1, window.gameState.critChance || 0);
-        const critMult = Math.min(cfg.critMultiplierCap || 999, window.gameState.critMultiplier || 2);
-
-        // 3. Ожидаемый бонус крита: шанс × (множитель − 1)
-        const expectedCritBonus = critChance * (critMult - 1);
-
-        // 4. Вклад Bobo — ТОЛЬКО пока активен (иначе без него блок непробиваем)
-        let expectedBoboBonus = 0;
-        if (window.gameState.helperActive) {
-            const boboLvl = Math.min(scale.boboLevelCap, window.gameState.helperUpgradeLevel || 0);
-            const boboDmg = Math.pow(1.5, boboLvl);
-            expectedBoboBonus = boboDmg / scale.boboHitRate; // урон Bobo → эквивалент кликов
-        }
-
-        // 5. Эффективный урон за клик (баффы комет НЕ учитываем — HP не прыгает)
-        const eed = cp * (1 + (expectedCritBonus * scale.critWeight) + (expectedBoboBonus * scale.boboWeight));
-
-        // 6. HP
+        const hpCfg = cfg.hpFromPlayer || {};
         const au = CFG.astronomicalUnits[window.gameState.currentLocation] || 0;
-        const auMult = 1 + Math.log(1 + au) * 0.1; // 1.03 Меркурий → 1.37 Плутон
-        let hp = eed * (cfg.targetClicks || 70) * auMult;
+        const auMult = 1 + Math.log(1 + au) * 0.1; // Меркурий ×1.03 → Плутон ×1.37
 
-        // 7. Рандомизация и внешние множители
+        // Целевые клики: 70–90 (случайный диапазон, чтобы не было «ровно 70»)
+        const targetClicks = (cfg.targetClicks || 70) + Math.floor(Math.random() * 21);
+
+        // HP = ожидаемый урон за клик × целевые клики × AU
+        const expected = this._expectedDamagePerClick();
+        let hp = Math.floor(expected * targetClicks * auMult);
+
+        // Случайный разброс ±20%
         const rnd = cfg.healthRandomRange.min +
-                    Math.random() * (cfg.healthRandomRange.max - cfg.healthRandomRange.min);
-        hp = Math.floor(hp * rnd * (window.GAME_CORE?.getBonus?.('getBlockHealthMultiplier', 1) || 1));
+            Math.random() * (cfg.healthRandomRange.max - cfg.healthRandomRange.min);
+        hp = Math.floor(hp * rnd);
 
-        // 8. Перманентное снижение HP от магазина/перков
-        if (window.GAME_CORE?.permanentBlockHpMult && window.GAME_CORE.permanentBlockHpMult < 1) {
-            hp = Math.floor(hp * window.GAME_CORE.permanentBlockHpMult);
-        }
+        // ✅ Страховочный потолок (не даёт HP улететь даже с прокачанным Bobo)
+        const maxMult = hpCfg.maxTotalMult ?? 6;
+        const cap = Math.floor((window.gameState.clickPower || 1) * maxMult * ((cfg.targetClicks || 70) + 20));
+        hp = Math.min(hp, Math.max(cap, 200));
 
-        // 9. Дневная HP-рампа (сверху, анти-фарм)
+        // Дневная HP-рампа (анти-фарм) — оставляем как есть
         const ramp = cfg.dailyRamp;
         if (ramp && ramp.enabled) {
             const blocksToday = window.gameState.dailyBlocksDestroyed || 0;
