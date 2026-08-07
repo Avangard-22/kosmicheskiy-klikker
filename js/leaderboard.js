@@ -49,7 +49,7 @@ const Leaderboard = {
         if (gs.achievementsV2) {
             Object.values(gs.achievementsV2).forEach(planetAch => {
                 const m = planetAch?.metrics || {};
-                blocks += (m.blocks?.progress || 0) + (m.rare?.progress || 0);
+               blocks += (m.blocks?.progress || 0);   // редкие уже входят в blocks — не дублируем
             });
         }
 
