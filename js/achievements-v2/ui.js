@@ -8,6 +8,20 @@ let currentView = 'grid';
 let currentMetric = null;
 let paginationOffset = 0;
 let panelVisible = false;
+let viewPlanetId = null; // ← какая планета открыта в панели (null = текущая)
+const PLANET_ORDER = () => (window.GAME_CONFIG?.planetOrder ||
+    ['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune','pluto','heliopause']);
+function getViewPlanetId() {
+    if (viewPlanetId && PLANET_ORDER().indexOf(viewPlanetId) !== -1) return viewPlanetId;
+    return window.gameState?.currentLocation || 'mercury';
+}
+function shiftViewPlanet(dir) {
+    const order = PLANET_ORDER();
+    const idx = order.indexOf(getViewPlanetId());
+    viewPlanetId = order[Math.max(0, Math.min(order.length - 1, idx + dir))];
+    currentView = 'grid'; currentMetric = null; paginationOffset = 0;
+    renderGridView();
+}
 
 // ═══════════════════════════════════════════════
 // 🔢 ФОРМАТИРОВАНИЕ ЧИСЕЛ
@@ -56,7 +70,7 @@ function updateAchievementsButton() {
     let totalUnlocked = 0;
     let totalPossible = 0;
     
-    const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];
+    const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'heliopause'];
     planets.forEach(planet => {
         const planetAch = gs.achievementsV2[planet];
         if (planetAch) {
@@ -132,7 +146,7 @@ function injectStyles() {
         .ach-v2-level-target { font-size:0.7em; color:#aaa; font-family:'Orbitron',monospace; }
         .ach-v2-level-reward { font-size:0.75em; color:#FFD700; font-weight:bold; padding:2px 8px; background:rgba(255,215,0,0.15); border-radius:6px; }
         .ach-v2-pagination { display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); }
-        .ach-v2-pagination-btn { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 12px; border-radius:6px; cursor:pointer; font-family:'Orbitron',sans-serif; font-size:0.8em; }
+        .ach-v2-back-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; margin-bottom: 8px; } .ach-v2-nav-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,215,0,0.35); color: #FFD700; border-radius: 8px; padding: 6px 11px; cursor: pointer; font-size: 1em; font-weight: bold; } .ach-v2-nav-btn:disabled { opacity: 0.25; cursor: not-allowed; }
         .ach-v2-pagination-btn:hover { background:rgba(255,255,255,0.2); }
         .ach-v2-pagination-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .ach-v2-pagination-info { font-size:0.75em; color:#aaa; font-family:'Orbitron',monospace; }
@@ -165,7 +179,7 @@ function attachButtonListener() {
 // 📦 ЛОГИКА ПАНЕЛИ
 // ═══════════════════════════════════════════════
 function getCurrentPlanetModule() {
-    const planet = window.gameState?.currentLocation || 'mercury';
+const planet = getViewPlanetId(); // ← просматриваемая планета, а не только текущая
     // ✅ Используем фабрику вместо жёсткого маппинга
     if (window.AchievementsV2?.PlanetFactory) {
         return window.AchievementsV2.PlanetFactory.get(planet);
@@ -188,15 +202,24 @@ function renderGridView() {
     const info = module.getPlanetInfo();
     const metrics = module.getMetricDefinitions();
     const achState = window.gameState?.achievementsV2?.[info.id] || { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };
-    const rankInfo = module.calculateRank(achState.totalUnlocked);
-    
-    let html = `
-        <div class="ach-v2-header">
-            <h3 class="ach-v2-title">${info.emoji} ${t(info.nameKey, info.id.toUpperCase())}</h3>
-            <div class="ach-v2-rank-badge">${rankInfo.title.ru || rankInfo.title.en}</div>
-        </div>
-        <div class="ach-v2-grid">
-    `;
+ const rankInfo = module.calculateRank(achState.totalUnlocked);
+ const viewedId = getViewPlanetId();
+ const currentId = window.gameState?.currentLocation || 'mercury';
+ const isFrozen = viewedId !== currentId || !!achState.frozen;
+ const order = PLANET_ORDER();
+ const idx = order.indexOf(viewedId);
+ let html = `
+     <div class="ach-v2-header">
+         <button class="ach-v2-nav-btn" id="achV2PrevPlanet" ${idx > 0 ? '' : 'disabled'}>←</button>
+         <div style="flex:1;text-align:center;">
+             <h3 class="ach-v2-title">${info.emoji} ${t(info.nameKey, info.id.toUpperCase())}</h3>
+             <div style="font-size:0.7em;color:${isFrozen ? '#4FC3F7' : '#9ef01a'};">${isFrozen ? '❄️ замороженный прогресс' : '▶️ текущая планета'}</div>
+         </div>
+         <button class="ach-v2-nav-btn" id="achV2NextPlanet" ${idx < order.length - 1 ? '' : 'disabled'}>→</button>
+         <div class="ach-v2-rank-badge">${rankInfo.title.ru || rankInfo.title.en}</div>
+     </div>
+     <div class="ach-v2-grid">
+ `;
     
     metrics.forEach(metric => {
         const metricState = achState.metrics[metric.id] || { level: 0, progress: 0 };
@@ -214,7 +237,7 @@ function renderGridView() {
     });
     
  const masterState = achState.masterUnlocked;
- const masterName = t(`achievements.${info.id}.levels.m_complete`, `${info.emoji} ${info.nameFallback || info.id.toUpperCase()} покорён!`);
+const masterName = t(`achievements.${info.id}.master`, `${info.emoji} ${info.id.toUpperCase()} покорён!`);
  html += `
      <div class="ach-v2-card master" data-metric="master" style="border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,140,0,0.1));">
          <div class="ach-v2-card-emoji">👑</div>
@@ -227,12 +250,13 @@ function renderGridView() {
     `;
     
     html += '</div>';
-    panel.innerHTML = html;
-    
-    // Обновляем кнопку достижений после рендера
-    updateAchievementsButton();
-    
-    panel.querySelectorAll('.ach-v2-card').forEach(card => {
+panel.innerHTML = html;
+// Обновляем кнопку достижений после рендера
+updateAchievementsButton();
+// ←/→ листают локации
+panel.querySelector('#achV2PrevPlanet')?.addEventListener('click', e => { e.stopPropagation(); shiftViewPlanet(-1); });
+panel.querySelector('#achV2NextPlanet')?.addEventListener('click', e => { e.stopPropagation(); shiftViewPlanet(1); });
+panel.querySelectorAll('.ach-v2-card').forEach(card => {
         card.addEventListener('click', function(e) {
             e.stopPropagation();
             showDetailView(this.dataset.metric);
@@ -366,10 +390,10 @@ function togglePanel() {
 }
 
 function showPanel() {
-    const panel = document.getElementById('achievementsPanel');
-    if (!panel) return;
-    
-    panel.style.display = 'flex';
+const panel = document.getElementById('achievementsPanel');
+if (!panel) return;
+viewPlanetId = null; // открываемся на текущей планете
+panel.style.display = 'flex';
     panelVisible = true;
     renderGridView();
     
@@ -431,11 +455,12 @@ function setupEventListeners() {
     });
     
     // ✅ Закрытие по клавише Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && panelVisible) {
-            hidePanel();
-        }
-    });
+ document.addEventListener('keydown', function(e) {
+     if (!panelVisible) return;
+     if (e.key === 'Escape') { hidePanel(); return; }
+     if (e.key === 'ArrowLeft')  { shiftViewPlanet(-1); }
+     if (e.key === 'ArrowRight') { shiftViewPlanet(1); }
+ });
     
     console.log('✅ [ACH-V2] Global event listeners setup complete');
 }
@@ -443,94 +468,70 @@ function setupEventListeners() {
 // ═══════════════════════════════════════════════
 // 🎨 ВИЗУАЛИЗАЦИЯ ПОЛУЧЕНИЯ ДОСТИЖЕНИЙ
 // ═══════════════════════════════════════════════
-function showAchievementCard(data) {
+// ═══════════════════════════════════════════════
+// 🎨 КОМПАКТНЫЕ ТОСТЫ ДОСТИЖЕНИЙ (v2.2)
+// ЧТО: стек справа сверху, ≤3 штук, 2.5с, не перекрывает центр поля
+// ═══════════════════════════════════════════════
+function getToastStack() {
+    let stack = document.getElementById('achToastStack');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'achToastStack';
+               // ✅ v2.3: по центру сверху — появление заметно, центр поля не перекрыт
+        stack.style.cssText = 'position:fixed;top:88px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;z-index:10001;pointer-events:none;max-width:92vw;';
+        document.body.appendChild(stack);
+    }
+    return stack;
+}
+
+function makeToast(html, accent) {
+    const stack = getToastStack();
     const card = document.createElement('div');
-    card.style.cssText = `
-        position: fixed;
-        top: 15%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, rgba(255,215,0,0.95), rgba(255,140,0,0.95));
-        color: #000;
-        padding: 15px 25px;
-        border-radius: 15px;
-        z-index: 10001;
-        text-align: center;
-        font-family: 'Orbitron', sans-serif;
-        font-weight: bold;
-        box-shadow: 0 5px 25px rgba(255,215,0,0.8), 0 0 40px rgba(255,215,0,0.4);
-        animation: achCardSlide 0.5s ease-out;
-        max-width: 350px;
-        width: 90%;
-        border: 3px solid #fff;
-        pointer-events: none;
-    `;
-
-    const planetEmoji = data.planet === 'mercury' ? '☿' : 
-                       data.planet === 'venus' ? '♀' : 
-                       data.planet === 'earth' ? '🌍' : 
-                       data.planet === 'mars' ? '♂' : '🪐';
-
-    card.innerHTML = `
-        <div style="font-size:2.5em;margin-bottom:5px">${planetEmoji}</div>
-        <div style="font-size:1.4em;margin-bottom:5px">🏆 ДОСТИЖЕНИЕ!</div>
-        <div style="font-size:1.1em;margin-bottom:8px;color:#fff">${data.level.nameFallback}</div>
-        <div style="font-size:0.85em;margin-bottom:10px;color:#eee">Уровень ${data.tier + 1}</div>
-        <div style="font-size:1.2em;color:#FFD700">💎 +${data.reward.toLocaleString()}</div>
-    `;
-
-    document.body.appendChild(card);
-
+    card.style.cssText = `background:linear-gradient(135deg, rgba(255,215,0,0.92), rgba(255,140,0,0.92));color:#000;padding:6px 10px;border-radius:10px;border:2px solid ${accent || '#fff'};font-family:'Orbitron',sans-serif;font-weight:bold;text-align:left;max-width:230px;box-shadow:0 4px 14px rgba(255,215,0,0.45);animation:achCardSlide 0.4s ease-out;pointer-events:none;`;
+    card.innerHTML = html;
+    stack.appendChild(card);
+    while (stack.children.length > 3) stack.removeChild(stack.firstChild); // ≤3 одновременно
     setTimeout(() => {
-        card.style.transition = 'all 0.5s ease-in';
+        card.style.transition = 'all 0.4s ease-in';
         card.style.opacity = '0';
-        card.style.transform = 'translateX(-50%) translateY(-50px)';
-        setTimeout(() => {
-            if (card.parentNode) card.parentNode.removeChild(card);
-        }, 500);
-    }, 3000);
+        card.style.transform = 'translateX(40px)';
+        setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 400);
+    }, 2500);
+}
+
+// ✅ v2.3: имя из переводов по nameKey (payload может быть плоским)
+function trName(key, fallback) {
+    const t = window.translations?.[window.currentLanguage || 'ru'];
+    if (!t || !key) return fallback;
+    if (t[key]) return t[key];                       // плоский ключ
+    let node = t;                                    // вложенный ach.planet.metric
+    for (const p of String(key).split('.')) { node = node?.[p]; if (!node) break; }
+    return node || fallback;
+}
+
+function showAchievementCard(data) {
+    const d = data || {};
+    const a = d.achievement || d;                    // ✅ платим и плоскому payload
+    const name = trName(a.nameKey, a.nameFallback || a.name || 'Достижение!');
+    const reward = Number(a.reward ?? d.reward ?? 0);
+    const tier = Number(a.tier ?? d.tier ?? 0);
+    makeToast(`
+        <div style="font-size:1.05em;line-height:1.15;">${a.emoji || '🏆'} ${name}</div>
+        <div style="font-size:0.72em;opacity:0.85;">Уровень ${tier + 1}</div>
+        <div style="font-size:0.85em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>
+    `);
 }
 
 function showMasterAchievementCard(data) {
-    const card = document.createElement('div');
-    card.style.cssText = `
-        position: fixed;
-        top: 10%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, rgba(255,215,0,1), rgba(255,140,0,1));
-        color: #000;
-        padding: 20px 30px;
-        border-radius: 20px;
-        z-index: 10002;
-        text-align: center;
-        font-family: 'Orbitron', sans-serif;
-        font-weight: bold;
-        box-shadow: 0 10px 40px rgba(255,215,0,1), 0 0 60px rgba(255,215,0,0.6);
-        animation: achCardSlide 0.5s ease-out;
-        max-width: 400px;
-        width: 90%;
-        border: 4px solid #fff;
-        pointer-events: none;
-    `;
-
-    card.innerHTML = `
-        <div style="font-size:3em;margin-bottom:10px">👑</div>
-        <div style="font-size:1.6em;margin-bottom:10px">ПЛАНЕТА ПОКОРЕНА!</div>
-        <div style="font-size:1.2em;margin-bottom:15px;color:#fff">${data.achievement.nameFallback}</div>
-        <div style="font-size:1.4em;color:#FFD700">💎 +${data.achievement.reward.toLocaleString()}</div>
-    `;
-
-    document.body.appendChild(card);
-
-    setTimeout(() => {
-        card.style.transition = 'all 0.5s ease-in';
-        card.style.opacity = '0';
-        card.style.transform = 'translateX(-50%) translateY(-50px)';
-        setTimeout(() => {
-            if (card.parentNode) card.parentNode.removeChild(card);
-        }, 500);
-    }, 4000);
+    const d = data || {};
+    const a = d.achievement || d;
+    const name = trName(a.nameKey, a.nameFallback || a.name || '');
+    const reward = Number(a.reward ?? d.reward ?? 0);
+    makeToast(`
+        <div style="font-size:1.15em;line-height:1.15;">👑 ПЛАНЕТА ПОКОРЕНА!</div>
+        <div style="font-size:0.78em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);">${name}</div>
+        <div style="font-size:0.9em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>
+    `, '#FFD700');
 }
 
 // ═══════════════════════════════════════════════
