@@ -56,35 +56,29 @@ function updateAchievementsButton() {
     
     const gs = window.gameState;
     if (!gs || !gs.achievementsV2) {
-        btn.textContent = '0/0';
+        btn.textContent = '';
         return;
     }
-    
-    // Текущая локация
+
+    // ✅ Компактный формат: 201 | 1.5K (тиры достижений бездонные — дробь X/Y бессмысленна)
+    const fmtCompact = n => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n);
+
     const currentLocation = gs.currentLocation || 'mercury';
-    const currentAch = gs.achievementsV2[currentLocation];
-    const currentUnlocked = currentAch ? 
-        Object.values(currentAch.metrics).reduce((sum, m) => sum + (m.level || 0), 0) + (currentAch.masterUnlocked ? 1 : 0) : 0;
-    
-    // Всего достижений на всех 9 планетах (приблизительно)
+    let currentUnlocked = 0;
     let totalUnlocked = 0;
-    let totalPossible = 0;
-    
-    const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'heliopause'];
-    planets.forEach(planet => {
-        const planetAch = gs.achievementsV2[planet];
-        if (planetAch) {
-            Object.values(planetAch.metrics).forEach(m => {
-                totalUnlocked += (m.level || 0);
-            });
-            if (planetAch.masterUnlocked) totalUnlocked++;
-        }
-        // Приблизительное количество возможных достижений на планете (10 метрик * ~10 уровней + мастер)
-        totalPossible += 110; 
+
+    // Один проход по всем планетам (порядок из конфига, не хардкод)
+    PLANET_ORDER().forEach(planet => {
+        const pa = gs.achievementsV2[planet];
+        if (!pa) return;
+        const n = Object.values(pa.metrics || {}).reduce((s, m) => s + (m.level || 0), 0)
+            + (pa.masterUnlocked ? 1 : 0);
+        totalUnlocked += n;
+        if (planet === currentLocation) currentUnlocked = n;
     });
-    
-    btn.textContent = `${currentUnlocked}/${totalPossible}`;
-    btn.title = `На ${currentLocation}: ${currentUnlocked} | Всего разблокировано: ${totalUnlocked}`;
+
+    btn.textContent = fmtCompact(currentUnlocked);
+    btn.title = `🏆 На ${currentLocation}: ${currentUnlocked} | Всего по всем планетам: ${totalUnlocked}`;
 }
 
 // ═══════════════════════════════════════════════
@@ -509,29 +503,69 @@ function trName(key, fallback) {
     return node || fallback;
 }
 
+// ✅ v2.2: ищем определение метрики так же, как это делает сетка карточек
+function lookupMetricDef(data) {
+    const d = data || {};
+    const a = d.achievement || d;
+    const planetId = d.planetId || d.planet || a.planetId || a.planet || window.gameState?.currentLocation;
+    const metricId = d.metricId || d.metric || a.metricId || a.metric || a.id;
+    const nameKey = a.nameKey || d.nameKey;
+    try {
+        const order = window.GAME_CONFIG?.planetOrder || [];
+        const planets = [planetId].concat(order.filter(p => p !== planetId));
+        for (const pid of planets) {
+            const module = window.AchievementsV2?.PlanetFactory?.get?.(pid);
+            if (!module || typeof module.getMetricDefinitions !== 'function') continue;
+            const defs = module.getMetricDefinitions() || [];
+            let hit = null;
+            if (metricId) hit = defs.find(m => m && m.id === metricId);
+            if (!hit && nameKey) hit = defs.find(m => m && m.nameKey === nameKey);
+            if (hit) return hit;
+        }
+    } catch (e) {}
+    return null;
+}
+
 function showAchievementCard(data) {
     const d = data || {};
-    const a = d.achievement || d;                    // ✅ платим и плоскому payload
-    const name = trName(a.nameKey, a.nameFallback || a.name || 'Достижение!');
+    const a = d.achievement || d; // ✅ платим и плоскому payload
+    const def = lookupMetricDef(d);                       // ✅ иконка/имя из карточки
+    const emoji = a.emoji || (def && def.emoji) || '🏆';
+    const name = trName(a.nameKey || (def && def.nameKey), a.nameFallback || a.name || (def && def.fallback) || 'Достижение!');
     const reward = Number(a.reward ?? d.reward ?? 0);
     const tier = Number(a.tier ?? d.tier ?? 0);
-    makeToast(`
-        <div style="font-size:1.05em;line-height:1.15;">${a.emoji || '🏆'} ${name}</div>
-        <div style="font-size:0.72em;opacity:0.85;">Уровень ${tier + 1}</div>
-        <div style="font-size:0.85em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>
-    `);
+    makeToast(
+        `<div style="display:flex;align-items:center;gap:10px;text-align:left;">` +
+        `<div style="font-size:2em;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">${emoji}</div>` +
+        `<div style="flex:1;min-width:0;">` +
+        `<div style="font-size:1.02em;line-height:1.15;font-weight:bold;">${name}</div>` +
+        `<div style="font-size:0.72em;opacity:0.85;">Уровень ${tier + 1}</div>` +
+        `<div style="font-size:0.85em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>` +
+        `</div></div>`
+    );
 }
 
 function showMasterAchievementCard(data) {
     const d = data || {};
     const a = d.achievement || d;
+    const planetId = d.planetId || d.planet || a.planetId || a.planet || window.gameState?.currentLocation;
+    let planetEmoji = '👑';
+    try {
+        const info = window.AchievementsV2?.PlanetFactory?.get?.(planetId)?.getPlanetInfo?.();
+        if (info && info.emoji) planetEmoji = info.emoji;   // ✅ иконка планеты как в карточке мастера
+    } catch (e) {}
     const name = trName(a.nameKey, a.nameFallback || a.name || '');
     const reward = Number(a.reward ?? d.reward ?? 0);
-    makeToast(`
-        <div style="font-size:1.15em;line-height:1.15;">👑 ПЛАНЕТА ПОКОРЕНА!</div>
-        <div style="font-size:0.78em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);">${name}</div>
-        <div style="font-size:0.9em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>
-    `, '#FFD700');
+    makeToast(
+        `<div style="display:flex;align-items:center;gap:10px;text-align:left;">` +
+        `<div style="font-size:2em;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">${planetEmoji}</div>` +
+        `<div style="flex:1;min-width:0;">` +
+        `<div style="font-size:1.1em;line-height:1.15;font-weight:bold;">👑 ПЛАНЕТА ПОКОРЕНА!</div>` +
+        `<div style="font-size:0.78em;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);">${name}</div>` +
+        `<div style="font-size:0.9em;color:#7a4a00;">💎 +${reward.toLocaleString()}</div>` +
+        `</div></div>`,
+        '#FFD700'
+    );
 }
 
 // ═══════════════════════════════════════════════
