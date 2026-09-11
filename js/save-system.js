@@ -322,41 +322,55 @@ function reconstructMetricsFromAchievements() {
             upgrades: 'upgrades', time: 'timePlayed', speed: 'fastestBlock', critStreak: 'maxCritStreak'
         };
 
-        for (const planet in ach) {
-            // ⏭️ Пропуск свеже-сброшенных телепортом планет
-            if (tpReset[planet] && tpNow - tpReset[planet] < 60000) {
-                console.log(`⏭️ [SAVE] ${planet} сброшена телепортом — синхронизация пропущена`);
-                continue;
-            }
-            const planetStats = gm.planetStats?.[planet];
-            if (!planetStats || !ach[planet]?.metrics) continue;
+const currentLocation = window.gameState?.currentLocation;
 
-            for (const [metricKey, statField] of Object.entries(planetMapping)) {
-                if (!ach[planet].metrics[metricKey]) {
-                    ach[planet].metrics[metricKey] = { level: 0, progress: 0 };
+for (const planet in ach) {
+    if (!ach[planet] || !ach[planet].metrics) continue;
+    
+    // ✅ ЗАЩИТА 1: Пропускаем замороженные планеты
+    // (пройденные через Врата, метрики должны стоять)
+    if (ach[planet].frozen) {
+        continue;
+    }
+    
+    // ✅ ЗАЩИТА 2: Синхронизируем ТОЛЬКО текущую локацию
+    // (остальные планеты обновляются только через фабрику)
+    if (planet !== currentLocation) {
+        continue;
+    }
+    
+    // Проверяем защитное окно телепорта
+    if (tpReset[planet] && tpNow - tpReset[planet] < 60000) {
+        console.log(`⏭️ [SAVE] ${planet} сброшена телепортом — синхронизация пропущена`);
+        continue;
+    }
+    
+    const planetStats = gm.planetStats?.[planet];
+    if (!planetStats || !ach[planet]?.metrics) continue;
+    
+    for (const [metricKey, statField] of Object.entries(planetMapping)) {
+        if (!ach[planet].metrics[metricKey]) {
+            ach[planet].metrics[metricKey] = { level: 0, progress: 0 };
+        }
+        const realValue = planetStats[statField] || 0;
+        const savedProgress = ach[planet].metrics[metricKey].progress || 0;
+        
+        if (realValue > savedProgress) {
+            console.log(`🛠️ Исправлено: [${planet}] ${metricKey} было ${savedProgress}, стало ${realValue}`);
+            ach[planet].metrics[metricKey].progress = realValue;
+            syncCount++;
+            
+            try {
+                const module = window.AchievementsV2?.PlanetFactory?.get(planet);
+                if (module && typeof module.updateMetric === 'function') {
+                    module.updateMetric(metricKey, realValue, 'set');
                 }
-
-                const realValue = planetStats[statField] || 0;
-                const savedProgress = ach[planet].metrics[metricKey].progress || 0;
-
-                // 🛡️ ЖЕСТКОЕ ПРАВИЛО: Если реальный прогресс в игре ВЫШЕ сохранённого в ачивках, перезаписываем
-                if (realValue > savedProgress) {
-                    console.log(`   🛠️ Исправлено: [${planet}] ${metricKey} было ${savedProgress}, стало ${realValue}`);
-                    ach[planet].metrics[metricKey].progress = realValue;
-                    syncCount++;
-
-                    // Просим систему достижений пересчитать уровень на основе нового прогресса
-                    try {
-                        const module = window.AchievementsV2?.PlanetFactory?.get(planet);
-                        if (module && typeof module.updateMetric === 'function') {
-                            module.updateMetric(metricKey, realValue, 'set');
-                        }
-                    } catch (err) {
-                        console.warn('⚠️ Ошибка пересчета уровня ачивки (не критично):', err);
-                    }
-                }
+            } catch (err) {
+                console.warn(`⚠️ Ошибка пересчета уровня ачивки:`, err);
             }
         }
+    }
+}
 
         if (syncCount > 0) {
             console.warn(`⚠️ [SAVE-SYSTEM] Успешно восстановлено ${syncCount} значений прогресса.`);
@@ -444,19 +458,52 @@ function applyCloudData(cloudData) {
     
 // Вызывать ПОСЛЕ восстановления gameState/gameMetrics из облака (save-system.js)
 function repairCopiedMetrics() {
-    const gs = window.gameState, gm = window.gameMetrics;
+    const gs = window.gameState;
+    const gm = window.gameMetrics;
     if (!gs?.achievementsV2 || !gm?.planetStats) return;
+    
+    const currentLocation = gs.currentLocation;
+    const unlockedLocations = gs.unlockedLocations || ['mercury'];
     let fixed = 0;
+    
     for (const [planet, ach] of Object.entries(gs.achievementsV2)) {
-        const realBlocks = gm.planetStats[planet]?.blocks || 0;
-        const m = ach?.metrics;
-        if (!m) continue;
-        if (realBlocks === 0 && (m.blocks?.progress || 0) > 0 && (ach.rank || 0) === 0) {
-            for (const key of Object.keys(m)) m[key] = { level: 0, progress: 0 };
+        if (!ach || !ach.metrics) continue;
+        
+        // ✅ Пропускаем текущую планету (она может иметь легитимный прогресс)
+        if (planet === currentLocation) continue;
+        
+        // ✅ Пропускаем замороженные планеты (они прошли Врата корректно)
+        if (ach.frozen) continue;
+        
+        // ✅ Пропускаем разблокированные планеты (игрок мог их посещать)
+        if (unlockedLocations.includes(planet)) continue;
+        
+        // Для всех остальных (неоткрытых, не замороженных, не текущих) —
+        // обнуляем метрики, если там есть ненулевой прогресс
+        let hasPhantom = false;
+        for (const key in ach.metrics) {
+            const m = ach.metrics[key];
+            if (m && (m.progress > 0 || m.level > 0)) {
+                hasPhantom = true;
+                break;
+            }
+        }
+        
+        if (hasPhantom) {
+            for (const key in ach.metrics) {
+                ach.metrics[key] = { level: 0, progress: 0 };
+            }
+            ach.masterUnlocked = false;
+            ach.rank = 0;
+            ach.totalUnlocked = 0;
             fixed++;
+            console.log(`🔧 [REPAIR] ${planet}: сброшены фантомные метрики (не открыта, не заморожена)`);
         }
     }
-    if (fixed) console.warn(`🔧 [REPAIR] Сброшены скопированные метрики: ${fixed} планет`);
+    
+    if (fixed > 0) {
+        console.warn(`🔧 [REPAIR] Всего сброшено фантомных метрик: ${fixed} планет`);
+    }
 }
     
 reconstructMetricsFromAchievements();
