@@ -442,7 +442,24 @@ function applyCloudData(cloudData) {
         console.warn('⚠️ [LOAD] full_game_metrics отсутствует в облачных данных');
     }
     
-    reconstructMetricsFromAchievements();
+// Вызывать ПОСЛЕ восстановления gameState/gameMetrics из облака (save-system.js)
+function repairCopiedMetrics() {
+    const gs = window.gameState, gm = window.gameMetrics;
+    if (!gs?.achievementsV2 || !gm?.planetStats) return;
+    let fixed = 0;
+    for (const [planet, ach] of Object.entries(gs.achievementsV2)) {
+        const realBlocks = gm.planetStats[planet]?.blocks || 0;
+        const m = ach?.metrics;
+        if (!m) continue;
+        if (realBlocks === 0 && (m.blocks?.progress || 0) > 0 && (ach.rank || 0) === 0) {
+            for (const key of Object.keys(m)) m[key] = { level: 0, progress: 0 };
+            fixed++;
+        }
+    }
+    if (fixed) console.warn(`🔧 [REPAIR] Сброшены скопированные метрики: ${fixed} планет`);
+}
+    
+reconstructMetricsFromAchievements();
     
     // ✅ НОВОЕ: Гарантируем полную структуру после загрузки
     ensurePlanetStatsStructure();
