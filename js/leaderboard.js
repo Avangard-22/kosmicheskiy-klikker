@@ -1,24 +1,35 @@
-// js/leaderboard.js (v3.0 — сервер считает всё)
+// js/leaderboard.js (v3.1 — полная версия)
 (function() {
 'use strict';
 
 const Leaderboard = {
-    config: { submitInterval: 30000, maxEntries: 50 },
-    
-    // ✅ Whitelist валидных планет (защита от XSS через level)
+    config: {
+        submitInterval: 30000,
+        maxEntries: 50
+    },
+
     _validPlanets: new Set([
         'mercury', 'venus', 'earth', 'mars', 'jupiter',
         'saturn', 'uranus', 'neptune', 'pluto', 'heliopause'
     ]),
-    
+
     currentPeriod: 'time',
     currentBlockPeriod: 'total',
     currentDistancePeriod: 'total',
     modalVisible: false,
     lastSubmitTime: 0,
+    isSubmitting: false,
+
+    _intervalId: null,
+    _onSaveReady: null,
+    _onSaveCompleted: null,
+    _escHandler: null,
+    _focusTrapHandler: null,
+    _ownsPause: false,
+    _previousFocus: null,
 
     // ═══════════════════════════════════════
-    // Форматирование значений для отображения
+    // ФОРМАТИРОВАНИЕ
     // ═══════════════════════════════════════
     formatDistance: function(num, period) {
         if (!num || num <= 0) return '0';
@@ -41,68 +52,71 @@ const Leaderboard = {
     },
 
     // ═══════════════════════════════════════
-    // Абсолютные тоталы для отправки на сервер
+    // АБСОЛЮТНЫЕ ТОТАЛЫ (Патч 1 + A)
     // ═══════════════════════════════════════
-getAbsoluteTotals: function() {
-    const gs = window.gameState;
-    if (!gs) return { blocks: 0, distance: 0, time: 0 };
+    getAbsoluteTotals: function() {
+        const gs = window.gameState;
+        if (!gs) return { blocks: 0, distance: 0, time: 0 };
 
-    let blocks = 0, time = 0;
-    const ps = window.gameMetrics?.planetStats || {};
-    Object.values(ps).forEach(p => {
-        blocks += (p.blocks || 0);        // planetStats не подвержен копипасте
-        time   += (p.timePlayed || 0);
-    });
-
-    const distance = gs.totalDamageDealt || 0;
-    return { blocks: Math.floor(blocks), distance: Math.floor(distance), time: Math.floor(time) };
-},
-    // ═══════════════════════════════════════
-    // Отправка на сервер (каждые 30 сек)
-    // ═══════════════════════════════════════
-isSubmitting: false, // поле в объекте Leaderboard
-
-submitToLeaderboard: async function() {
-    if (!window.telegramCloud?.isAvailable) return;
-    if (this.isSubmitting) return; // ✅ защита от race condition
-    
-    const now = Date.now();
-    if (now - this.lastSubmitTime < this.config.submitInterval) return;
-
-    const gs = window.gameState;
-    if (!gs) return;
-
-    const username = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
-    const userId = window.getUserId ? window.getUserId() : null;
-    if (!userId) return;
-
-    this.isSubmitting = true;
-    try {
-        const totals = this.getAbsoluteTotals();
-        console.log('🏆 [LB] Отправка:', totals);
-
-        const result = await window.telegramCloud.submitLeaderboard({
-            blocks: totals.blocks,
-            distance: totals.distance,
-            time: totals.time,
-            username: username,
-            userId: userId,
-            level: gs.currentLocation || 'mercury'
+        let blocks = 0, time = 0;
+        const ps = window.gameMetrics?.planetStats || {};
+        Object.values(ps).forEach(p => {
+            blocks += (p.blocks || 0);
+            time   += (p.timePlayed || 0);
         });
 
-        if (result?.success) {
-            this.lastSubmitTime = now;
-            console.log('✅ [LB] Отправлено');
-        }
-    } catch (e) {
-        console.warn('⚠️ [LB] Ошибка отправки:', e);
-    } finally {
-        this.isSubmitting = false;
-    }
-},
+        const distance = gs.totalDamageDealt || 0;
+        return {
+            blocks: Math.floor(blocks),
+            distance: Math.floor(distance),
+            time: Math.floor(time)
+        };
+    },
 
     // ═══════════════════════════════════════
-    // Загрузка с сервера
+    // ОТПРАВКА (Патч 5: race condition)
+    // ═══════════════════════════════════════
+    submitToLeaderboard: async function() {
+        if (!window.telegramCloud?.isAvailable) return;
+        if (this.isSubmitting) return;
+
+        const now = Date.now();
+        if (now - this.lastSubmitTime < this.config.submitInterval) return;
+
+        const gs = window.gameState;
+        if (!gs) return;
+
+        const username = window.getTelegramUsername ? window.getTelegramUsername() : 'Anonymous';
+        const userId = window.getUserId ? window.getUserId() : null;
+        if (!userId) return;
+
+        this.isSubmitting = true;
+        try {
+            const totals = this.getAbsoluteTotals();
+            console.log('🏆 [LB] Отправка:', totals);
+
+            const result = await window.telegramCloud.submitLeaderboard({
+                blocks: totals.blocks,
+                distance: totals.distance,
+                time: totals.time,
+                username: username,
+                userId: userId,
+                level: gs.currentLocation || 'mercury'
+            });
+
+            if (result?.success) {
+                this.lastSubmitTime = now;
+                console.log('✅ [LB] Отправлено');
+            }
+        } catch (e) {
+            console.warn('⚠️ [LB] Ошибка отправки:', e);
+        } finally {
+            this.isSubmitting = false;
+        }
+    },
+
+    // ═══════════════════════════════════════
+    // ЗАГРУЗКА
     // ═══════════════════════════════════════
     fetchLeaderboard: async function(period, subPeriod) {
         if (!window.telegramCloud?.isAvailable) {
@@ -117,7 +131,7 @@ submitToLeaderboard: async function() {
     },
 
     // ═══════════════════════════════════════
-    // СТИЛИ (без изменений)
+    // СТИЛИ (Патч 9: .is-me)
     // ═══════════════════════════════════════
     injectStyles: function() {
         if (document.getElementById('leaderboard-styles')) return;
@@ -138,13 +152,6 @@ submitToLeaderboard: async function() {
                 width: 100%;
                 transition: all 0.2s;
             }
-.lb-entry.is-me {
-    background: rgba(79,195,247,0.15) !important;
-    border-color: rgba(79,195,247,0.5) !important;
-    box-shadow: 0 0 12px rgba(79,195,247,0.3);
-}
-.lb-entry.is-me .lb-name { color: #4FC3F7; }
-.lb-entry.is-me .lb-distance { color: #81D4FA; }
             .leaderboard-btn:hover { background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,140,0,0.3)); transform: scale(1.02); }
             .leaderboard-btn:active { transform: scale(0.98); }
             .lb-modal {
@@ -181,6 +188,13 @@ submitToLeaderboard: async function() {
             .lb-loading { text-align: center; padding: 30px; color: #aaa; }
             .lb-empty { text-align: center; padding: 30px; color: #666; }
             .lb-entry { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; transition: all 0.2s; }
+            .lb-entry.is-me {
+                background: rgba(79,195,247,0.15) !important;
+                border-color: rgba(79,195,247,0.5) !important;
+                box-shadow: 0 0 12px rgba(79,195,247,0.3);
+            }
+            .lb-entry.is-me .lb-name { color: #4FC3F7; }
+            .lb-entry.is-me .lb-distance { color: #81D4FA; }
             .lb-rank { font-size: 1.5em; width: 40px; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: bold; }
             .lb-entry.top-1 .lb-rank { color: #FFD700; }
             .lb-entry.top-2 .lb-rank { color: #C0C0C0; }
@@ -200,23 +214,14 @@ submitToLeaderboard: async function() {
     },
 
     // ═══════════════════════════════════════
-    // МОДАЛЬНОЕ ОКНО (с A11y: Focus Trap + Escape)
+    // МОДАЛЬНОЕ ОКНО (Патч 4: Focus Trap + Escape)
     // ═══════════════════════════════════════
-    
-    // Ссылки на обработчики для корректного removeEventListener
-    _escHandler: null,
-    _focusTrapHandler: null,
-    _ownsPause: false,
-    _previousFocus: null, // элемент, который имел фокус до открытия модалки
-
     createModal: function() {
         if (document.getElementById('leaderboardModal')) return;
 
         const modal = document.createElement('div');
         modal.id = 'leaderboardModal';
         modal.className = 'lb-modal';
-        
-        // ✅ A11y: ARIA-атрибуты для модального окна
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-labelledby', 'lbTitle');
@@ -258,19 +263,18 @@ submitToLeaderboard: async function() {
 
         document.body.appendChild(modal);
 
-        // ─── Базовые обработчики ───
         const closeBtn = document.getElementById('lbCloseBtn');
         closeBtn.addEventListener('click', () => this.hideModal());
-        closeBtn.addEventListener('touchstart', (e) => { 
-            e.preventDefault(); 
-            this.hideModal(); 
+        closeBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.hideModal();
         }, { passive: false });
 
         modal.querySelectorAll('.lb-tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchPeriod(tab.dataset.period));
-            tab.addEventListener('touchstart', (e) => { 
-                e.preventDefault(); 
-                this.switchPeriod(tab.dataset.period); 
+            tab.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.switchPeriod(tab.dataset.period);
             }, { passive: false });
         });
 
@@ -278,9 +282,9 @@ submitToLeaderboard: async function() {
         if (blockSubtabs) {
             blockSubtabs.querySelectorAll('.lb-subtab').forEach(tab => {
                 tab.addEventListener('click', () => this.switchBlockPeriod(tab.dataset.blockPeriod));
-                tab.addEventListener('touchstart', (e) => { 
-                    e.preventDefault(); 
-                    this.switchBlockPeriod(tab.dataset.blockPeriod); 
+                tab.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.switchBlockPeriod(tab.dataset.blockPeriod);
                 }, { passive: false });
             });
         }
@@ -289,22 +293,19 @@ submitToLeaderboard: async function() {
         if (distanceSubtabs) {
             distanceSubtabs.querySelectorAll('.lb-subtab').forEach(tab => {
                 tab.addEventListener('click', () => this.switchDistancePeriod(tab.dataset.distancePeriod));
-                tab.addEventListener('touchstart', (e) => { 
-                    e.preventDefault(); 
-                    this.switchDistancePeriod(tab.dataset.distancePeriod); 
+                tab.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.switchDistancePeriod(tab.dataset.distancePeriod);
                 }, { passive: false });
             });
         }
 
-        // Закрытие по клику на фон
-        modal.addEventListener('click', (e) => { 
-            if (e.target === modal) this.hideModal(); 
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.hideModal();
         });
 
-        // ✅ A11y: Focus Trap — Tab не выходит за пределы модалки
         this._focusTrapHandler = (e) => {
             if (e.key !== 'Tab') return;
-            
             const focusableSelectors = [
                 'button:not([disabled])',
                 '[href]',
@@ -313,21 +314,16 @@ submitToLeaderboard: async function() {
                 'textarea:not([disabled])',
                 '[tabindex]:not([tabindex="-1"])'
             ].join(', ');
-            
             const focusableElements = modal.querySelectorAll(focusableSelectors);
             if (focusableElements.length === 0) return;
-            
             const firstFocusable = focusableElements[0];
             const lastFocusable = focusableElements[focusableElements.length - 1];
-            
             if (e.shiftKey) {
-                // Shift+Tab: если на первом элементе → переходим на последний
                 if (document.activeElement === firstFocusable) {
                     e.preventDefault();
                     lastFocusable.focus();
                 }
             } else {
-                // Tab: если на последнем элементе → переходим на первый
                 if (document.activeElement === lastFocusable) {
                     e.preventDefault();
                     firstFocusable.focus();
@@ -340,59 +336,48 @@ submitToLeaderboard: async function() {
     showModal: async function() {
         this.injectStyles();
         this.createModal();
-        
+
         const modal = document.getElementById('leaderboardModal');
         if (!modal) return;
-        
-        // ✅ A11y: запоминаем элемент, который имел фокус до открытия
+
         this._previousFocus = document.activeElement;
-        
         modal.classList.add('active');
         this.modalVisible = true;
-        
-        // ✅ Патч 3: Условная пауза игры
+
         const core = window.GAME_CORE;
         if (core?.pauseGame && core.gameActive && !core.isPaused?.()) {
             core.pauseGame();
             this._ownsPause = true;
         }
-        
-        // ✅ A11y: Обработчик Escape
+
         this._escHandler = (e) => {
             if (e.key === 'Escape' && this.modalVisible) {
                 this.hideModal();
             }
         };
         document.addEventListener('keydown', this._escHandler);
-        
-        // ✅ A11y: автофокус на кнопку закрытия (первый интерактивный элемент)
+
         const closeBtn = document.getElementById('lbCloseBtn');
-        if (closeBtn) {
-            // Небольшая задержка, чтобы CSS-анимация не мешала фокусу
-            setTimeout(() => closeBtn.focus(), 50);
-        }
-        
+        if (closeBtn) setTimeout(() => closeBtn.focus(), 50);
+
         await this.loadAndRender(this.currentPeriod);
     },
 
-       hideModal: function() {
+    hideModal: function() {
         const modal = document.getElementById('leaderboardModal');
         if (modal) modal.classList.remove('active');
         this.modalVisible = false;
-        
-        // ✅ Патч 3: Снимаем с паузы ТОЛЬКО если мы сами её ставили
+
         if (this._ownsPause && window.GAME_CORE?.resumeGame) {
             window.GAME_CORE.resumeGame();
             this._ownsPause = false;
         }
-        
-        // ✅ A11y: убираем глобальный обработчик Escape
+
         if (this._escHandler) {
             document.removeEventListener('keydown', this._escHandler);
             this._escHandler = null;
         }
-        
-        // ✅ A11y: возвращаем фокус на элемент, который был активен до открытия
+
         if (this._previousFocus && typeof this._previousFocus.focus === 'function') {
             setTimeout(() => {
                 try { this._previousFocus.focus(); } catch (e) {}
@@ -401,8 +386,6 @@ submitToLeaderboard: async function() {
         }
     },
 
-    // ✅ Патч 8: Алиас для обратной совместимости с tutorial.js и внешними модулями
-    // tutorial.js вызывает Leaderboard.close?.() — без этого метода туториал "зависает"
     close: function() {
         this.hideModal();
     },
@@ -412,7 +395,6 @@ submitToLeaderboard: async function() {
         document.querySelectorAll('.lb-tab').forEach(t => {
             const isActive = t.dataset.period === period;
             t.classList.toggle('active', isActive);
-            // ✅ A11y: обновляем aria-selected
             t.setAttribute('aria-selected', isActive.toString());
         });
 
@@ -449,12 +431,13 @@ submitToLeaderboard: async function() {
         });
         await this.loadAndRender('distance', period);
     },
+
     // ═══════════════════════════════════════
-    // ОТРИСОВКА (УПРОЩЕНА — сервер даёт всё)
+    // ОТРИСОВКА (Патч 2: whitelist level)
     // ═══════════════════════════════════════
     loadAndRender: async function(period, subPeriod) {
         const list = document.getElementById('lbList');
-        list.innerHTML = '<div class="lb-loading">⏳ Загрузка...</div>';
+        list.innerHTML = '<div class="lb-loading" role="status">⏳ Загрузка...</div>';
 
         console.log('🔍 [LB] Загрузка:', period, subPeriod);
 
@@ -462,8 +445,9 @@ submitToLeaderboard: async function() {
         console.log('🔍 [LB] Результат:', result);
 
         if (!result?.success || !result.data || result.data.length === 0) {
-            list.innerHTML = '<div class="lb-empty"> Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
-            document.getElementById('lbMyPosition').style.display = 'none';
+            list.innerHTML = '<div class="lb-empty">Пока нет данных<br><span style="font-size:0.8em;color:#666">Станьте первым!</span></div>';
+            const myPosBlock = document.getElementById('lbMyPosition');
+            if (myPosBlock) myPosBlock.style.display = 'none';
             return;
         }
 
@@ -472,8 +456,9 @@ submitToLeaderboard: async function() {
         let html = '';
 
         const planetEmojis = {
-            mercury: '☿', venus: '♀', earth: '', mars: '♂',
-            jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆', pluto: ''
+            mercury: '☿', venus: '♀', earth: '♁', mars: '♂',
+            jupiter: '♃', saturn: '♄', uranus: '♅', neptune: '♆',
+            pluto: '♇', heliopause: '🌌'
         };
 
         entries.forEach((entry, idx) => {
@@ -492,33 +477,25 @@ submitToLeaderboard: async function() {
             const val = entry[period] || 0;
             const formatted = this.formatDistance(val, period);
             const emoji = planetEmojis[entry.level] || '🪐';
+            const rawLevel = entry.level || 'mercury';
+            const safeLevel = this._validPlanets.has(rawLevel) ? rawLevel : 'mercury';
 
-const VALID_PLANETS = new Set([
-    'mercury', 'venus', 'earth', 'mars', 'jupiter',
-    'saturn', 'uranus', 'neptune', 'pluto', 'heliopause'
-]);
-
-// Внутри forEach:
-const rawLevel = entry.level || 'mercury';
-const safeLevel = VALID_PLANETS.has(rawLevel) ? rawLevel : 'mercury';
-
-html += `
-    <div class="lb-entry ${rankClass}">
-        <div class="lb-rank">${rankDisplay}</div>
-        <div class="lb-info">
-            <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
-            <div class="lb-level">${emoji} ${safeLevel}</div>
-        </div>
-        <div class="lb-distance">${formatted}</div>
-    </div>
-`;
+            html += `
+                <div class="lb-entry ${rankClass}" role="listitem">
+                    <div class="lb-rank">${rankDisplay}</div>
+                    <div class="lb-info">
+                        <div class="lb-name">${this.escapeHtml(entry.username || 'Anonymous')}</div>
+                        <div class="lb-level">${emoji} ${safeLevel}</div>
+                    </div>
+                    <div class="lb-distance">${formatted}</div>
+                </div>
+            `;
         });
 
         list.innerHTML = html;
 
-        // ── Моя позиция (данные от сервера) ──
         const myPosBlock = document.getElementById('lbMyPosition');
-        myPosBlock.style.display = 'flex';
+        if (myPosBlock) myPosBlock.style.display = 'flex';
 
         if (result.myRank > 0) {
             document.getElementById('lbMyRank').textContent = `#${result.myRank}`;
@@ -538,13 +515,12 @@ html += `
     },
 
     // ═══════════════════════════════════════
-    // 🚀 ИНИЦИАЛИЗАЦИЯ (с защитой от дублирования)
+    // ИНИЦИАЛИЗАЦИЯ (Патч 6 + 7)
     // ═══════════════════════════════════════
     init: function() {
         this.injectStyles();
         this.createModal();
 
-        // ✅ Патч 7: защита от дублирования интервалов при повторном init()
         if (this._intervalId) {
             clearInterval(this._intervalId);
             this._intervalId = null;
@@ -556,9 +532,7 @@ html += `
             }
         }, this.config.submitInterval);
 
-        // ✅ Патч 6: подписка на оба события EventBus
         if (window.EventBus) {
-            // Удаляем старые подписки, если они были (защита от дублей)
             if (this._onSaveReady) window.EventBus.off('save:ready', this._onSaveReady);
             if (this._onSaveCompleted) window.EventBus.off('save:completed', this._onSaveCompleted);
 
@@ -572,17 +546,11 @@ html += `
         console.log('🏆 Leaderboard v3.1 initialized (server-side ranking)');
     },
 
-    // ═══════════════════════════════════════
-    // 🗑️ УНИЧТОЖЕНИЕ МОДУЛЯ (очистка всех ресурсов)
-    // ═══════════════════════════════════════
     destroy: function() {
-        // 1. Останавливаем интервал отправки
         if (this._intervalId) {
             clearInterval(this._intervalId);
             this._intervalId = null;
         }
-
-        // 2. Отписываемся от EventBus
         if (window.EventBus) {
             if (this._onSaveReady) {
                 window.EventBus.off('save:ready', this._onSaveReady);
@@ -593,42 +561,31 @@ html += `
                 this._onSaveCompleted = null;
             }
         }
-
-        // 3. Убираем глобальный обработчик Escape (из Патча 4)
         if (this._escHandler) {
             document.removeEventListener('keydown', this._escHandler);
             this._escHandler = null;
         }
-
-        // 4. Убираем focus trap (из Патча 4)
         const modal = document.getElementById('leaderboardModal');
         if (modal && this._focusTrapHandler) {
             modal.removeEventListener('keydown', this._focusTrapHandler);
             this._focusTrapHandler = null;
         }
-
-        // 5. Удаляем DOM-элементы модалки и стилей
         if (modal) modal.remove();
         const styles = document.getElementById('leaderboard-styles');
         if (styles) styles.remove();
 
-        // 6. Сбрасываем состояние
         this.modalVisible = false;
         this._ownsPause = false;
         this._previousFocus = null;
         this.lastSubmitTime = 0;
 
-        console.log('🗑️ [LB] Leaderboard destroyed — all resources cleaned up');
+        console.log('🗑️ [LB] Leaderboard destroyed');
     }
 };
 
 window.Leaderboard = Leaderboard;
 
-// ═══════════════════════════════════════
-// 🚪 АВТОЗАПУСК С ЗАЩИТОЙ ОТ ПОВТОРНОЙ ИНИЦИАЛИЗАЦИИ
-// ═══════════════════════════════════════
 (function autoInit() {
-    // Если модуль уже был инициализирован — уничтожаем старый перед перезапуском
     if (window.Leaderboard && window.Leaderboard._intervalId) {
         console.warn('⚠️ [LB] Re-initialization detected, destroying previous instance');
         window.Leaderboard.destroy();
@@ -639,4 +596,5 @@ window.Leaderboard = Leaderboard;
     } else {
         setTimeout(() => Leaderboard.init(), 300);
     }
+})();
 })();
