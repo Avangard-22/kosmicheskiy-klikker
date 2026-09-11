@@ -238,7 +238,8 @@ animateBlock: function(block) {
     const blockSize = block.offsetHeight || (window.innerWidth < 768 ? 80 : 60);
     const escapePos = Math.max(60, fieldHeight + blockSize);
     // Зона гравитации — только в видимой части поля (у верха), не за экраном
-    const zoneH = Math.max(60, Math.round(fieldHeight * 0.12));
+    // СТАЛО (8% экрана, мин 40px — зона тоньше):
+    const zoneH = Math.max(40, Math.round(fieldHeight * 0.08));;
     const zoneStart = fieldHeight - zoneH;
 
     const move = (now) => {
@@ -260,10 +261,10 @@ animateBlock: function(block) {
         lastTime = now;
 
         const speed = this.getCurrentSpeed() || 0;
-        // 🆕 v11.1: Гравитация — замедление в зоне чуть ниже прогресс-бара (−25%/ур., кап 3)
+        // 🆕 v11.1: Гравитация — замедление в зоне чуть ниже прогресс-бара (−10%/ур., кап 3)
         const gLvl = Number(window.gameState?.gravityLevel) || 0;
         const effSpeed = (gLvl > 0 && pos > zoneStart)
-            ? speed * Math.max(0.1, 1 - 0.25 * gLvl)
+            ? speed * Math.max(0.1, 1 - 0.10 * gLvl)
             : speed;
         pos += effSpeed * dt;
         block.style.bottom = pos + 'px';
