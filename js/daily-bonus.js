@@ -1,4 +1,4 @@
-// js/daily-bonus.js
+ // js/daily-bonus.js
 (function() {
 'use strict';
 
