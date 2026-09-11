@@ -35,7 +35,7 @@ const shopConfig = {
     luckyCharm: {
         id: 'luckyCharm',
         name: 'Талисман удачи',
-        desc: '+70% шанс редких блоков',
+        desc: '+50% шанс редких блоков',
         cost: 1200,
         duration: 60000,
         icon: 'fas fa-clover',
@@ -195,10 +195,34 @@ card.innerHTML = `
             purchaseItem(item.id);
         }, { passive: false });
 
-        grid.appendChild(card);
-    });
-
-    document.getElementById('shopCloseBtn').addEventListener('click', closeShop);
+     grid.appendChild(card);
+ });
+ // 💱 КУПОН за BoC (обязательная трата BoC)
+ const coupon = document.createElement('div');
+ coupon.className = 'shop-card'; coupon.id = 'shop-card-coupon';
+ coupon.innerHTML = `<div class="shop-card-icon"><i class="fas fa-ticket-alt"></i><div class="shop-card-emoji">🎟️</div></div>
+   <div class="shop-card-name">Купон скидки</div>
+   <div class="shop-card-desc">−10…70% на случайный апгрейд</div>
+   <div class="shop-card-cost">100 🪙</div>
+   <div class="shop-card-timer" id="couponTimer" hidden></div>`;
+ coupon.addEventListener('click', () => {
+     const gs = window.gameState; if (!gs) return;
+     const eco = window.GameEconomy; if (!eco?.buyCoupon) return;
+     const types = ['clickPower','critChance','critMultiplier','helperDamage','helper'];
+     const res = eco.buyCoupon(gs, types, t => window.GAME_FEATURES?.getUpgradeCost?.(t) || 0);
+     if (!res.success) {
+         const tEl = coupon.querySelector('#couponTimer');
+         if (tEl) { tEl.hidden = false; tEl.textContent = res.reason === 'cooldown'
+             ? `⏳ ${Math.ceil(eco.couponCooldownRemaining(gs)/60000)} мин` : 'Нужно 100 🪙'; }
+         return;
+     }
+     const tEl = coupon.querySelector('#couponTimer');
+     if (tEl) { tEl.hidden = false; tEl.textContent = `🎟️ ${res.type} −${Math.round(res.percent*100)}%`; }
+     if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+     if (typeof window.saveGame === 'function') window.saveGame();
+ });
+ grid.appendChild(coupon);
+ document.getElementById('shopCloseBtn').addEventListener('click', closeShop);
     document.getElementById('shopCloseBtn').addEventListener('touchstart', (e) => {
         e.preventDefault();
         closeShop();
@@ -234,6 +258,10 @@ function openShop() {
     if (window.achievementsSystem && window.achievementsSystem.hideAchievementsPanel) {
         window.achievementsSystem.hideAchievementsPanel();
     }
+    // ✅ Закрываем панель улучшений, если открыта
+    if (window.upgradesSystem && typeof window.upgradesSystem.closePanel === 'function') {
+        window.upgradesSystem.closePanel();
+    }
 }
 
 // ЧТО: Добавлен сброс состояния подтверждения при закрытии
@@ -251,7 +279,12 @@ function closeShop() {
         resetPendingPurchase();
     }
     
-    if (window.GAME_CORE && window.GAME_CORE.resumeGame) {
+    // ✅ Resume только если не открыта другая панель (achievements / upgrades)
+    const achPanel = document.getElementById('achievementsPanel');
+    const upgPanel = document.getElementById('upgradesPanel');
+    const otherPanelOpen = (achPanel && achPanel.style.display === 'flex') ||
+                           (upgPanel && upgPanel.style.display === 'flex');
+    if (!otherPanelOpen && window.GAME_CORE && window.GAME_CORE.resumeGame) {
         window.GAME_CORE.resumeGame();
     }
     if (window.MusicSystem && typeof window.MusicSystem.resume === 'function') {
@@ -282,7 +315,9 @@ function purchaseItem(boostId) {
     }
     
     // Проверка: недостаточно кристаллов
-    if (window.gameState.coins < item.cost) {
+    const actualPrice = getActualPrice(item.cost);
+
+if (window.gameState.coins < actualPrice) {
         showNotification('❌ Недостаточно кристаллов!', '#f44336');
         const errCard = document.getElementById(`shop-card-${boostId}`);
         if (errCard) {
@@ -329,7 +364,14 @@ function executePurchase(boostId) {
     
 // ✅ НОВОЕ: Используем актуальную цену вместо базовой
 const actualPrice = getActualPrice(item.cost);
-window.gameState.coins -= actualPrice;
+
+if (window.GameEconomy?.spendCrystals) {
+    if (!window.GameEconomy.spendCrystals(actualPrice)) return;
+} else {
+    if (window.gameState.coins < actualPrice) return;
+    window.gameState.coins -= actualPrice;
+}
+
 if (!window.gameState.shopItems) window.gameState.shopItems = {};
 window.gameState.shopItems[boostId] = {
     purchased: true,

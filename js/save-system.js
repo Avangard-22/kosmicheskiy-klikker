@@ -19,6 +19,12 @@ let isOperationLocked = false;
 let pendingOperations = [];
 let cloudSaveTimeout = null;
 
+// ✅ Единая точка выбора бэкенда: облако Telegram → локальный fallback
+function getCloud() {
+    if (window.telegramCloud?.isAvailable) return window.telegramCloud;
+    if (window.localCloud?.isAvailable) return window.localCloud;
+    return null;
+}
 // ============================================
 // 🔒 БЛОКИРОВКА СИНХРОНИЗАЦИИ
 // ============================================
@@ -47,16 +53,22 @@ window.isSyncLocked = function() { return isOperationLocked; };
 // ============================================
 const DEFAULT_GAME_STATE = {
     coins: 0,
+    darkMatter: 0,               // ⚠️ LEGACY
     clickPower: 1,
     critChance: 0.001,
     critMultiplier: 2.0,
     currentLocation: 'mercury',
     totalDamageDealt: 0,
-planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей планете (для прогресс-бара)
+    planetDamageDealt: 0,
     clickUpgradeLevel: 0,
     critChanceUpgradeLevel: 0,
     critMultiplierUpgradeLevel: 0,
     helperUpgradeLevel: 0,
+    helperSpeedLevel: 0,   // 🆕 v11: Ускоритель (интервал Bobo)
+    resonanceLevel: 0,     // 🆕 v11: Резонанс (окно комбо)
+    gravityLevel: 0,       // 🆕 v11: Гравитационный колодец
+    anchorLevel: 0,        // 🆕 v11: Квантовый якорь (телепорты)
+    compassLevel: 0,       // 🆕 v11: Звёздный компас (редкие блоки)
     helperActivations: 0,
     helperActive: false,
     helperTimeLeft: 0,
@@ -72,10 +84,27 @@ planetDamageDealt: 0,  // ✅ НОВОЕ: Урон на текущей план�
     unlockedLocations: ['mercury'],
     boboSkin: 'default',
     dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 },
-    
-    // ✅ НОВОЕ: Состояние системы достижений v2 (создаётся динамически в ensureAchievementsV2Structure)
+
+     // ✅ BoC-экономика v3
+bocEarned: 0,                 // престиж-BoC (пассивный бонус, не тратится)
+bocLiquid: 0,                 // жидкая BoC (кэшбэк + конвертация, тратится на врата)
+bocSpentOnGates: 0,           // сколько BoC ушло на врата (метрика)
+heliopauseProgress: 0,        // 🌌 прогресс рейда Гелиопаузы, 0–100% (персистентно)
+    teleportMult: 1,              // множитель телепорта (сумма стека, кап ×20)
+    planetTeleports: 0,           // счётчик телепортов на планете
+    runNumber: 1,                 // № престиж-рана (скейлинг цен врат)
+    _helioPct: 0,                 // рейд Гелиопаузы: 0–100% (+10% за ран)
+    _tpStacks: {},                // стеки множителей телепорта по локациям (FIFO ≤5)
+    _spentRun: 0,                 // потрачено в текущем ране (КПД Кузницы)
+    _farmRunsOnPlanet: 0,         // фарм-проходы текущей локации (истощение жилы)
+    _planetCompleteShown: null,   // флаг экрана завершения
+
+    // ✅ Кешбэк-метрики (5% от трат → BoC)
+    cashbackSpentCrystals: 0,     // сумма потраченных 💎, с которых начислен кешбэк
+    cashbackBoCEarned: 0,         // сумма начисленного BoC (дробное)
+    cashbackCrystalsTotal: 0,     // аналитика (зарезервировано)
+
     achievementsV2: {}
-    // skipPenaltyState создаётся динамически в ensureSkipPenaltyState()
 };
 
 const DEFAULT_GAME_METRICS = {
@@ -193,17 +222,16 @@ function ensureAchievementsV2Structure() {
     
     const planetOrder = window.GAME_CONFIG?.planetOrder || ['mercury'];
     
-    const achTemplate = {
-        rank: 0,
-        totalUnlocked: 0,
-        metrics: {},
-        masterUnlocked: false
-    };
-    
-    planetOrder.forEach(planet => {
-        if (!window.gameState.achievementsV2[planet]) {
-            window.gameState.achievementsV2[planet] = Object.assign({}, achTemplate);
-        } else {
+// ✅ ФАБРИКА: каждая планета получает СОБСТВЕННЫЙ объект metrics.
+// Object.assign({}, template) копировал ссылку на один metrics на всех —
+// это и был корень «перетекания» прогресса между локациями.
+function freshPlanetAch() {
+    return { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false };
+}
+planetOrder.forEach(planet => {
+if (!window.gameState.achievementsV2[planet]) {
+window.gameState.achievementsV2[planet] = freshPlanetAch();
+} else {
             const ach = window.gameState.achievementsV2[planet];
             if (ach.rank === undefined) ach.rank = 0;
             if (ach.totalUnlocked === undefined) ach.totalUnlocked = 0;
@@ -212,6 +240,44 @@ function ensureAchievementsV2Structure() {
         }
     });
 }
+
+/**
+ * Полный сброс прогресса ПЛАНЕТЫ (престиж-телепорт).
+ * Единый источник: сбрасываем И достижения V2, И фактические planetStats.
+ * Иначе reconstructMetricsFromAchievements() «воскресит» старый прогресс
+ * из gameMetrics.planetStats сразу после телепорта.
+ * Флаг _teleportReset говорит синхронизации: планету не трогать
+ * (защитное окно 60 с — на время ближайших сейвов/перезагрузок).
+ */
+window.resetPlanetProgress = function (planet) {
+    if (!window.gameState || !planet) return;
+
+    // 1. Достижения V2 — как раньше (мастер-статус сохраняем).
+    const ach = window.gameState.achievementsV2?.[planet];
+    if (ach) {
+        const master = ach.masterUnlocked || false;
+        ach.metrics = {};
+        ach.rank = master ? 1 : 0;
+        ach.totalUnlocked = master ? 1 : 0;
+        ach.masterUnlocked = master;
+    }
+
+    // 2. Фактические метрики планеты — обнуляем, чтобы синхронизация не воскресила старые значения.
+    //    Шаблон полей совпадает с ensurePlanetStatsStructure().
+    if (window.gameMetrics?.planetStats?.[planet]) {
+        window.gameMetrics.planetStats[planet] = {
+            blocks: 0, crits: 0, combo: 0, rare: 0,
+            damageDealt: 0, crystalsEarned: 0,
+            boboActivations: 0, boboDamage: 0, boboCrystalsEarned: 0,
+            upgrades: 0, timePlayed: 0,
+            fastestBlock: 0, maxCritStreak: 0
+        };
+    }
+
+    // 3. Флаг: защитное окно на синхронизацию.
+    window.gameState._teleportReset = window.gameState._teleportReset || {};
+    window.gameState._teleportReset[planet] = Date.now();
+};
 
 /**
  * Гарантирует наличие skipPenaltyState (протокол отката)
@@ -238,6 +304,11 @@ function reconstructMetricsFromAchievements() {
         ensureSkipPenaltyState();
 
         const gm = window.gameMetrics;
+        // ✅ ТЕЛЕПОРТ-ЗАЩИТА: планета, только что сброшенная телепортом,
+        //    не синхронизируется из planetStats (там могут быть остатки),
+        //    пока не пройдёт защитное окно 60 с.
+        const tpReset = window.gameState?._teleportReset || {};
+        const tpNow = Date.now();
         const ach = window.gameState.achievementsV2;
         if (!ach) return;
 
@@ -252,6 +323,11 @@ function reconstructMetricsFromAchievements() {
         };
 
         for (const planet in ach) {
+            // ⏭️ Пропуск свеже-сброшенных телепортом планет
+            if (tpReset[planet] && tpNow - tpReset[planet] < 60000) {
+                console.log(`⏭️ [SAVE] ${planet} сброшена телепортом — синхронизация пропущена`);
+                continue;
+            }
             const planetStats = gm.planetStats?.[planet];
             if (!planetStats || !ach[planet]?.metrics) continue;
 
@@ -422,13 +498,11 @@ function debouncedCloudSave() {
 }
 
 window.flushCloudSave = function() {
-    if (cloudSaveTimeout) {
-        clearTimeout(cloudSaveTimeout);
-        cloudSaveTimeout = null;
-    }
-    if (window.telegramCloud?.saveProgressCritical) {
+    if (cloudSaveTimeout) { clearTimeout(cloudSaveTimeout); cloudSaveTimeout = null; }
+    const cloud = getCloud();
+    if (cloud?.saveProgressCritical) {
         const cloudData = extractCloudData();
-        if (cloudData) window.telegramCloud.saveProgressCritical(cloudData);
+        if (cloudData) cloud.saveProgressCritical(cloudData);
     } else {
         cloudSaveAsync();
     }
@@ -439,13 +513,15 @@ window.flushCloudSave = function() {
 // ЗАЧЕМ: Если игрок нажал "Новая игра", _isNewGame=true позволяет сохранить
 //        пустой сейв в облако, чтобы перезатереть старый прогресс.
 async function cloudSaveAsync() {
-    if (!window.telegramCloud?.isAvailable || isOperationLocked || isSyncing) return;
+    const cloud = getCloud();
+    if (!cloud || isOperationLocked || isSyncing) return;
     
     const now = Date.now();
     if (now - lastCloudSync < CLOUD_SYNC_COOLDOWN) return;
     
     const gs = window.gameState;
-    const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury');
+    const hasRealData = gs?.coins > 0 || gs?.totalDamageDealt > 0 || gs?.clickUpgradeLevel > 0 || (gs?.currentLocation && gs.currentLocation !== 'mercury')
+        || gs?.bocEarned > 0 || gs?.bocLiquid > 0;   // ✅ НОВОЕ (BoC): игрок с BoC тоже сохраняется
     const isNewGame = gs?._isNewGame === true;
     
     if (!hasRealData && !isNewGame) {
@@ -457,7 +533,7 @@ async function cloudSaveAsync() {
     try {
         const cloudData = extractCloudData();
         if (cloudData) {
-            const result = await window.telegramCloud.saveProgress(cloudData);
+        const result = await cloud.saveProgress(cloudData);
             if (result?.success) {
                 lastCloudSync = now;
                 showSaveIndicator('☁️', 'Сохранено', '#4CAF50');
@@ -482,12 +558,12 @@ async function cloudSaveAsync() {
 //        начинаем новую игру. Локальный бэкап создавал конфликты.
 window.loadGame = async function() {
     try {
-        if (!window.telegramCloud?.isAvailable) {
-            console.warn('⚠️ [LOAD] Облако недоступно. Начинаем новую игру.');
+        const cloud = getCloud();
+        if (!cloud) {
+            console.warn('⚠️ [LOAD] Ни облака, ни локального хранилища. Начинаем новую игру.');
             return false;
         }
-        
-        const result = await window.telegramCloud.loadProgress();
+        const result = await cloud.loadProgress();
         
         if (result?.success && result.data) {
             console.log('☁️ [LOAD] Данные загружены из облака');
@@ -533,18 +609,33 @@ window.cloudInit = async function() {
 // ЗАЧЕМ: При нажатии "Новая игра" отправляем пустой сейв в облако,
 //        чтобы перезаписать старый прогресс. Флаг _isNewGame гарантирует сохранение.
 window.resetGame = function() {
-    window.gameState = Object.assign({}, DEFAULT_GAME_STATE);
-    window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS);
+    // ✅ Глубокая копия вложенных объектов — DEFAULT остаётся девственно чистым
+    window.gameState = Object.assign({}, DEFAULT_GAME_STATE, {
+        achievementsV2: {},
+        dailyBonus: { lastClaimDate: null, currentDay: 1, totalClaimed: 0, streak: 0 }
+    });
+    window.gameMetrics = Object.assign({}, DEFAULT_GAME_METRICS, {
+        planetStats: {},
+        visitedPlanets: []
+    });
     window.gameMetrics.startTime = Date.now();
     window.gameState._isNewGame = true;
 
-    // ✅ Сброс с ОБЯЗАТЕЛЬНОЙ перезаписью облака: ждём ответ, проверяем success,
-    //    передаём серверу явный флаг reset (чтобы он перезаписал game_state_json даже пустым)
-    if (window.telegramCloud?.saveProgress) {
+    // ✅ Сброс локального сейва (если используется)
+    if (window.localCloud?.clear) {
+        window.localCloud.clear();
+    }
+    
+    // ✅ Сброс с ОБЯЗАТЕЛЬНОЙ перезаписью облака
+    const cloud = getCloud();
+    if (cloud?.saveProgress) {
         const emptyData = extractCloudData();
         if (emptyData) {
             emptyData.reset = true;   // ✅ сервер обязан перезаписать game_state_json
-            window.telegramCloud.saveProgress(emptyData)
+            
+            // ❌ ИСПРАВЛЕНО: Убрана зависшая строка window.telegramCloud...
+            // Оставлен только единственный корректный вызов cloud.saveProgress
+            cloud.saveProgress(emptyData)
                 .then((result) => {
                     if (result?.success) {
                         console.log('☁️ [RESET] Облако перезаписано: новая игра подтверждена');
@@ -561,9 +652,10 @@ window.resetGame = function() {
 };
 
 window.hasSave = async function() {
-    if (!window.telegramCloud?.isAvailable) return false;
+    const cloud = getCloud();
+    if (!cloud) return false;
     try {
-        const result = await window.telegramCloud.loadProgress();
+        const result = await cloud.loadProgress();
         return result?.success && !!result.data;
     } catch (e) {
         console.warn('⚠️ [HAS-SAVE] Ошибка проверки облака:', e);

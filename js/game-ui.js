@@ -44,6 +44,26 @@ function formatNumber(num, decimals = 1) {
 // ✅ Экспортируем глобально, чтобы другие модули могли использовать
 window.formatNumber = formatNumber;
 
+function formatBoC(value) {
+    const numberValue = Number(value) || 0;
+
+    if (numberValue >= 1000) {
+        return formatNumber(numberValue);
+    }
+
+    if (numberValue >= 1) {
+        return numberValue.toFixed(2).replace(/\.?0+$/, '');
+    }
+
+    if (numberValue > 0) {
+        return numberValue
+            .toFixed(6)
+            .replace(/\.?0+$/, '');
+    }
+
+    return '0';
+}
+
 /**
  * Инициализация пула текстовых элементов
  */
@@ -127,9 +147,32 @@ updateHUD: function() {
     if (critChanceEl) critChanceEl.textContent = `${(window.gameState.critChance * 100).toFixed(1)}%`;
     const critMultEl = el('critMultiplier-value');
     if (critMultEl) critMultEl.textContent = `x${window.gameState.critMultiplier.toFixed(1)}`;
+const bocEl = el('boc-value');
+if (bocEl) {
+    bocEl.textContent = formatBoC(
+        window.gameState.bocLiquid || 0
+    );
+    // ✅ v10.13: 🏆 престиж и 🌌 % рейда — автосоздание элементов, если их нет в HTML
+    const parent = bocEl.parentElement;
+    if (parent && !document.getElementById('bocEarned-value')) {
+        const wrap = document.createElement('span');
+        wrap.id = 'boc-extra';
+        wrap.innerHTML = ' · 🏆 <span id="bocEarned-value">0</span> · 🌌 <span id="helio-value">0%</span>';
+        parent.appendChild(wrap);
+    }
+}
+const earnedEl = el('bocEarned-value');
+if (earnedEl) earnedEl.textContent = formatBoC(window.gameState.bocEarned || 0);
+const helioEl = el('helio-value');
+if (helioEl) {
+    helioEl.textContent = Math.floor(
+        window.gameState.heliopauseProgress ?? window.gameState._helioPct ?? 0
+    ) + '%';
+}
 },
 
 updateUpgradeButtons: function() {
+
     if (!window.gameState) return;
 
     // ✅ ЕДИНЫЙ ИСТОЧНИК ЦЕН: GAME_FEATURES.getUpgradeCost(type)
@@ -192,6 +235,17 @@ updateUpgradeButtons: function() {
 
     // Урон Bobo
     setBtn('upgradeHelperDmgBtn', getCost('helperDamage'), 'Увеличить урон Bobo');
+    // 🆕 v11: новые апгрейды (капы из balanceConfig.newUpgradeMax)
+    const newMax = CFG.balanceConfig?.newUpgradeMax || {};
+    const lvlOf = (type) => window.GAME_FEATURES?.upgradeLevelOf
+        ? window.GAME_FEATURES.upgradeLevelOf(type) : 0;
+    const atMax = (type) => !!(newMax[type] && lvlOf(type) >= newMax[type]);
+
+    setBtn('upgradeBoboSpeedBtn', getCost('boboSpeed'), atMax('boboSpeed') ? 'Ускоритель Bobo: MAX' : 'Ускорить атаки Bobo', atMax('boboSpeed'));
+    setBtn('upgradeResonanceBtn', getCost('resonance'), atMax('resonance') ? 'Резонанс: MAX' : 'Комбо держится дольше', atMax('resonance'));
+    setBtn('upgradeGravityBtn', getCost('gravity'), atMax('gravity') ? 'Гравитация: MAX' : 'Замедлить блоки у верха', atMax('gravity'));
+    setBtn('upgradeAnchorBtn', getCost('anchor'), atMax('anchor') ? 'Квантовый якорь: MAX' : 'Усилить телепорты', atMax('anchor'));
+    setBtn('upgradeCompassBtn', getCost('compass'), atMax('compass') ? 'Звёздный компас: MAX' : 'Больше редких блоков', atMax('compass'));
 },
 
     // ==========================================
@@ -199,12 +253,18 @@ updateUpgradeButtons: function() {
     // ==========================================
     
 updateProgressBar: function() {
-    if (!window.gameState) return;
-    const req = LOC_REQ[window.gameState.currentLocation];
-    if (!req) return;
+if (!window.gameState) return;
+const req = LOC_REQ[window.gameState.currentLocation];
+if (!req) return;
     // ✅ ИСПРАВЛЕНО: Используем планетарный урон (сохраняется в облако)
-    const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
-    const pct = Math.min(100, (cur / req.targetAU) * 100);
+const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
+const pct = Math.min(100, (cur / req.targetAU) * 100);
+// ✅ v10.13: запоминаем лучший прогресс рейда 🌌 (пока рейд-логика 10%/ран не портирована в live)
+if (window.gameState.currentLocation === 'heliopause') {
+    window.gameState.heliopauseProgress = Math.max(
+        window.gameState.heliopauseProgress || 0, pct
+    );
+}
         
         const bar = document.getElementById('progressBar');
         const txt = document.getElementById('progressText');
@@ -220,34 +280,29 @@ updateProgressBar: function() {
         } else if (txt) {
             txt.textContent = `Прогресс: ${cur.toFixed(5)} / ${req.targetAU.toFixed(5)} а.е. (${pct.toFixed(1)}%)`;
         }
-    },
-
+},
 checkLocationUpgrade: function() {
-    if (!window.gameState) return;
-    const req = LOC_REQ[window.gameState.currentLocation];
-    if (!req || !req.nextLocation) return;
-    // ✅ ИСПРАВЛЕНО: Используем планетарный урон
+if (!window.gameState) return;
+const req = LOC_REQ[window.gameState.currentLocation];
+    if (!req) return;
     const cur = (window.gameState.planetDamageDealt || 0) / CFG.AU_TO_DAMAGE;
+
+    // ✅ НОВОЕ: при 100% показываем экран завершения планеты,
+    // а не переходим автоматически
     if (cur >= req.targetAU) {
-if (window.GAME_CORE && window.GAME_CORE.setLocation) {
-    // ✅ Устанавливаем флаг перехода ПЕРЕД setLocation
-    if (window.gameState) window.gameState._isLocationChange = true;
-    window.GAME_CORE.setLocation(req.nextLocation);
-}
-            
-            if (window.showTooltip && window.translations && window.formatString) {
-                const tooltipText = window.formatString(
-                    window.translations[window.currentLanguage].locationProgress.unlocked,
-                    { location: CFG.locations[req.nextLocation].name }
-                );
-                window.showTooltip(tooltipText);
-                setTimeout(window.hideTooltip, 3000);
+        // Экран показываем только один раз за планеты (флаг в сейве)
+        if (window.gameState._planetCompleteShown !== window.gameState.currentLocation) {
+            if (window.PlanetComplete?.show) {
+                window.PlanetComplete.show();
+            } else {
+                console.warn('⚠️ PlanetComplete module not loaded. Экран завершения планеты недоступен.');
             }
         }
-        
-        this.updateProgressBar();
-    },
+    }
 
+    this.updateProgressBar();
+},
+            
     // ==========================================
     // ВИЗУАЛЬНЫЕ ЭФФЕКТЫ
     // ==========================================

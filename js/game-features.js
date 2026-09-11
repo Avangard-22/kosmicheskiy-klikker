@@ -5,6 +5,25 @@
 const CFG = window.GAME_CONFIG;
 const UI = window.GAME_UI;
 const getCore = () => window.GAME_CORE;
+// ✅ Тиры цен (вне объекта!)
+function tieredCost(base, tiers, level) {
+    let cost = base, prev = 0;
+    for (const t of (tiers || [])) {
+        const steps = Math.max(0, Math.min(level, t.upTo) - prev);
+        cost *= Math.pow(t.g, steps);
+        prev = t.upTo;
+        if (level <= t.upTo) break;
+    }
+    return cost;
+}
+// 🆕 v11: id апгрейда → поле уровня в gameState (единая карта для цен/капов/UI)
+const NEW_LEVEL = {
+    boboSpeed: 'helperSpeedLevel',
+    resonance: 'resonanceLevel',
+    gravity:   'gravityLevel',
+    anchor:    'anchorLevel',
+    compass:   'compassLevel'
+};
 
 window.GAME_FEATURES = {
     createExplosion: function(block) {
@@ -53,11 +72,11 @@ window.GAME_FEATURES = {
             { n: 'Сила удара', g: () => window.gameState.clickUpgradeLevel, s: v => { window.gameState.clickUpgradeLevel = v; } },
             { n: 'Шанс крита', g: () => window.gameState.critChanceUpgradeLevel, s: v => {
                 window.gameState.critChanceUpgradeLevel = v;
-                window.gameState.critChance = Math.max(0.001, 0.001 + v * 0.001);
+                window.gameState.critChance = Math.max(0.001, 0.001 + v * 0.004);
             }},
             { n: 'Множитель крита', g: () => window.gameState.critMultiplierUpgradeLevel, s: v => {
                 window.gameState.critMultiplierUpgradeLevel = v;
-                window.gameState.critMultiplier = Math.max(2, 2 + v * 0.2);
+                window.gameState.critMultiplier = Math.max(2, 2 + v * 0.25);
             }},
             { n: 'Урон Bobo', g: () => window.gameState.helperUpgradeLevel, s: v => { window.gameState.helperUpgradeLevel = v; } }
         ];
@@ -101,8 +120,16 @@ window.GAME_FEATURES = {
 
         core.createHelperElement();
 
-        // ✅ Интервал с учётом permanent-бонуса helper_speed
-        const interval = window.GAME_CORE?.permanentHelperInterval || 1500;
+        // ✅ Интервал с учётом «Ускорителя» (helperSpeedLevel) + событийного баффа скорости
+
+        const baseInterval = (core && typeof core.helperIntervalBase === 'function')
+            ? core.helperIntervalBase()
+            : (window.GAME_CORE?.permanentHelperInterval || 1500);
+        // Если сейчас активен событийный бафф скорости Bobo — не затираем его
+        const boosted = Number(window.gameState?.permanentHelperInterval) > 0 &&
+                        Number(window.gameState.permanentHelperInterval) < baseInterval;
+        const interval = boosted ? Number(window.gameState.permanentHelperInterval) : baseInterval;
+        if (!boosted) window.gameState.permanentHelperInterval = baseInterval;
 
         core.helperInterval = setInterval(() => {
             if (window.gameState?.helperActive && core.currentBlock &&
@@ -117,6 +144,7 @@ window.GAME_FEATURES = {
                 core.helperTimer = null;
                 return;
             }
+            if (core.isGamePaused) return; // 🆕 пауза (панели) не сжигает время Bobo
             window.gameState.helperTimeLeft -= 1000;
             UI.updateUpgradeButtons();
 
@@ -156,6 +184,21 @@ window.GAME_FEATURES = {
         if (typeof window.saveGame === 'function') window.saveGame();
     },
 
+    // 🆕 v11: Пересчёт интервала Bobo на лету (покупка «Ускорителя» при активном Bobo)
+    recalcBoboInterval: function() {
+        const core = getCore();
+        const gs = window.gameState;
+        if (!core || !gs || !gs.helperActive) return;
+        if (core.helperInterval) { clearInterval(core.helperInterval); core.helperInterval = null; }
+        const baseInterval = (typeof core.helperIntervalBase === 'function') ? core.helperIntervalBase() : 1500;
+        gs.permanentHelperInterval = baseInterval;
+        core.helperInterval = setInterval(() => {
+            if (gs.helperActive && core.currentBlock && gs.gameActive && !core.isGamePaused) {
+                core.helperAttack();
+            }
+        }, baseInterval);
+    },
+
     // ═══════════════════════════════════════════════
     // 💰 ЕДИНЫЙ ИСТОЧНИК ЦЕН (используется и в покупке, и в UI)
     // ═══════════════════════════════════════════════
@@ -165,25 +208,26 @@ window.GAME_FEATURES = {
         const costMult = CFG.planetCostMultipliers?.[planet] || 1.0;
         const gs = window.gameState;
 
-        switch (type) {
-            case 'clickPower':
-                return Math.floor(CFG.costs.baseClickUpgradeCost * Math.pow(1.5, gs.clickUpgradeLevel || 0) * costMult);
-            case 'helper': {
-                const baseCost = Math.floor(CFG.costs.baseHelperUpgradeCost * Math.pow(1.4, gs.helperUpgradeLevel || 0));
-                const actBonus = Math.floor((gs.helperActivations || 0) / 10);
-                return Math.floor(baseCost * (1 + actBonus * 0.2) * costMult);
-            }
-            case 'critChance':
-                return Math.floor(CFG.costs.baseCritChanceCost * Math.pow(1.3, gs.critChanceUpgradeLevel || 0) * costMult);
-            case 'critMultiplier':
-                return Math.floor(CFG.costs.baseCritMultiplierCost * Math.pow(1.25, gs.critMultiplierUpgradeLevel || 0) * costMult);
-            case 'helperDamage':
-                // ⚠️ Рост цены 1.8 → 1.5: цена растёт как урон Bobo (1.5^lvl)
-                // Если хочешь старую цену — верни 1.8
-                return Math.floor(CFG.costs.baseHelperDmgCost * Math.pow(1.5, gs.helperUpgradeLevel || 0) * costMult);
-            default:
-                return 0;
-        }
+     const tiers = CFG.balanceConfig?.costTiers || {};
+     const c = CFG.costs;
+     switch (type) {
+         case 'clickPower':     return Math.floor(tieredCost(c.baseClickUpgradeCost, tiers.clickPower, gs.clickUpgradeLevel || 0) * costMult);
+         case 'critChance':     return Math.floor(tieredCost(c.baseCritChanceCost, tiers.critChance, gs.critChanceUpgradeLevel || 0) * costMult);
+         case 'critMultiplier': return Math.floor(tieredCost(c.baseCritMultiplierCost, tiers.critMultiplier, gs.critMultiplierUpgradeLevel || 0) * costMult);
+         case 'helperDamage':   return Math.floor(tieredCost(c.baseHelperDmgCost, tiers.helperDamage, gs.helperUpgradeLevel || 0) * costMult);
+         case 'helper': {
+             const baseCost = Math.floor(tieredCost(c.baseHelperUpgradeCost, tiers.helper, gs.helperUpgradeLevel || 0));
+             const actBonus = Math.floor((gs.helperActivations || 0) / 10);
+             return Math.floor(baseCost * (1 + actBonus * 0.2) * costMult);
+         }
+         // 🆕 v11: новые апгрейды
+         case 'boboSpeed': return Math.floor(tieredCost(c.baseBoboSpeedCost, tiers.boboSpeed, gs.helperSpeedLevel || 0) * costMult);
+         case 'resonance': return Math.floor(tieredCost(c.baseResonanceCost, tiers.resonance, gs.resonanceLevel || 0) * costMult);
+         case 'gravity':   return Math.floor(tieredCost(c.baseGravityCost,   tiers.gravity,   gs.gravityLevel   || 0) * costMult);
+         case 'anchor':    return Math.floor(tieredCost(c.baseAnchorCost,    tiers.anchor,    gs.anchorLevel    || 0) * costMult);
+         case 'compass':   return Math.floor(tieredCost(c.baseCompassCost,   tiers.compass,   gs.compassLevel   || 0) * costMult);
+         default: return 0;
+     }
     },
 
     // ═══════════════════════════════════════════════
@@ -191,7 +235,7 @@ window.GAME_FEATURES = {
     // ═══════════════════════════════════════════════
     buyUpgrade: function(type) {
         const core = getCore();
-        if (!window.gameState || !core) return;
+        if (!window.gameState || !core) return false;
         const gs = window.gameState;
 
         // Bobo уже активен — купить нельзя
@@ -200,23 +244,38 @@ window.GAME_FEATURES = {
                 window.showTooltip(window.translations[window.currentLanguage].tooltips.helperAlreadyActive || 'Bobo уже активен!');
                 setTimeout(window.hideTooltip, 1500);
             }
-            return;
+            return false;
         }
 
         // Достигнут потолок — не даём тратить кристаллы впустую
-        if (type === 'critChance' && (gs.critChance || 0) >= (CFG.balanceConfig.critChanceCap || 1)) return;
-        if (type === 'critMultiplier' && (gs.critMultiplier || 2) >= (CFG.balanceConfig.critMultiplierCap || 999)) return;
+        if (type === 'critChance' && (gs.critChance || 0) >= (CFG.balanceConfig.critChanceCap || 1)) return false;
+        if (type === 'critMultiplier' && (gs.critMultiplier || 2) >= (CFG.balanceConfig.critMultiplierCap || 999)) return false;
+        // 🆕 v11: потолок новых апгрейдов
+        const newCap = (CFG.balanceConfig?.newUpgradeMax || {})[type];
+        if (newCap && (gs[NEW_LEVEL[type]] || 0) >= newCap) return false;
 
-        const cost = this.getUpgradeCost(type);
-        if (gs.coins < cost) return;
-        gs.coins -= cost;
+const cost = this.getUpgradeCost(type);
+
+if (window.GameEconomy?.spendCrystals) {
+    if (!window.GameEconomy.spendCrystals(cost)) return false;
+} else {
+    // Fallback, если GameEconomy ещё не загружен
+    if (gs.coins < cost) return false;
+    gs.coins -= cost;
+}
 
         const btnMap = {
             clickPower: 'upgradeClickBtn',
             helper: 'upgradeHelperBtn',
             critChance: 'upgradeCritChanceBtn',
             critMultiplier: 'upgradeCritMultBtn',
-            helperDamage: 'upgradeHelperDmgBtn'
+            helperDamage: 'upgradeHelperDmgBtn',
+            // 🆕 v11
+            boboSpeed: 'upgradeBoboSpeedBtn',
+            resonance: 'upgradeResonanceBtn',
+            gravity: 'upgradeGravityBtn',
+            anchor: 'upgradeAnchorBtn',
+            compass: 'upgradeCompassBtn'
         };
         const btn = document.getElementById(btnMap[type]);
 
@@ -230,15 +289,32 @@ window.GAME_FEATURES = {
                 this.activateHelper(); // сама показывает тултип «Bobo активирован»
                 break;
             case 'critChance':
-                gs.critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (gs.critChance || 0.001) + 0.001);
+             gs.critChance = Math.min(CFG.balanceConfig.critChanceCap || 1, (gs.critChance || 0.001) + 0.004);
                 gs.critChanceUpgradeLevel = (gs.critChanceUpgradeLevel || 0) + 1;
                 break;
             case 'critMultiplier':
-                gs.critMultiplier = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (gs.critMultiplier || 2) + 0.2);
+             gs.critMultiplier = Math.min(CFG.balanceConfig.critMultiplierCap || 999, (gs.critMultiplier || 2) + 0.25);
                 gs.critMultiplierUpgradeLevel = (gs.critMultiplierUpgradeLevel || 0) + 1;
                 break;
             case 'helperDamage':
                 gs.helperUpgradeLevel = (gs.helperUpgradeLevel || 0) + 1;
+                break;
+            // 🆕 v11: новые апгрейды (эффекты читаются модулями из полей уровня)
+            case 'boboSpeed':
+                gs.helperSpeedLevel = (gs.helperSpeedLevel || 0) + 1;
+                if (typeof this.recalcBoboInterval === 'function') this.recalcBoboInterval(); // Волна 3
+                break;
+            case 'resonance':
+                gs.resonanceLevel = (gs.resonanceLevel || 0) + 1;
+                break;
+            case 'gravity':
+                gs.gravityLevel = (gs.gravityLevel || 0) + 1;
+                break;
+            case 'anchor':
+                gs.anchorLevel = (gs.anchorLevel || 0) + 1;
+                break;
+            case 'compass':
+                gs.compassLevel = (gs.compassLevel || 0) + 1;
                 break;
         }
 
@@ -268,18 +344,36 @@ window.GAME_FEATURES = {
             else if (type === 'critChance') tip = window.formatString(t.critChanceUpgrade, { chance: (gs.critChance * 100).toFixed(1) });
             else if (type === 'critMultiplier') tip = window.formatString(t.critMultUpgrade, { mult: gs.critMultiplier.toFixed(1) });
             else if (type === 'helperDamage') tip = window.formatString(t.helperDmgUpgrade, { level: gs.helperUpgradeLevel });
+            else if (type === 'boboSpeed') tip = window.formatString(t.boboSpeedUpgrade, { level: gs.helperSpeedLevel });
+            else if (type === 'resonance') tip = window.formatString(t.resonanceUpgrade, { level: gs.resonanceLevel });
+            else if (type === 'gravity') tip = window.formatString(t.gravityUpgrade, { level: gs.gravityLevel });
+            else if (type === 'anchor') tip = window.formatString(t.anchorUpgrade, { level: gs.anchorLevel });
+            else if (type === 'compass') tip = window.formatString(t.compassUpgrade, { level: gs.compassLevel });
             if (tip) { window.showTooltip(tip); setTimeout(window.hideTooltip, 1500); }
         }
 
         if (typeof window.saveGame === 'function') window.saveGame();
+        return true;
     },
-
     // ⚠️ ТОНКИЕ ОБЁРТКИ — ОБЯЗАТЕЛЬНЫ: их вызывают game-core.js (строки 1097–1101)!
     // Без них игра упадёт с «FEAT.buyClickPower is not a function»
     buyClickPower:    function() { return this.buyUpgrade('clickPower'); },
     buyHelper:        function() { return this.buyUpgrade('helper'); },
     buyCritChance:    function() { return this.buyUpgrade('critChance'); },
     buyCritMultiplier:function() { return this.buyUpgrade('critMultiplier'); },
-    buyHelperDamage:  function() { return this.buyUpgrade('helperDamage'); }
+    buyHelperDamage:  function() { return this.buyUpgrade('helperDamage'); },
+    // 🆕 v11: новые апгрейды
+    buyBoboSpeed:     function() { return this.buyUpgrade('boboSpeed'); },
+    buyResonance:     function() { return this.buyUpgrade('resonance'); },
+    buyGravity:       function() { return this.buyUpgrade('gravity'); },
+    buyAnchor:        function() { return this.buyUpgrade('anchor'); },
+    buyCompass:       function() { return this.buyUpgrade('compass'); },
+
+    // 🆕 v11: текущий уровень любого апгрейда (для UI «MAX» и капов)
+    upgradeLevelOf: function(type) {
+        if (!window.gameState) return 0;
+        const field = NEW_LEVEL[type];
+        return field ? (window.gameState[field] || 0) : 0;
+    }
 };
 })();

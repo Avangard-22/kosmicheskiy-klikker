@@ -52,6 +52,7 @@
     let particles = [];
     let specialElements = [];
     let nebulae = [];
+    let sparks = [];         // 💥 Взрывы-искры при столкновении двух миров (Гелиопауза)
     let stars = [];
     let isPaused = false;
     let isInitialized = false;
@@ -60,7 +61,7 @@
     // ==========================================
     // 🌌 СТАТИЧНЫЙ ФОН ГЛУБОКОГО КОСМОСА
     // ==========================================
-    let deepSpaceCanvas = null;
+ let deepSpaceCanvas = null;
     let deepSpaceStars = []; // Массив звезд заднего плана (использует класс Particle для мерцания)
 
     /**
@@ -205,8 +206,33 @@
                     ctx.fill();
                 }
                 break;
+
+            case 'heliopause':
+                // Гигантский пузырь гелиосферы: яркая кромка = граница
+                const bubbleGlow = ctx.createRadialGradient(
+                    width / 2, height / 2, 0,
+                    width / 2, height / 2, height * 0.75
+                );
+                bubbleGlow.addColorStop(0, 'rgba(138, 43, 226, 0)');
+                bubbleGlow.addColorStop(0.65, 'rgba(138, 43, 226, 0.05)');
+                bubbleGlow.addColorStop(0.9, 'rgba(0, 191, 255, 0.12)');
+                bubbleGlow.addColorStop(1, 'rgba(255, 20, 147, 0.20)');  // «лента IBEX» на границе
+
+                ctx.fillStyle = bubbleGlow;
+                ctx.beginPath();
+                ctx.arc(width / 2, height / 2, height * 0.75, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Тонкое кольцо самой границы
+                ctx.strokeStyle = 'rgba(0, 191, 255, 0.25)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(width / 2, height / 2, height * 0.75, 0, Math.PI * 2);
+                ctx.stroke();
+                break;
         }
     }
+
 
     // ==========================================
     // 🚀 СИСТЕМА КЭШИРОВАНИЯ СПРАЙТОВ
@@ -383,6 +409,12 @@
             colors: ['#a9a9a9', '#696969', '#808080', '#d3d3d3', '#c0c0c0', '#b0b0b0', '#9e9e9e'],
             background: ['#1a1a2a', '#2a2a3a', '#3a3a4a'],
             type: 'dwarf'
+        },
+        heliopause: {
+            name: 'Гелиопауза',
+            colors: ['#8a2be2', '#ff1493', '#4b0082', '#00bfff', '#ff00ff', '#1e90ff', '#9400d3'],
+            background: ['#0a0014', '#17002e', '#240047'],
+            type: 'plasma_boundary'
         }
     };
 
@@ -452,9 +484,12 @@
             this.x += parallaxSettings.directionX * parallaxSpeed;
             this.y += parallaxSettings.directionY * parallaxSpeed;
 
-            const smoothFactor = fixedSettings.smoothness / 10;
-            this.velocity.x *= (1 - smoothFactor * 0.05);
-            this.velocity.y *= (1 - smoothFactor * 0.05);
+            // ✅ Частицы с constantVelocity (Гелиопауза) летят без затухания
+            if (!this.constantVelocity) {
+                const smoothFactor = fixedSettings.smoothness / 10;
+                this.velocity.x *= (1 - smoothFactor * 0.05);
+                this.velocity.y *= (1 - smoothFactor * 0.05);
+            }
 
             this.x += this.velocity.x;
             this.y += this.velocity.y;
@@ -691,13 +726,185 @@
             else if (i % 3 === 1) particles.push(new Particle(x, y, radius, color, vel, 'crystal', parallaxSettings.layers.particles));
             else particles.push(new Particle(x, y, radius, color, vel, 'rock', parallaxSettings.layers.particles));
         }
-        specialElements = [];
-        for (let i = 0; i < 3; i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            const radius = Math.random() * 30 + 20;
-            specialElements.push(new Particle(x, y, radius, data.colors[3], { x: (Math.random() - 0.5) * 0.1, y: (Math.random() - 0.5) * 0.1 }, 'ice', parallaxSettings.layers.special));
+    }
+
+    // 🌌 ГЕЛИОПАУЗА: два встречных диагональных потока (солнечный ветер × межзвёздная пыль)
+    function spawnHeliopauseParticle(isSolar) {
+        const data = planetData.heliopause;
+        let x, y;
+        if (isSolar) {
+            // Солнечный ветер: рождается в ВЕРХНЕЙ-ПРАВОЙ части, летит вниз-влево
+            x = canvas.width * 0.5 + Math.random() * canvas.width * 0.5;
+            y = Math.random() * canvas.height * 0.5;
+        } else {
+            // Межзвёздная пыль: рождается в НИЖНЕЙ-ЛЕВОЙ части, летит вверх-вправо
+            x = Math.random() * canvas.width * 0.5;
+            y = canvas.height * 0.5 + Math.random() * canvas.height * 0.5;
         }
+
+        const radius = Math.random() * fixedSettings.size * 1.5 + 2;
+        const color = isSolar ? data.colors[1] : data.colors[3]; // розовый #ff1493 / циан #00bfff
+        const speedValue = (Math.random() * 0.2 + 0.08) * fixedSettings.speed / 5;
+
+        // Противоположные диагонали: solar { -1, +1 }, interstellar { +1, -1 }
+        const dirX = isSolar ? -1 : 1;
+        const dirY = isSolar ? 1 : -1;
+        const mult = isSolar ? 2 : 1.5;
+        const vel = { x: dirX * speedValue * mult, y: dirY * speedValue * mult };
+
+        // parallaxFactor = 0 → БЕЗ глобального дрейфа фона (иначе всё летит в одну сторону)
+        const p = new Particle(x, y, radius, color, vel, 'crystal', 0);
+        p.team = isSolar ? 'solar' : 'interstellar';
+        p.constantVelocity = true;   // ❄️ не даём скорости затухать — поток летит вечно
+        particles.push(p);
+    }
+
+    // 🔄 ПОПОЛНЕНИЕ: рождаем новые частицы по таймеру, пока поле не заполнено
+    let heliopauseTargetCount = 0;
+    let lastHeliopauseRespawn = 0;
+    const HELIOPAUSE_RESPAWN_MS = 250;  // как часто рождать (меньше = чаще)
+
+    function replenishHeliopauseParticles() {
+        if (particles.length >= heliopauseTargetCount) return;
+        const now = Date.now();
+        if (now - lastHeliopauseRespawn < HELIOPAUSE_RESPAWN_MS) return;
+        lastHeliopauseRespawn = now;
+
+        // Рождаем пару (солнце + пыль) за один тик
+        spawnHeliopauseParticle(true);
+        spawnHeliopauseParticle(false);
+    }
+
+    function generateHeliopause() {
+        particles = [];
+        sparks = [];
+
+        heliopauseTargetCount = fixedSettings.density * 40; // цель плотности
+        const count = heliopauseTargetCount;
+        for (let i = 0; i < count; i++) {
+            spawnHeliopauseParticle(i % 2 === 0);
+        }
+
+        // Одиночные «искры» пересоединения на границе
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const data = planetData.heliopause;
+        specialElements = [];
+        for (let i = 0; i < 4; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = canvas.height * (0.55 + Math.random() * 0.15);
+            const x = cx + Math.cos(a) * r;
+            const y = cy + Math.sin(a) * r;
+            specialElements.push(new Particle(x, y, Math.random() * 20 + 12, data.colors[3], { x: (Math.random() - 0.5) * 0.05, y: (Math.random() - 0.5) * 0.05 }, 'crystal', parallaxSettings.layers.special));
+        }
+    }
+
+    // 💥 СТОЛКНОВЕНИЕ ДВУХ МИРОВ — частицы УНИЧТОЖАЮТСЯ и пересоздаются
+    function updateHeliopauseCollisions() {
+        const now = Date.now();
+        const collideDist = 16;       // дистанция «касания» (px)
+        const sparkCooldown = 250;    // мс между взрывами одной частицы
+
+        for (let i = 0; i < particles.length; i++) {
+            const a = particles[i];
+            if (!a.team || now - (a.lastSpark || 0) < sparkCooldown) continue;
+
+            for (let j = i + 1; j < particles.length; j++) {
+                const b = particles[j];
+                if (!b.team || a.team === b.team) continue;
+                if (now - (b.lastSpark || 0) < sparkCooldown) continue;
+
+                const dx = a.x - b.x, dy = a.y - b.y;
+                if (dx * dx + dy * dy < collideDist * collideDist) {
+                    // 💥 Взрыв в точке столкновения
+                    sparks.push({
+                        x: (a.x + b.x) / 2,
+                        y: (a.y + b.y) / 2,
+                        r: 4 + Math.random() * 4,
+                        life: 1,
+                        decay: 0.05 + Math.random() * 0.04,
+                        color: Math.random() < 0.5 ? a.color : b.color
+                    });
+                    if (sparks.length > 24) sparks.shift();
+
+                    // ⚰️ Обе частицы ИСЧЕЗАЮТ (сначала j — больший индекс)
+                    particles.splice(j, 1);
+                    particles.splice(i, 1);
+
+                    // 🔄 Пересоздаём по одной каждой команде — поле не пустеет
+                    spawnHeliopauseParticle(true);
+                    spawnHeliopauseParticle(false);
+                    return; // массив изменился — выходим, в след. кадре продолжим
+                }
+            }
+        }
+    }
+
+    function updateSparks() {
+        for (let i = sparks.length - 1; i >= 0; i--) {
+            sparks[i].life -= sparks[i].decay;
+            if (sparks[i].life <= 0) sparks.splice(i, 1);
+        }
+    }
+
+    function drawSparks() {
+        sparks.forEach(s => {
+            const alpha = Math.max(0, s.life);
+            const radius = s.r * (1.8 - s.life * 0.8); // расширяется и гаснет
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.9;
+            ctx.fillStyle = s.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = s.color;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, Math.max(1, radius), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    // 🌌 ПУЛЬСИРУЮЩАЯ ПЛАЗМЕННАЯ ДУГА ГЕЛИОПАУЗЫ
+    // «Дышит» яркостью и слегка меняет радиус — эффект магнитного пересоединения
+    function drawHeliopausePulse() {
+        const cx = canvas.width / 2, cy = canvas.height / 2;
+        const baseR = canvas.height * 0.75;
+
+        // Медленное дыхание: период ~4 секунды
+        const breathe = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2) / 4);
+        const pulse = 0.55 + 0.45 * breathe;          // 0.55–1.0 для свечения
+        const ringPulse = 0.35 + 0.65 * breathe;      // 0.35–1.0 для кольца
+        const radius = baseR * (1 + 0.015 * Math.sin(time * (Math.PI * 2) / 4 + 0.5)); // радиус тоже дышит
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';     // свечение поверх частиц
+
+        // ── Внешнее свечение пузыря ──
+        const glow = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, radius * 1.15);
+        glow.addColorStop(0, 'rgba(138, 43, 226, 0)');
+        glow.addColorStop(0.75, `rgba(138, 43, 226, ${0.04 * pulse})`);
+        glow.addColorStop(0.92, `rgba(0, 191, 255, ${0.10 * pulse})`);
+        glow.addColorStop(1, `rgba(255, 20, 147, ${0.16 * pulse})`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // ── Кольцо границы (лента IBEX) ──
+        ctx.strokeStyle = `rgba(0, 191, 255, ${0.22 * ringPulse})`;
+        ctx.lineWidth = 1.5 + 1.5 * breathe;          // толщина тоже дышит
+        ctx.shadowBlur = 12 * breathe + 4;
+        ctx.shadowColor = 'rgba(0, 191, 255, 0.8)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // ── Вторая тонкая линия-отблеск (сдвиг фазы) ──
+        ctx.strokeStyle = `rgba(255, 20, 147, ${0.10 * ringPulse})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 1.02, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
     }
 
     const genMap = {
@@ -709,7 +916,8 @@
         saturn: generateSaturn,
         uranus: generateUranus,
         neptune: generateNeptune,
-        pluto: generatePluto    
+        pluto: generatePluto,
+        heliopause: generateHeliopause
     };
 
     // ==========================================
@@ -747,6 +955,19 @@
             e.update();
             e.draw();
         });
+
+        // 💥 Столкновения «двух миров» — только на Гелиопаузе
+        if (currentPlanet === 'heliopause') {
+            updateHeliopauseCollisions();
+            updateSparks();
+            drawSparks();
+
+            // 🔄 Рождаем новые частицы, пока поле не заполнено
+            replenishHeliopauseParticles();
+
+            // 🌌 Пульсирующая плазменная дуга (поверх всех слоёв)
+            drawHeliopausePulse();
+        }
     }
 
     function animate(timestamp) {
@@ -777,6 +998,7 @@
         specialElements = [];
         nebulae = [];
         stars = [];
+        sparks = [];
 
         spriteCache.clear();
 

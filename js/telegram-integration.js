@@ -77,7 +77,6 @@ async function sendToCloud(action, progressData, initData, critical = false) {
     
     // ✅ ПРИОРИТЕТ 2: fetch с keepalive
     try {
-        console.log('🔍 [CLOUD] Request body:', bodyString.substring(0, 200));
         const response = await fetch(`${CLOUD_API_URL}/api/save`, {
             method: 'POST',
             headers: {
@@ -106,7 +105,8 @@ async function sendToCloud(action, progressData, initData, critical = false) {
 function initTelegramIntegration() {
     console.log('🔍 Initializing Telegram integration...');
     const tg = window.Telegram?.WebApp;
-    const isTelegram = !!tg;
+    // ✅ Реальный Telegram = есть initData (его присылает только настоящий клиент/ссылка бота).
+    const isTelegram = !!(tg && tg.initData);
     console.log('🔍 Telegram WebApp available:', isTelegram);
     console.log('🔍 User Agent:', navigator.userAgent);
     
@@ -263,8 +263,8 @@ if (!isTelegram) {
     console.log('🔍 [TELEGRAM] telegramInitData length:', window.telegramInitData?.length || 0);
     
     // === ОБЛАЧНЫЕ ФУНКЦИИ ===
-    window.telegramCloud = {
-        isAvailable: true,
+        window.telegramCloud = {
+        isAvailable: !!tg.initData,   // ✅ облако доступно только когда есть initData; иначе getCloud() уйдёт на localCloud
         saveProgress: async function(progressData) {
             console.log('☁️ [SAVE] Отправка:', progressData);
             console.log('☁️ [SAVE] username:', window.telegramUsername);

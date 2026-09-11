@@ -45,8 +45,8 @@ buffs: [
         type: 'crystal_boost_blocks',
         name: { ru: '💎 Кристальный шторм', en: '💎 Crystal Storm', zh: '💎 水晶风暴' },
         durationMs: 0,
-        valueMin: 2000,
-        valueMax: 10000,
+    valueMin: 1200,
+valueMax: 2000,
         blocksMin: 1,
         blocksMax: 10,
         weight: 50
@@ -55,8 +55,8 @@ buffs: [
         type: 'crystal_boost',
         name: { ru: '💰 Кристальный дождь', en: '💰 Crystal Rain', zh: '💰 水晶雨' },
         durationMs: 0,
-        valueMin: 500,
-        valueMax: 5000,
+valueMin: 400,
+valueMax: 1500,
         weight: 50
     }
 ]

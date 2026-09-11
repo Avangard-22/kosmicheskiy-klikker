@@ -198,7 +198,8 @@ function claimDailyBonus() {
     }
     
     // Генерируем награду (детерминированно!)
-    const dayNumber = data.totalClaimed + 1;
+// ✅ Цикл 1–30: номер дня считаем от общего числа получений по модулю
+    const dayNumber = ((data.totalClaimed || 0) % 30) + 1;
     const reward = generateReward(dayNumber);
     
     // Блокируем синхронизацию
@@ -253,7 +254,8 @@ function claimDailyBonus() {
         // Обновляем данные
         data.lastClaimDate = today;
         data.lastClaimTimestamp = now;
-        data.totalClaimed = dayNumber;
+        data.totalClaimed = (data.totalClaimed || 0) + 1;   // ✅ общий счётчик растёт
+        data.currentDay = dayNumber;       
 
 // ✅ НОВОЕ: Сбрасываем цены в магазине
 if (window.shopSystem && typeof window.shopSystem.resetShopPrices === 'function') {
@@ -325,8 +327,9 @@ function applyReward(reward) {
             break;
     }
     
-    if (window.UI?.updateHUD) window.UI.updateHUD();
-    if (window.UI?.updateUpgradeButtons) window.UI.updateUpgradeButtons();}
+    if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+    if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+    }
 
 // ==========================================
 // 🎨 UI
@@ -384,7 +387,7 @@ function updateIconDisplay() {
     if (!dayEl || !timerEl) return;
 
     const today = getToday();
-    const dayNumber = (data.totalClaimed || 0) + 1;
+     const dayNumber = ((data.totalClaimed || 0) % 30) + 1;   // ✅ цикл 1–30
     const now = Date.now();
 
     const dateChanged = data.lastClaimDate !== today;
@@ -401,7 +404,7 @@ function updateIconDisplay() {
         timerEl.style.color = '#4CAF50';
         icon.style.borderColor = '#4CAF50';
         icon.style.animation = 'dailyBonusPulse 2s infinite';
-    } else if (data.streak > 30) {
+  } else if ((data.streak || 0) % 30 === 0) {
         timerEl.textContent = '🎉';
         timerEl.style.color = '#FFD700';
         icon.style.borderColor = '#FFD700';

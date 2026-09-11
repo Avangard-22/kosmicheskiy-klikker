@@ -8,6 +8,21 @@ const FEAT = window.GAME_FEATURES;
 // ✅ БЕЗОПАСНЫЙ ГЕТТЕР: предотвращает краш, если game-features.js не загрузился
 const getFeat = () => window.GAME_FEATURES || {};
 
+// ❄️ ПРЕДОХРАНИТЕЛЬ: гарантируем, что у каждой планеты СВОЙ объект metrics
+function isolateAchievementsV2(gs) {
+    if (!gs || typeof gs.achievementsV2 !== 'object') return;
+    let count = 0;
+    for (const planet in gs.achievementsV2) {
+        const entry = gs.achievementsV2[planet];
+        if (!entry || typeof entry !== 'object') continue;
+        entry.metrics = (entry.metrics && typeof entry.metrics === 'object')
+            ? JSON.parse(JSON.stringify(entry.metrics)) // разрываем любую общую ссылку
+            : {};
+        count++;
+    }
+    if (count) console.log(`🧊 [CORE] achievementsV2 изолирован: ${count} планет с собственными метриками`);
+}
+
 // ✅ БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ — только если save-system ещё не загрузился
 // НЕ перезаписываем существующие данные!
 if (!window.gameState) {
@@ -74,13 +89,37 @@ calculateClickPower: function() {
     return power;
 },
 
-    getCurrentSpeed: function() {
-        if (!window.gameState) return this.blockSpeed;
-        let speed = this.blockSpeed * (CFG.planetOrder.indexOf(window.gameState.currentLocation) < 1 ? 0.85 : 1);
-        return speed * this.getBonus('getSpeedMultiplier', 1);
-    },
+getCurrentSpeed: function() {
+    if (!window.gameState) return this.blockSpeed;
+    const planet = window.gameState.currentLocation || 'mercury';
+    let speed = this.blockSpeed * (CFG.planetOrder.indexOf(planet) < 1 ? 0.85 : 1);
+    // ✅ ЗЕРКАЛО СИМУЛЯТОРА: HP-рампа замедляет полёт блока с тем же коэффициентом,
+    // иначе на поздних планетах killTime > flyTime на каждом блоке → стена пропусков
+    const prof = (CFG.balanceConfig?.hpProfiles || {})[planet] || {};
+    if (prof.rampNoDailyReset) {
+        // Плутон/Гелиопауза: рампа без дневного сброса — считаем по блокам планеты
+        const n = window.gameMetrics?.planetStats?.[planet]?.blocks || 0;
+        const steps = Math.min(Math.floor(n / Number(prof.rampStep ?? 100)), Number(prof.rampMaxSteps ?? 30));
+        if (steps > 0) speed /= (1 + steps * Number(prof.rampPerStep ?? 5) / 100);
+    } else {
+        const ramp = CFG.balanceConfig?.dailyRamp;
+        if (ramp?.enabled) {
+            const steps = Math.min(Math.floor((window.gameState.dailyBlocksDestroyed || 0) / Number(ramp.blocksPerStep || 100)), Number(ramp.maxSteps || 30));
+            if (steps > 0) speed /= (1 + steps * Number(ramp.hpPercentPerStep ?? 5) / 100);
+        }
+    }
+    return speed * this.getBonus('getSpeedMultiplier', 1);
+},
+
+// 🆕 v11: Базовый интервал атак Bobo с учётом «Ускорителя» (helperSpeedLevel)
+// 1500 мс при 0 → 500 мс при 8 (пол 400 мс)
+helperIntervalBase: function() {
+    const lvl = Number(window.gameState?.helperSpeedLevel) || 0;
+    return Math.max(400, Math.round(1500 / (1 + 0.25 * lvl)));
+},
 
 // ЧТО: Делегируем расчёт HP блока в единый CombatSystem
+
 // КУДА: game-core.js → GAME_CORE.calculateBlockHealth()
 // ЗАЧЕМ: Убираем дублирование формул. Теперь все изменения баланса в CombatSystem 
 //        автоматически применяются в игре. Метод-обёртка сохранён для совместимости.
@@ -92,13 +131,21 @@ calculateBlockHealth: function() {
     return 80;
 },
 
-    createMovingBlock: function() {
-        if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
-        const gameArea = document.getElementById('gameArea');
-        if (!gameArea) return;
-        if (this.currentBlock?.parentNode === gameArea) gameArea.removeChild(this.currentBlock);
-
-        this.currentBlockHealth = this.calculateBlockHealth();
+createMovingBlock: function() {
+     if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
+     const gameArea = document.getElementById('gameArea');
+     if (!gameArea) return;
+     if (this.currentBlock?.parentNode === gameArea) gameArea.removeChild(this.currentBlock);
+     
+     // 🛡️ ЗАЩИТНЫЙ СБРОС: если планета только что сменилась (planetDamageDealt === 0),
+     // но dailyBlocksDestroyed > 0 (осталось от предыдущей планеты или увеличилось последним блоком),
+     // сбрасываем его. Это гарантирует, что первый блок на новой планете всегда имеет низкий HP.
+     if (window.gameState.planetDamageDealt === 0 && window.gameState.dailyBlocksDestroyed > 0) {
+         window.gameState.dailyBlocksDestroyed = 0;
+         console.log('🛡️ [CORE] dailyBlocksDestroyed сброшен в createMovingBlock (новая планета)');
+     }
+     
+     this.currentBlockHealth = this.calculateBlockHealth();
         const block = document.createElement('div');
         block.className = 'moving-block';
         const size = (window.innerWidth < 768 ? 80 : 60);
@@ -147,7 +194,9 @@ this.animateBlock(block);
 },
 
     getRareBlockType: function() {
-        const rand = Math.random(), luck = this.getBonus('getLuckMultiplier', 1);
+        // 🆕 v11: Звёздный компас — +40% к шансу редких за уровень (кап 4 → ×2.6)
+        const compassLvl = Number(window.gameState?.compassLevel) || 0;
+        const rand = Math.random(), luck = this.getBonus('getLuckMultiplier', 1) * (1 + 0.4 * compassLvl);
         let cum = 0;
         for (const [key, b] of Object.entries(CFG.rareBlocks)) {
             cum += b.chance * luck;
@@ -173,6 +222,25 @@ animateBlock: function(block) {
     let pos = parseFloat(block.style.bottom) || 0;
     let lastTime = performance.now();
 
+    // 🆕 v11.1: «верх поля» = нижний край Прогресс-бара.
+    // Раньше блоки прятались за HUD и жили до innerHeight — с Гравитацией + Bobo
+    // они «зависали» за экраном и дожидались разрушения. Теперь блок исчезает
+    // на уровне прогресс-бара, а зона гравитации — в видимой части поля.
+    const pbEl = document.getElementById('progressText') ||
+                 document.getElementById('progressContainer') ||
+                 document.getElementById('header');
+    const fieldTopY = pbEl ? Math.ceil(pbEl.getBoundingClientRect().bottom) : 96;
+    const fieldBottom = window.innerHeight;
+    // 🆕 v11.2: высота видимого поля + запас на высоту блока.
+    // Блок засчитывается как упущенный, когда ПОЛНОСТЬЮ скрылся за прогресс-баром
+    // (плюс его корпус), а не в момент касания линии — меньше ложных миссов.
+    const fieldHeight = Math.max(120, fieldBottom - fieldTopY);
+    const blockSize = block.offsetHeight || (window.innerWidth < 768 ? 80 : 60);
+    const escapePos = Math.max(60, fieldHeight + blockSize);
+    // Зона гравитации — только в видимой части поля (у верха), не за экраном
+    const zoneH = Math.max(60, Math.round(fieldHeight * 0.12));
+    const zoneStart = fieldHeight - zoneH;
+
     const move = (now) => {
         // 1. Блок уничтожен или игра остановлена → ПРЕРЫВАЕМ цикл навсегда (НЕ зомби!)
         if (!window.gameState?.gameActive || this.currentBlock !== block) {
@@ -192,11 +260,16 @@ animateBlock: function(block) {
         lastTime = now;
 
         const speed = this.getCurrentSpeed() || 0;
-        pos += speed * dt;
+        // 🆕 v11.1: Гравитация — замедление в зоне чуть ниже прогресс-бара (−25%/ур., кап 3)
+        const gLvl = Number(window.gameState?.gravityLevel) || 0;
+        const effSpeed = (gLvl > 0 && pos > zoneStart)
+            ? speed * Math.max(0.1, 1 - 0.25 * gLvl)
+            : speed;
+        pos += effSpeed * dt;
         block.style.bottom = pos + 'px';
 
-        // 4. Блок улетел за экран → штраф + новый блок
-        if (pos > window.innerHeight) {
+        // 4. Блок достиг уровня прогресс-бара → штраф + новый блок
+        if (pos > escapePos) {
             if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
             if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
 
@@ -269,8 +342,9 @@ animateBlock: function(block) {
  * Обрабатывает удар по блоку
  * @param {HTMLElement} block - DOM-элемент блока
  * @param {number} damage - Базовый урон (до применения бонусов)
- */
-hitBlock: function(block, damage) {
+ * @param {boolean} isAuto - true для Bobo/автокликера 
+*/
+hitBlock: function(block, damage, isAuto = false) {
     if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
     
     // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Блокировка ударов по блоку с HP <= 0
@@ -292,7 +366,7 @@ this.playSound('clickSound');
     // ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает урон, криты, обновляет метрики ──
     let hitResult;
     if (window.CombatSystem && typeof window.CombatSystem.applyHit === 'function') {
-        hitResult = window.CombatSystem.applyHit(damage, false);
+        hitResult = window.CombatSystem.applyHit(damage, isAuto);
     } else {
         // Fallback, если CombatSystem не готов (защита от race condition)
         hitResult = { destroyed: false, damage: Math.round(damage), isCrit: false };
@@ -317,9 +391,9 @@ this.playSound('clickSound');
     }
     
     // ── Логика: разрушение или обновление блока ──
-    if (hitResult.destroyed || this.currentBlockHealth <= 0) {
-        console.log('💥 [CORE] Block destroyed! HP:', this.currentBlockHealth);
-        this.destroyBlock(block);
+     if (hitResult.destroyed || this.currentBlockHealth <= 0) {
+        console.log('💥 [CORE] Block destroyed! HP:', this.currentBlockHealth, 'isAuto:', isAuto);
+        this.destroyBlock(block, isAuto);
     } else {
         // ✅ ИСПРАВЛЕНИЕ: Показываем минимум 0, а не отрицательное число
         block.textContent = Math.max(0, Math.floor(this.currentBlockHealth));
@@ -337,32 +411,21 @@ this.playSound('clickSound');
  */
 destroyBlock: function(block, isAuto = false) {
     if (!window.gameState) return;
-    
-// ── ДЕЛЕГИРОВАНИЕ: CombatSystem считает награду, комбо, обновляет метрики ──
-let destroyResult;
-if (window.CombatSystem && typeof window.CombatSystem.applyDestroy === 'function') {
-    destroyResult = window.CombatSystem.applyDestroy(block, false);
-} else {
-    // Fallback на старую логику, если CombatSystem не готов
-    destroyResult = { reward: 0, comboCount: 0, comboBonus: 0, isRare: false };
-}
 
-// ✅ НОВОЕ: Применяем бонусы кометы К НАГРАДЕ
-if (destroyResult.reward > 0) {
-    // Кристальный шторм (на N блоков)
-    if (window.RandomEvents?.consumeCrystalBlocksBuff) {
-        destroyResult.reward = window.RandomEvents.consumeCrystalBlocksBuff(destroyResult.reward);
+    // ── ДЕЛЕГИРОВАНИЕ: CombatSystem — ЕДИНСТВЕННЫЙ источник награды, монет и метрик ──
+    if (!window.CombatSystem || typeof window.CombatSystem.applyDestroy !== 'function') {
+        console.error('❌ [CORE] CombatSystem.applyDestroy недоступен — награда не начислена');
+        // не даём игре зависнуть: убираем блок и спавним новый
+        const ga0 = document.getElementById('gameArea');
+        if (ga0?.contains(block)) ga0.removeChild(block);
+        this.currentBlock = null;
+        this.currentBlockHealth = 0;
+        setTimeout(() => { if (window.gameState?.gameActive) this.createMovingBlock(); }, 500);
+        return;
     }
-    
-    // Кристальный дождь (на 1 блок)
-    if (window.RandomEvents?.consumeCrystalBuff) {
-        destroyResult.reward = window.RandomEvents.consumeCrystalBuff(destroyResult.reward);
-    }
-}
+    const destroyResult = window.CombatSystem.applyDestroy(block, isAuto);
+    if (!destroyResult) return;
 
-// ✅ КРИТИЧЕСКИ ВАЖНО: Начисляем кристаллы игроку
-window.gameState.coins = (window.gameState.coins || 0) + (destroyResult.reward || 0);
-    
     // ── UX: Комбо-текст (только если было комбо > 1) ──
     if (destroyResult.comboCount > 1 && destroyResult.comboBonus > 0) {
         this.showComboText(destroyResult.comboCount, destroyResult.comboBonus, block);
@@ -373,17 +436,6 @@ window.gameState.coins = (window.gameState.coins || 0) + (destroyResult.reward |
 UI.updateHUD();
 UI.updateUpgradeButtons();
 this.playSound('breakSound');
-
-// ✅ НОВОЕ: Метрика crystals (заработано кристаллов на планете)
-const planet = window.gameState?.currentLocation;
-if (planet && window.achievementsSystem?.incrementPlanetCrystals) {
-    window.achievementsSystem.incrementPlanetCrystals(planet, destroyResult.reward || 0);
-}
-
-// ✅ НОВОЕ: Если блок уничтожен Bobo (isAuto=true) — считаем кристаллы Bobo
-if (isAuto && planet && window.achievementsSystem?.incrementPlanetBoboCrystals) {
-    window.achievementsSystem.incrementPlanetBoboCrystals(planet, destroyResult.reward || 0);
-}
 
     this.showRewardText(destroyResult.reward || 0, block);
     // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
@@ -428,7 +480,10 @@ if (isAuto && planet && window.achievementsSystem?.incrementPlanetBoboCrystals) 
     const t = document.createElement('div');
     t.className = 'combo-text';
     const fmtBonus = window.formatNumber ? window.formatNumber(b) : b;
-t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.combo, { count: c, bonus: fmtBonus });
+const comboKey = window.translations?.[window.currentLanguage]?.tooltips?.combo;
+t.textContent = (comboKey && window.formatString)
+    ? window.formatString(comboKey, { count: c, bonus: fmtBonus })
+    : `COMBO x${c}! +${fmtBonus}`;
     
     let l = r.left + r.width / 2;
     let tp = r.top;
@@ -452,7 +507,10 @@ showRewardText: function(r, block) {
     const t = document.createElement('div');
     t.className = 'reward-text';
     const fmtReward = window.formatNumber ? window.formatNumber(r) : r;
-t.textContent = window.formatString(window.translations[window.currentLanguage].tooltips.reward, { reward: fmtReward });
+const rewardKey = window.translations?.[window.currentLanguage]?.tooltips?.reward;
+t.textContent = (rewardKey && window.formatString)
+    ? window.formatString(rewardKey, { reward: fmtReward })
+    : `+${fmtReward} 💎`;
     
     let l = rct.left + rct.width / 2;
     let tp = rct.top + rct.height / 2;
@@ -700,74 +758,111 @@ if (planet && window.achievementsSystem?.incrementPlanetBoboDamage) {
     }
 },
 
-setLocation: function(loc) {
-    if (!window.gameState) return;
-    if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
-    
-    const oldPlanet = window.gameState.currentLocation;
-    const isNewPlanet = oldPlanet !== loc;
-    
-    window.gameState.currentLocation = loc;
-    
-    // ✅ Сброс серии критов при смене планеты
-    if (window.gameMetrics) {
-        window.gameMetrics.currentCritStreak = 0;
-    }
-    
-    // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: planetDamageDealt ВСЕГДА сбрасывается при смене планеты
-    // Это прогресс именно ТЕКУЩЕЙ планеты, он не может переноситься между локациями.
-    // Раньше сбрасывался только при _isLocationChange=true, что приводило к багу:
-    // на новой планете оставалось огромное значение от предыдущей → master-ачивка срабатывала мгновенно
-    if (isNewPlanet) {
-        window.gameState.planetDamageDealt = 0;
-        console.log(`🔄 [CORE] planetDamageDealt сброшен в 0 для новой планеты`);
-    }
-    
-    // Флаг _isLocationChange сбрасываем в любом случае (защита от повторного использования)
-    if (window.gameState._isLocationChange) {
-        window.gameState._isLocationChange = false;
-    }
-    
-    // ✅ Сброс протокола отката (новая планета = чистый старт)
-    if (window.gameState) {
-        window.gameState.skipPenaltyState = null;
-    }
-    
-    // ═══════════════════════════════════════════════════
-    // 🔄 СБРОС МЕТРИК ДОСТИЖЕНИЙ v2 ПРИ РЕАЛЬНОМ ПЕРЕХОДЕ
-    // ═══════════════════════════════════════════════════
-    if (isNewPlanet && window.gameState.achievementsV2) {
-        console.log(`🔄 [CORE] Переход: ${oldPlanet} → ${loc}. Сбрасываем метрики достижений.`);
+// ═══════════════════════════════════════════════════
+// 🔄 ОБЩИЙ СБРОС СОСТОЯНИЯ ПЛАНЕТЫ (Врата + Телепорт)
+// Вынесено из doTeleport, чтобы ЛЮБОЙ переход — кнопка,
+// developer-режим, консоль — гарантированно сбрасывал прокачку.
+// ═══════════════════════════════════════════════════
+resetPlanetState: function(gs, endedPlanet, freezeAchievements) {
+// 1. Прогресс планеты + HP-рампа
+gs.planetDamageDealt = 0;
+gs.planetFirstBlockCleared = false;
+gs.dailyBlocksDestroyed = 0;
+gs.skipPenaltyState = null;
+gs.comboCount = 0;
+gs.lastDestroyTime = 0;
+     // 2. Апгрейды (клик/крит/Bobo) — ВОТ ЧТО ПРОПАДАЛО ПРИ ВРАТАХ
+   gs.clickUpgradeLevel = 0;
+    gs.critChanceUpgradeLevel = 0;
+    gs.critMultiplierUpgradeLevel = 0;
+    gs.helperUpgradeLevel = 0;
+    gs.helperActivations = 0;
+    // 🆕 v11: новые апгрейды — планетарные (сброс как у остальных при Вратах)
+    gs.helperSpeedLevel = 0;
+    gs.resonanceLevel = 0;
+    gs.gravityLevel = 0;
+    gs.anchorLevel = 0;
+    gs.compassLevel = 0;
+    gs.helperDamageBonus = 0;
+    gs.boboCoinBonus = 0;
+    gs.critChance = 0.001;
+    gs.critMultiplier = 2.0;
+    gs.clickPower = this.calculateClickPower();
+// 3. ❄️ ВРАТА: метрики старой планеты ЗАМОРАЖИВАЕМ (не сбрасываем!)
+if (freezeAchievements && endedPlanet && gs.achievementsV2 && gs.achievementsV2[endedPlanet]) {
+    gs.achievementsV2[endedPlanet].frozen = true;
+    console.log(`   ❄️ achievementsV2.${endedPlanet} заморожен (разблокировано: ${gs.achievementsV2[endedPlanet].totalUnlocked})`);
+}
+// ✅ СЛОЙ B: сброс трекинга стиля и флага «кольца» на новом проходе
+gs._styleTotalDmg = 0; gs._styleBoboDmg = 0; gs._styleCrits = 0; gs._ringBlock = false;
+if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
+},
+
+    setLocation: function(loc) {
+        if (!window.gameState) return;
+        if (CFG.planetOrder.indexOf(loc) < CFG.planetOrder.indexOf(window.gameState.currentLocation)) return;
         
-        // Сбрасываем метрики старой планеты (кроме masterUnlocked)
-        if (window.gameState.achievementsV2[oldPlanet]) {
-            const oldAch = window.gameState.achievementsV2[oldPlanet];
-            const wasMasterUnlocked = oldAch.masterUnlocked || false;
+        const oldPlanet = window.gameState.currentLocation;
+        const isNewPlanet = oldPlanet !== loc;
             
-            // Сбрасываем все метрики
-            oldAch.metrics = {};
-            oldAch.rank = wasMasterUnlocked ? 1 : 0;
-            oldAch.totalUnlocked = wasMasterUnlocked ? 1 : 0;
-            oldAch.masterUnlocked = wasMasterUnlocked; // Сохраняем мастер-достижение!
-            
-            console.log(`   ✓ achievementsV2.${oldPlanet} сброшен (мастер: ${wasMasterUnlocked})`);
-        }
-        
-        // ✅ ИСПРАВЛЕНО: Полностью сбрасываем gameMetrics.planetStats старой планеты
-        // Это предотвращает восстановление прогресса через верификацию save-system
-        if (window.gameMetrics?.planetStats?.[oldPlanet]) {
-            const stats = window.gameMetrics.planetStats[oldPlanet];
-            for (const key in stats) {
-                if (typeof stats[key] === 'number') stats[key] = 0;
-                else if (Array.isArray(stats[key])) stats[key] = [];
-                else if (typeof stats[key] === 'object' && stats[key] !== null) {
-                    for (const subKey in stats[key]) stats[key][subKey] = 0;
+        // ✅ НОВОЕ (BoC): Защита врат — переход без оплаты BoC запрещён
+   if (isNewPlanet) {
+      const Econ = window.GameEconomy;
+      const run = window.gameState.runNumber || 1;
+      // ✅ v3: цена врат растёт с раном (ранние ×(1+floor(r/2)), после Сатурна — фикс)
+      const gate = (typeof Econ?.gateForRun === 'function')
+          ? Econ.gateForRun(loc, run)
+          : (Econ?.gateFor(loc) || 0);
+         // ✅ Врата уже открыты (локация разлочена) — повторная оплата при возврате НЕ взимается
+         const alreadyUnlocked = (window.gameState.unlockedLocations || []).indexOf(loc) !== -1;
+         if (gate > 0 && !alreadyUnlocked) {
+                let paid = false;
+                if (Econ?.payGate) {
+                    const result = Econ.payGate(gate);
+                    paid = !!(result === true || (result && result.success));
+                } else if ((window.gameState.bocLiquid || 0) >= gate) {
+                    window.gameState.bocLiquid -= gate;
+                    paid = true;
+                }
+                if (!paid) {
+                    console.warn(`🚪 [BOC] Врата ${loc}: нужно ${gate} BoC, есть ${Math.floor(window.gameState.bocLiquid || 0)}`);
+                    if (window.PlanetComplete?.show && window.gameState._planetCompleteShown !== oldPlanet) {
+                        window.PlanetComplete.show();
+                    }
+                    return;
                 }
             }
-            console.log(`   ✓ gameMetrics.planetStats.${oldPlanet} сброшен (все поля)`);
         }
         
-        // Инициализируем новую планету (если её нет)
+             // ✅ Запоминаем открытые Врата: оплаченная локация попадает в unlockedLocations
+     if (isNewPlanet && (window.gameState.unlockedLocations || (window.gameState.unlockedLocations = ['mercury'])).indexOf(loc) === -1) {
+         window.gameState.unlockedLocations.push(loc);
+     }
+     window.gameState.currentLocation = loc;
+        
+        // ✅ Сброс серии критов при смене планеты
+        if (window.gameMetrics) {
+            window.gameMetrics.currentCritStreak = 0;
+        }
+        
+if (isNewPlanet) {
+    // ✅ ЛЕЧЕБНАЯ АРХИТЕКТУРА: единый сброс (прогресс + HP-рампа + АПГРЕЙДЫ + ачивки)
+            
+// ❄️ + заморозка ачивок старой планеты для просмотра ←/→
+this.resetPlanetState(window.gameState, oldPlanet, true);
+// Множитель телепорта не переносится на новую планету; стек локации чистый
+window.gameState.teleportMult = 1;
+window.gameState._tpStacks = window.gameState._tpStacks || {};
+window.gameState._tpStacks[loc] = [];
+    window.gameState.planetTeleports = 0;
+    window.gameState._planetCompleteShown = null;
+     console.log(`🔄 [CORE] ${oldPlanet} → ${loc}: прогресс, HP-рампа, апгрейды и метрики сброшены`);
+            
+            if (window.gameState._isLocationChange) {
+                window.gameState._isLocationChange = false;
+            }
+            
+        // Инициализируем новую планету ИЛИ размораживаем пройденную
         if (!window.gameState.achievementsV2[loc]) {
             window.gameState.achievementsV2[loc] = {
                 rank: 0,
@@ -776,45 +871,52 @@ setLocation: function(loc) {
                 masterUnlocked: false
             };
             console.log(`   ✓ achievementsV2.${loc} инициализирован`);
+        } else if (window.gameState.achievementsV2[loc].frozen) {
+            // 🔥 Возврат на пройденную (телепорт назад / новый РАН): счёт продолжается
+            window.gameState.achievementsV2[loc].frozen = false;
+            console.log(`   🔥 achievementsV2.${loc} разморожен — метрики продолжаются`);
+        }
+            
+            // Обновляем UI
+            if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+            if (window.AchievementsV2?.UI?.updateAchievementsButton) {
+                window.AchievementsV2.UI.updateAchievementsButton();
+            }
+            
+            // Сохраняем
+            if (typeof window.saveGame === 'function') window.saveGame();
+        } // ← закрывает if (isNewPlanet)
+
+        // ❗❗❗ ВСЁ ЧТО НИЖЕ — ВНУТРИ setLocation (НЕ ЗАКРЫВАЕМ ЕЁ РАНЬШЕ ВРЕМЕНИ!)
+        const gameTitle = document.getElementById('gameTitle');
+        const header = document.getElementById('header');
+        if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
+        if (header) header.style.borderColor = CFG.locations[loc].borderColor;
+        if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
+        
+        const ann = document.getElementById('levelAnnounce');
+        if (ann) {
+            ann.textContent = CFG.locations[loc].name;
+            ann.style.color = CFG.locations[loc].color;
+            ann.style.opacity = "1";
+            setTimeout(() => { ann.style.opacity = "0"; }, 2000);
         }
         
-        // Обновляем UI
-        if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
-        if (window.AchievementsV2?.UI?.updateAchievementsButton) {
-            window.AchievementsV2.UI.updateAchievementsButton();
+        if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
+        if (window.EventBus) {
+            window.EventBus.emit('game:planetChanged', loc);
         }
-        
-        // Сохраняем
-        if (typeof window.saveGame === 'function') window.saveGame();
-    }
-    
-    const gameTitle = document.getElementById('gameTitle');
-    const header = document.getElementById('header');
-    if (gameTitle && window.applyTranslation) window.applyTranslation(gameTitle, `gameTitle.${loc}`);
-    if (header) header.style.borderColor = CFG.locations[loc].borderColor;
-    if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(loc);
-    const ann = document.getElementById('levelAnnounce');
-    if (ann) {
-        ann.textContent = CFG.locations[loc].name;
-        ann.style.color = CFG.locations[loc].color;
-        ann.style.opacity = "1";
-        setTimeout(() => { ann.style.opacity = "0"; }, 2000);
-    }
-    
-    if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(loc);
-    if (window.EventBus) {
-        window.EventBus.emit('game:planetChanged', loc);
-    }
-    UI.updateProgressBar();
-},
+        UI.updateProgressBar();
+    }, // ← закрывает setLocation (обязательно с запятой!)
 
     startGame: function(reset = true) {
         console.log('🚀 Start, reset =', reset);
-        if (reset) {
-            if (typeof window.resetGame === 'function') window.resetGame();
-        } else {
-            window.gameState.clickPower = this.calculateClickPower();
-        }
+     if (reset) {
+         if (typeof window.resetGame === 'function') window.resetGame();
+     } else {
+         window.gameState.clickPower = this.calculateClickPower();
+     }
+     isolateAchievementsV2(window.gameState);
 
         this.isGamePaused = false;
         if (window.gameState) window.gameState.gamePaused = false;
@@ -951,11 +1053,11 @@ setTimeout(() => this.createMovingBlock(), 500);
             } catch (e) {
                 console.error('☁️ [GAME] cloudInit error:', e);
             }
-        } else {
-            console.warn('⚠️ [GAME] cloudInit function NOT found');
-        }
-
-        // ✅ Запускаем игру с загруженными данными
+     } else {
+         console.warn('⚠️ [GAME] cloudInit function NOT found');
+     }
+     isolateAchievementsV2(window.gameState); // ✅ после облака — ссылки разорваны
+     // ✅ Запускаем игру с загруженными данными
         console.log('✅ [GAME] Load successful, starting game...');
         console.log('💾 [GAME] gameState.coins:', window.gameState.coins);
         console.log('💾 [GAME] gameState.currentLocation:', window.gameState.currentLocation);
@@ -977,6 +1079,98 @@ setTimeout(() => this.createMovingBlock(), 500);
 
     restartGame: function() {
         this.startGame(true);
+    },
+
+ // ✅ НОВОЕ: список локаций для фарм-телепорта (только НАЗАД, включая текущую)
+ getFarmDestinations: function() {
+     const gs = window.gameState;
+     if (!gs) return [];
+     const order = CFG.planetOrder || [];
+     const currentIdx = order.indexOf(gs.currentLocation);
+     return order.slice(0, currentIdx + 1).map(id => ({
+         id: id,
+         name: CFG.locations[id]?.name || id,
+         emoji: CFG.locations[id]?.emoji || '🪐',
+         color: CFG.locations[id]?.color || '#fff',
+         isCurrent: id === gs.currentLocation
+     }));
+ },
+
+    // ✅ НОВОЕ (BoC): ТЕЛЕПОРТ — повторный проход той же планеты с множителем дохода
+    // Сброс: planetDamageDealt + метрики планеты + апгрейды (клик/крит/Bobo) + ачивки планеты.
+    // Сохраняются: bocEarned (престиж) + кристаллы + bocLiquid + teleportMult.
+    // Множитель 1.5–5.0 (шаг 0.25), новый ЗАМЕНЯЕТ старый (не стакается).
+    doTeleport: function(previewMult, targetPlanet) {
+     if (!window.gameState) return;
+     const gs = window.gameState;
+
+     // ✅ НОВОЕ: фарм-телепорт с выбором точки — прыжок НАЗАД на пройденную локацию
+     // (Врата туда уже открыты, оплата не нужна)
+     const order = CFG.planetOrder || [];
+     let planet = gs.currentLocation;
+     if (targetPlanet && order.indexOf(targetPlanet) !== -1 &&
+         order.indexOf(targetPlanet) <= order.indexOf(planet)) {
+         planet = targetPlanet;
+         gs.currentLocation = planet;
+         // 🔥 Фарм-прыжок на пройденную планету: размораживаем её метрики
+         if (gs.achievementsV2?.[planet]?.frozen) {
+             gs.achievementsV2[planet].frozen = false;
+             console.log(`🔥 [TELEPORT] achievementsV2.${planet} разморожен — фарм продолжает метрики`);
+         }
+         if (window.planetBackground?.setPlanet) window.planetBackground.setPlanet(planet);
+         if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+         if (window.achievementsSystem) window.achievementsSystem.updatePlanetProgress(planet);
+         console.log(`🎯 [TELEPORT] выбрана точка фарма: ${planet}`);
+     }
+
+        // 1. Множитель (переданный из экрана или дефолт)
+        let mult = previewMult;
+        if (!mult) {
+            const TP = window.GameEconomy?.CFG?.teleport || { min: 1.5, max: 5.0, step: 0.25 };
+            const steps = Math.round((TP.max - TP.min) / TP.step);
+            mult = TP.min + Math.floor(Math.random() * (steps + 1)) * TP.step;
+        }
+  
+// ✅ 2–3. Единый сброс: прогресс + HP-рампа + апгрейды
+// (ачивки НЕ трогаем: freezeAchievements = false, это та же локация)
+this.resetPlanetState(gs, planet, false);
+// ✅ НОВОЕ: множители телепортов СУММИРУЮТСЯ в пределах локации (FIFO, ≤5 стаков на локацию за РАН)
+// 🆕 v11: Квантовый якорь — +1 слот стека и +5 к капу за уровень (кап 5 → 10 слотов / кап 45)
+const anchorLvl = Number(gs.anchorLevel) || 0;
+const stackLimit = 5 + anchorLvl;
+const multCap = 20 + 5 * anchorLvl;
+gs._tpStacks = gs._tpStacks || {};
+const stackArr = (gs._tpStacks[planet] = gs._tpStacks[planet] || []);
+stackArr.push(mult);
+if (stackArr.length > stackLimit) stackArr.shift();
+gs.teleportMult = Number(Math.min(multCap, stackArr.reduce((s, x) => s + x, 0)).toFixed(2));
+gs.planetTeleports = (gs.planetTeleports || 0) + 1;
+gs._farmRunsOnPlanet = (gs._farmRunsOnPlanet || 0) + 1; // 🏭 истощение жилы: кэшбэк ×0.6 за фарм-проход
+
+        // 5. Очистка блоков / Bobo / таймеров
+        this.currentBlock = null;
+        this.currentBlockHealth = 0;
+        if (this.helperInterval) { clearInterval(this.helperInterval); this.helperInterval = null; }
+        if (this.helperTimer) { clearInterval(this.helperTimer); this.helperTimer = null; }
+        if (this.helperElement?.parentNode) document.body.removeChild(this.helperElement);
+        this.helperElement = null;
+        if (this.autoClickInterval) { clearInterval(this.autoClickInterval); this.autoClickInterval = null; }
+        if (this.magnetInterval) { clearInterval(this.magnetInterval); this.magnetInterval = null; }
+        const ga = document.getElementById('gameArea');
+        if (ga) ga.innerHTML = "";
+
+        // 6. Перезапуск той же планеты БЕЗ полного сброса (reset=false!)
+        gs._planetCompleteShown = null;
+        this.startGame(false);
+
+        // 7. Сохранение
+        if (typeof window.saveGame === 'function') window.saveGame();
+        console.log(
+            `⚡ [TELEPORT] ${planet}: ×${mult.toFixed(2)}`
+            + ` · телепортов: ${gs.planetTeleports}`
+        );
+
+        return { mult };
     },
 
     initEventHandlers: function() {
@@ -1085,6 +1279,11 @@ setTimeout(() => this.createMovingBlock(), 500);
         add('upgradeCritChanceBtn', () => FEAT.buyCritChance());
         add('upgradeCritMultBtn', () => FEAT.buyCritMultiplier());
         add('upgradeHelperDmgBtn', () => FEAT.buyHelperDamage());
+        add('upgradeBoboSpeedBtn', () => FEAT.buyBoboSpeed());
+        add('upgradeResonanceBtn', () => FEAT.buyResonance());
+        add('upgradeGravityBtn', () => FEAT.buyGravity());
+        add('upgradeAnchorBtn', () => FEAT.buyAnchor());
+        add('upgradeCompassBtn', () => FEAT.buyCompass());
 
         add('shareBtn', () => {
             if (!window.gameState) return;
@@ -1108,9 +1307,14 @@ add('leaderboardBtn', () => { if (window.Leaderboard?.showModal) window.Leaderbo
             upgradeHelperBtn: 'tooltips.upgradeHelper',
             upgradeCritChanceBtn: 'tooltips.upgradeCritChance',
             upgradeCritMultBtn: 'tooltips.upgradeCritMult',
-            upgradeHelperDmgBtn: 'tooltips.upgradeHelperDmg'
+            upgradeHelperDmgBtn: 'tooltips.upgradeHelperDmg',
+            // 🆕 v11
+            upgradeBoboSpeedBtn: 'tooltips.upgradeBoboSpeed',
+            upgradeResonanceBtn: 'tooltips.upgradeResonance',
+            upgradeGravityBtn: 'tooltips.upgradeGravity',
+            upgradeAnchorBtn: 'tooltips.upgradeAnchor',
+            upgradeCompassBtn: 'tooltips.upgradeCompass'
         };
-
         Object.entries(tips).forEach(([id, tk]) => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -1170,8 +1374,6 @@ window.gameFunctions = {
     hitBlock: (b, d) => window.GAME_CORE.hitBlock(b, d),
     destroyBlock: bl => window.GAME_CORE.destroyBlock(bl),
     createMovingBlock: () => window.GAME_CORE.createMovingBlock(),
-    shareResult: () => {},
-    updateAllTranslations: () => {},
     setLocation: loc => window.GAME_CORE.setLocation(loc),
     applyUpgradePenalty: () => { if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty(); },
     calculateClickPower: () => window.GAME_CORE.calculateClickPower()
@@ -1182,7 +1384,8 @@ window.gameFunctions = {
 // ЗАЧЕМ: Гарантирует, что initEventHandlers() запустится ТОЛЬКО после того,
 //        как save-system.js инициализирует gameState. Убирает race condition.
 function onGameReady() {
-    window.GAME_CORE.initEventHandlers();
+isolateAchievementsV2(window.gameState);
+window.GAME_CORE.initEventHandlers();
     UI.updateHUD();
     UI.updateUpgradeButtons();
     if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);

@@ -111,7 +111,8 @@
 // === ЕДИНЫЙ ПОРЯДОК ПЛАНЕТ (используется везде) ===
 const PLANET_ORDER = [
     'mercury', 'venus', 'earth', 'mars',
-    'jupiter', 'saturn', 'uranus', 'neptune', 'pluto'
+    'jupiter', 'saturn', 'uranus', 'neptune', 'pluto',
+    'heliopause'
 ];
 
 // === АСТРОНОМИЧЕСКИЕ РАССТОЯНИЯ (а.е.) ===
@@ -124,7 +125,8 @@ const ASTRONOMICAL_UNITS = {
     saturn: 9.53707,
     uranus: 19.19126,
     neptune: 30.06896,
-    pluto: 39.48200
+    pluto: 39.48200,
+    heliopause: 120.00000      // Реальная гелиопауза: 119–122 а.е. (V1: 121, V2: 119)
 };
 
 // === КОЭФФИЦИЕНТЫ СТОИМОСТИ АПГРЕЙДОВ ПО ПЛАНЕТАМ ===
@@ -139,7 +141,8 @@ const PLANET_COST_MULTIPLIERS = {
     saturn: 15.4,    // ×15.4 (награда ~2814, апгрейд 1232)
     uranus: 30.5,    // ×30.5 (награда ~5589, апгрейд 2440)
     neptune: 47.6,   // ×47.6 (награда ~8717, апгрейд 3808)
-    pluto: 62.4      // ×62.4 (награда ~11423, апгрейд 4992)
+    pluto: 62.4,     // ×62.4 (награда ~11423, апгрейд 4992)
+    heliopause: 400.0  // ×400 — скачок за Плутон (награда растёт вместе с AU)
 };
 
 // === ВИЗУАЛЬНЫЕ ТЕМЫ ПЛАНЕТ ===
@@ -209,13 +212,20 @@ const LOCATIONS = {
         borderColor: '#0000cd',
         blockColors: ['#4169e1', '#1e90ff', '#0000cd', '#191970']
     },
-    // ♇ Плутон — серо-коричневый лёд (карликовая планета)
     pluto: {
         name: '♇ Плутон',
         color: '#b0b0b0',
         coinColor: '#d3d3d3',
         borderColor: '#696969',
         blockColors: ['#a9a9a9', '#808080', '#696969', '#d3d3d3']
+    },
+    // 🌌 Гелиопауза — граница солнечного пузыря (межзвёздная плазма)
+    heliopause: {
+        name: '🌌 Гелиопауза',
+        color: '#8a2be2',
+        coinColor: '#00bfff',
+        borderColor: '#4b0082',
+        blockColors: ['#8a2be2', '#ff1493', '#00bfff', '#ff00ff']
     }
 };
 
@@ -253,15 +263,15 @@ const RARE_BLOCKS = {
 
 // === БАЛАНС ИГРЫ ===
 const BALANCE_CONFIG = {
-    baseHealth: 80,
-    targetClicks: 70,
+baseHealth: 80,
+targetClicks: 70,
     healthRandomRange: { min: 0.8, max: 1.3 },
     damageProgression: {
         baseMultiplier: 1.15,
         diminishingReturns: 0.96,
         maxLevelEffect: 60
     },
-    rewardMultiplier: 2.5,
+    rewardMultiplier: 3.5,
     comboMultiplier: 0.25,
     randomBonusRange: { min: 0.8, max: 1.5 },
     penaltyMin: 0.05,
@@ -270,6 +280,15 @@ const BALANCE_CONFIG = {
     // ✅ НОВОЕ: Капы критов (применяются в combat-system.js — crit roll)
     critChanceCap: 0.50,     // шанс крита не выше 50%
     critMultiplierCap: 10,   // множитель крита не выше x10
+
+    // 🆕 v11: капы новых апгрейдов (читаются в game-features / game-core / combat-system)
+    newUpgradeMax: { boboSpeed: 8, resonance: 8, gravity: 3, anchor: 5, compass: 4 },
+    // Формулы эффектов (v1, крутятся здесь же при балансировке):
+    //  · boboSpeed: интервал = 1500 / (1 + 0.25·lvl), мин 500мс (ур.8 = ×3 скорострельности)
+    //  · resonance: окно комбо = 1000 + 250·lvl мс (ур.8 = 3000мс)
+    //  · gravity:   верх. 12% экрана замедляют блок ×(1 − 0.25·lvl) (ур.3 = ×0.25)
+    //  · anchor:    множитель телепорта ×(1 + 0.15·lvl) (ур.5 = +75%)
+    //  · compass:   шанс редких ×(1 + 0.20·lvl) · награда редких ×(1 + 0.10·lvl)
   
     // ✅ НОВОЕ: HP блоков считается ОТ УРОНА ИГРОКА (клики + криты + Bobo)
     // Бонусы магазина НЕ участвуют — они помогают ломать, а не раздувать HP
@@ -288,6 +307,35 @@ const BALANCE_CONFIG = {
         maxSteps: 30            // потолок: +150% HP в сутки
     },
 
+ // 🗺️ СЛОЙ A: профили локаций (зеркало HP_PROFILES_DEFAULT симулятора)
+ hpProfiles: {
+     mercury:    { randMin: 0.9, randMax: 1.2, rampPerStep: 4,  rampMaxSteps: 20, pattern: 'none' },
+     venus:      { randMin: 0.8, randMax: 1.4, rampPerStep: 5,  rampMaxSteps: 25, pattern: 'spike', patternEvery: 17, patternMult: 2 },
+     earth:      { randMin: 0.8, randMax: 1.3, rampPerStep: 5,  rampMaxSteps: 30, pattern: 'none' },
+     mars:       { randMin: 0.6, randMax: 1.8, rampPerStep: 6,  rampMaxSteps: 30, pattern: 'none' },
+     jupiter:    { randMin: 0.8, randMax: 1.3, rampPerStep: 8,  rampMaxSteps: 35, pattern: 'none' },
+     saturn:     { randMin: 0.8, randMax: 1.3, rampPerStep: 5,  rampMaxSteps: 30, pattern: 'ring', patternEvery: 10, patternMult: 3 },
+     uranus:     { randMin: 0.9, randMax: 1.1, rampPerStep: 5,  rampMaxSteps: 30, pattern: 'alt', altLight: 0.6, altHeavy: 1.5 },
+     neptune:    { randMin: 0.8, randMax: 1.3, rampPerStep: 5,  rampMaxSteps: 25, pattern: 'none' },
+     pluto:      { randMin: 0.8, randMax: 1.3, rampPerStep: 7,  rampMaxSteps: 40, rampNoDailyReset: true, pattern: 'none' },
+     heliopause: { randMin: 0.7, randMax: 1.5, rampPerStep: 10, rampMaxSteps: 50, pattern: 'spike', patternEvery: 13, patternMult: 2.5 }
+ },
+// 🎯 МОДЕЛЬ v2.1: поздний тир поднят — возвращаем кристалл-синк (и доход BoC),
+// но мягче исходных 1.35, чтобы не reintroduce «стену»
+costTiers: {
+    clickPower:     [{upTo:25,g:1.30},{upTo:75,g:1.22},{upTo:Infinity,g:1.22}],
+    critChance:     [{upTo:25,g:1.20},{upTo:75,g:1.14},{upTo:Infinity,g:1.14}],
+    critMultiplier: [{upTo:25,g:1.17},{upTo:75,g:1.11},{upTo:Infinity,g:1.11}],
+    helperDamage:   [{upTo:25,g:1.22},{upTo:75,g:1.15},{upTo:Infinity,g:1.15}],
+    helper:         [{upTo:25,g:1.26},{upTo:75,g:1.18},{upTo:Infinity,g:1.18}],
+    // 🆕 v11: новые апгрейды (1 тир — кап из newUpgradeMax)
+    boboSpeed:      [{upTo:8,g:1.22}],
+    resonance:      [{upTo:8,g:1.20}],
+    gravity:        [{upTo:3,g:1.30}],
+    anchor:         [{upTo:5,g:1.25}],
+    compass:        [{upTo:4,g:1.24}]
+},
+
     // ✅ НОВОЕ: boboCrystals — метрика достижений V2 (единый каталог)
     // Метрика добавлена во все 9 конфигов планет (mercury…pluto, Этап 1 №5)
     boboCrystals: {
@@ -303,7 +351,13 @@ const COSTS = {
     baseHelperUpgradeCost: 1500,
     baseCritChanceCost: 500,
     baseCritMultiplierCost: 800,
-    baseHelperDmgCost: 1000
+    baseHelperDmgCost: 1000,
+    // 🆕 v11: новые апгрейды (базы = цена 1-го уровня)
+    baseBoboSpeedCost: 1200,    // Ускоритель
+    baseResonanceCost: 900,     // Резонанс
+    baseGravityCost: 1500,      // Гравитационный колодец
+    baseAnchorCost: 2200,       // Квантовый якорь
+    baseCompassCost: 1800       // Звёздный компас
 };
 
 // === КОНВЕРТАЦИЯ УРОНА В А.Е. ===

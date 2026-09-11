@@ -8,7 +8,7 @@ const translations = {
         gameTitle: {
             mercury: "☿ Меркурий", venus: "♀ Венера", earth: "♁ Земля",
             mars: "♂ Марс", jupiter: "♃ Юпитер", saturn: "♄ Сатурн",
-            uranus: "♅ Уран", neptune: "♆ Нептун", pluto: "♇ Плутон"
+            uranus: "♅ Уран", neptune: "♆ Нептун", pluto: "♇ Плутон", heliopause: "🌌 Гелиопауза"
         },
         progressText: "Прогресс: {current} / {target} а.е. ({percent}%)",
         tooltips: {
@@ -21,6 +21,18 @@ const translations = {
             critChanceUpgrade: "Шанс крита: {chance}%",
             critMultUpgrade: "Множитель крита: x{mult}",
             helperDmgUpgrade: "Уровень Bobo: {level}",
+    // 🆕 v11: заголовки кнопок
+            upgradeBoboSpeed: "Ускорить атаки Bobo",
+            upgradeResonance: "Комбо держится дольше",
+            upgradeGravity: "Замедлить блоки у верха",
+            upgradeAnchor: "Усилить телепорты",
+            upgradeCompass: "Больше редких блоков",
+            // 🆕 v11: динамические тултипы после покупки
+            boboSpeedUpgrade: "Ускоритель Bobo: ур. {level}",
+            resonanceUpgrade: "Резонанс: ур. {level}",
+            gravityUpgrade: "Гравитация: ур. {level}",
+            anchorUpgrade: "Квантовый якорь: ур. {level}",
+            compassUpgrade: "Звёздный компас: ур. {level}",
             combo: "КОМБО x{count}! +{bonus}",
             reward: "+{reward} 💎",
             helperAvailable: "🤖 Bobo активирован!",
@@ -35,7 +47,7 @@ const translations = {
             continue: "Продолжить", newGame: "Новая игра", crystals: "Кристаллы",
             power: "Сила", crit: "Крит", critMult: "Множ.крита",
             save: "Сохранить", shop: "Магазин", achievements: "Достижения",
-            dailyBonus: "Ежедневный бонус"
+            upgrades: "Улучшения", dailyBonus: "Ежедневный бонус"
         },
         achievements: {
             mercury: { description: "Исследование Меркурия", levels: {} },
@@ -46,7 +58,8 @@ const translations = {
             saturn: { description: "Исследование Сатурна", levels: {} },
             uranus: { description: "Исследование Урана", levels: {} },
             neptune: { description: "Покорение Нептуна", levels: {} },
-            pluto: { description: "Покорение Плутона", levels: {} }
+            pluto: { description: "Покорение Плутона", levels: {} },
+            heliopause: { description: "Граница солнечного пузыря — солнечный ветер встречает межзвёздную плазму", levels: {} }
         },
         dailyBonus: {
             title: "Ежедневный бонус",
@@ -78,7 +91,7 @@ const translations = {
         gameTitle: {
             mercury: "☿ Mercury", venus: "♀ Venus", earth: "♁ Earth",
             mars: "♂ Mars", jupiter: "♃ Jupiter", saturn: "♄ Saturn",
-            uranus: "♅ Uranus", neptune: "♆ Neptune", pluto: "♇ Pluto"
+            uranus: "♅ Uranus", neptune: "♆ Neptune", pluto: "♇ Pluto", heliopause: "🌌 Heliopause"
         },
         progressText: "Progress: {current} / {target} AU ({percent}%)",
         tooltips: {
@@ -91,6 +104,16 @@ const translations = {
             critChanceUpgrade: "Crit Chance: {chance}%",
             critMultUpgrade: "Crit Multiplier: x{mult}",
             helperDmgUpgrade: "Bobo Level: {level}",
+           upgradeBoboSpeed: "Boost Bobo's attack speed",
+            upgradeResonance: "Combo window lasts longer",
+            upgradeGravity: "Slow blocks near the top",
+            upgradeAnchor: "Empower teleports",
+            upgradeCompass: "More rare blocks",
+            boboSpeedUpgrade: "Bobo Booster: lvl {level}",
+            resonanceUpgrade: "Resonance: lvl {level}",
+            gravityUpgrade: "Gravity: lvl {level}",
+            anchorUpgrade: "Quantum Anchor: lvl {level}",
+            compassUpgrade: "Star Compass: lvl {level}",
             combo: "COMBO x{count}! +{bonus}",
             reward: "+{reward} 💎",
             helperAvailable: "🤖 Bobo activated!",
@@ -102,7 +125,8 @@ const translations = {
         ui: {
             continue: "Continue", newGame: "New Game", crystals: "Crystals",
             power: "Power", crit: "Crit", critMult: "Crit Mult",
-            save: "Save", shop: "Shop", achievements: "Achievements", dailyBonus: "Daily Bonus"
+            save: "Save", shop: "Shop", achievements: "Achievements",
+            upgrades: "Upgrades", dailyBonus: "Daily Bonus"
         },
         achievements: {
             mercury: { description: "Mercury Exploration", levels: {} },
@@ -113,8 +137,9 @@ const translations = {
             saturn: { description: "Saturn Exploration", levels: {} },
             uranus: { description: "Uranus Exploration", levels: {} },
             neptune: { description: "Neptune Conquest", levels: {} },
-            pluto: { description: "Pluto Conquest", levels: {} }
-        },
+            pluto: { description: "Pluto Conquest", levels: {} },
+            heliopause: { description: "The boundary of the solar bubble is where the solar wind meets interstellar plasma.", levels: {} }
+    },
         dailyBonus: {
             title: "Daily Bonus",
             alreadyClaimed: "⏰ Already claimed today!",
@@ -143,7 +168,7 @@ const translations = {
         gameTitle: {
             mercury: "☿ 水星", venus: "♀ 金星", earth: "♁ 地球",
             mars: "♂ 火星", jupiter: "♃ 木星", saturn: "♄ 土星",
-            uranus: "♅ 天王星", neptune: "♆ 海王星", pluto: "♇ 冥王星"
+            uranus: "♅ 天王星", neptune: "♆ 海王星", pluto: "♇ 冥王星", heliopause: "🌌 太阳风层顶"
         },
         progressText: "进度: {current} / {target} AU ({percent}%)",
         tooltips: {
@@ -156,6 +181,16 @@ const translations = {
             critChanceUpgrade: "暴击几率: {chance}%",
             critMultUpgrade: "暴击倍率: x{mult}",
             helperDmgUpgrade: "Bobo 等级: {level}",
+            upgradeBoboSpeed: "提升 Bobo 攻击速度",
+            upgradeResonance: "连击窗口持续更久",
+            upgradeGravity: "顶部附近方块减速",
+            upgradeAnchor: "强化传送",
+            upgradeCompass: "更多稀有方块",
+            boboSpeedUpgrade: "Bobo 加速器: 等级 {level}",
+            resonanceUpgrade: "共振: 等级 {level}",
+            gravityUpgrade: "引力: 等级 {level}",
+            anchorUpgrade: "量子锚点: 等级 {level}",
+            compassUpgrade: "星象罗盘: 等级 {level}",
             combo: "连击 x{count}! +{bonus}",
             reward: "+{reward} 💎",
             helperAvailable: "🤖 Bobo 已激活!",
@@ -167,7 +202,8 @@ const translations = {
         ui: {
             continue: "继续", newGame: "新游戏", crystals: "水晶",
             power: "力量", crit: "暴击", critMult: "暴击倍率",
-            save: "保存", shop: "商店", achievements: "成就", dailyBonus: "每日奖励"
+            save: "保存", shop: "商店", achievements: "成就",
+            upgrades: "升级", dailyBonus: "每日奖励"
         },
         achievements: {
             mercury: { description: "水星探索", levels: {} },
@@ -178,7 +214,8 @@ const translations = {
             saturn: { description: "土星探索", levels: {} },
             uranus: { description: "天王星探索", levels: {} },
             neptune: { description: "海王星征服", levels: {} },
-            pluto: { description: "冥王星征服", levels: {} }
+            pluto: { description: "冥王星征服", levels: {} },
+            heliopause: { description: "太阳风层顶——太阳风与星际等离子体交汇之处", levels: {} }
         },
         dailyBonus: {
             title: "每日奖励",
@@ -219,7 +256,8 @@ const translations = {
         saturn:  { ru: 'Сатурн',   en: 'Saturn',  zh: '土星', emoji: '♄' },
         uranus:  { ru: 'Уран',     en: 'Uranus',  zh: '天王星', emoji: '♅' },
         neptune: { ru: 'Нептун',   en: 'Neptune', zh: '海王星', emoji: '♆' },
-        pluto:   { ru: 'Плутон',   en: 'Pluto',   zh: '冥王星', emoji: '♇' }
+        pluto:   { ru: 'Плутон',   en: 'Pluto',   zh: '冥王星', emoji: '♇' },
+        heliopause: { ru: 'Гелиопауза', en: 'Heliopause', zh: '太阳风层顶', emoji: '🌌' }
     };
     
     const metricTemplates = {
@@ -457,16 +495,13 @@ translations.zh.shop = {
 // 🎮 ПЕРЕВОДЫ HUD (рабочее пространство)
 // ═══════════════════════════════════════════════════
 translations.ru.hud = {
-    crystals: 'Кристаллы:', power: 'Сила:', crit: 'Крит:',
-    critMult: 'Множ.крита:', progress: 'Прогресс:'
+crystals: 'Кристаллы:', power: 'Сила:', crit: 'Крит:', critMult: 'Множ.крита:', progress: 'Прогресс:', bocEarned: 'Престиж BoC:', helio: 'Гелиопауза:' 
 };
 translations.en.hud = {
-    crystals: 'Crystals:', power: 'Power:', crit: 'Crit:',
-    critMult: 'Crit Mult:', progress: 'Progress:'
+crystals: 'Crystals:', power: 'Power:', crit: 'Crit:', critMult: 'Crit Mult:', progress: 'Progress:', bocEarned: 'Prestige BoC:', helio: 'Heliopause:'
 };
 translations.zh.hud = {
-    crystals: '水晶:', power: '力量:', crit: '暴击:',
-    critMult: '暴击倍率:', progress: '进度:'
+ crystals: '水晶:', power: '力量:', crit: '暴击:', critMult: '暴击倍率:', progress: '进度:', bocEarned: '声望 BoC:', helio: '日球层顶:'
 };
 
 // === КОНСТАНТЫ ===
@@ -553,6 +588,7 @@ window.switchLanguage = function() {
     try { localStorage.setItem('cosmicLang', currentLanguage); } catch (e) {}
     window.updateLanguageFlag();
     window.updateAllUITexts();
+if (window.TutorialSystem?.refresh) window.TutorialSystem.refresh();
     console.log('🌍 Язык переключён:', currentLanguage);
 };
 
