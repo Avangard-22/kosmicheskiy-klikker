@@ -1,0 +1,427 @@
+// js/achievements-v2/planet-factory.js (v2.1 — Delta Mode)
+// ═══════════════════════════════════════════════════
+// 🏭 ФАБРИКА ПЛАНЕТ — Универсальный движок достижений v2.1
+// ЧТО: Создаёт полноценный модуль достижений из конфига.
+// ЗАЧЕМ: Чтобы добавить новую планету, нужен ТОЛЬКО конфиг (~20 строк).
+//        Вся логика (генерация, ранги, сохранение) едина для всех.
+//        ✅ НОВОЕ: Delta Mode — прогресс не сбрасывается при перезапуске
+// ═══════════════════════════════════════════════════
+(function() {
+'use strict';
+
+// ─────────────────────────────────────────────────────
+//  УТИЛИТЫ (детерминизм + римские цифры)
+// ─────────────────────────────────────────────────────
+function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0);
+}
+
+function jit(seed, pct) {
+    return 1 + ((hashStr(seed) % 1000) / 1000 - 0.5) * 2 * pct;
+}
+
+function toRoman(num) {
+    if (num <= 0) return String(num);
+    const lookup = {M:1000,CM:900,D:500,CD:400,C:100,XC:90,L:50,XL:40,X:10,IX:9,V:5,IV:4,I:1};
+    let roman = '';
+    for (const i in lookup) { while (num >= lookup[i]) { roman += i; num -= lookup[i]; } }
+    return roman;
+}
+
+// ─────────────────────────────────────────────────────
+// 🎖️ РАНГИ (единые для всех планет)
+// ─────────────────────────────────────────────────────
+const RANKS = [
+    { threshold: 1,    title: { ru: '✨ Искра',       en: '✨ Spark',          zh: '✨ 火花' },     bonus: null },
+    { threshold: 10,   title: { ru: '🌟 Созвездие',   en: '🌟 Constellation',  zh: '🌟 星座' },   bonus: { type: 'clickPower', value: 0.01 } },
+    { threshold: 50,   title: { ru: '🌌 Галактика',   en: '🌌 Galaxy',         zh: '🌌 星系' },   bonus: { type: 'coinsMult', value: 0.02 } },
+    { threshold: 100,  title: { ru: '🌫️ Туманность',  en: '🌫️ Nebula',         zh: '🌫️ 星云' },   bonus: { type: 'critChance', value: 0.003 } },
+    { threshold: 250,  title: { ru: '💥 Сверхновая',  en: '💥 Supernova',      zh: '💥 超新星' }, bonus: { type: 'comboMult', value: 0.05 } },
+    { threshold: 500,  title: { ru: '🕳️ Чёрная дыра', en: '🕳️ Black Hole',     zh: '🕳️ 黑洞' },   bonus: { type: 'damageMult', value: 0.07 } },
+    { threshold: 1000, title: { ru: '⚛️ Кварк',       en: '⚛️ Quark',           zh: '⚛️ 夸克' },   bonus: { type: 'rareChance', value: 0.10 } }
+];
+
+function calculateRank(totalUnlocked) {
+    let currentRank = RANKS[0];
+    let nextThreshold = RANKS[1]?.threshold || null;
+    
+    for (let i = RANKS.length - 1; i >= 0; i--) {
+        if (totalUnlocked >= RANKS[i].threshold) {
+            currentRank = RANKS[i];
+            nextThreshold = RANKS[i + 1]?.threshold || null;
+            break;
+        }
+    }
+    
+    if (totalUnlocked >= 1000) {
+        const extraRanks = Math.floor((totalUnlocked - 1000) / 100);
+        const legendNum = extraRanks + 1;
+        nextThreshold = 1000 + (extraRanks + 1) * 100;
+        currentRank = {
+            threshold: 1000 + extraRanks * 100,
+            title: {
+                ru: `👑 Легенда ${toRoman(legendNum)}`,
+                en: `👑 Legend ${toRoman(legendNum)}`,
+                zh: `👑 传奇 ${toRoman(legendNum)}`
+            },
+            bonus: { type: 'allMult', value: 0.01 * legendNum }
+        };
+    }
+    
+    return { rank: totalUnlocked, title: currentRank.title, bonus: currentRank.bonus, nextThreshold };
+}
+
+// ─────────────────────────────────────────────────────
+//  СОЗДАНИЕ МОДУЛЯ ПЛАНЕТЫ
+// ─────────────────────────────────────────────────────
+function createPlanetModule(config, nameTemplates) {
+    
+    // ⚙️ Генератор уровней
+    function generateLevel(metric, tier) {
+        const cfg = config.metrics[metric];
+        if (!cfg) return null;
+
+        const seed = `${config.id}:${metric}:${tier}`;
+        let target, reward;
+
+        // ✅ СПЕЦ-КЕЙС: метрики с фиксированным массивом таргетов
+        if (cfg.targets) {
+            if (tier >= cfg.targets.length) return null;
+            target = cfg.targets[tier];
+            reward = (cfg.rewards && cfg.rewards[tier] !== undefined) ? cfg.rewards[tier] : (cfg.rewardBase || 0);
+            const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
+            return {
+                id: `${config.prefix}_${metric}_t${tier}`,
+                tier, target, reward,
+                nameKey: tmpl.key,
+                nameFallback: tmpl.fallback.replace('{N}', tier + 1),
+                metric, metricType: 'cumulative', emoji: cfg.emoji
+            };
+        }
+
+        // ✅ СПЕЦ-КЕЙС «ДНИ В ИГРЕ»: 1–30 дней (+1), далее +10 до 360, 360 = 1 год, далее +30
+        if (cfg.type === 'days') {
+            // ── Таргеты ──
+            if (tier < 30)      target = tier + 1;                       // уровни 1–30: 1..30 дней
+            else if (tier < 63) target = 30 + (tier - 29) * 10;          // уровни 31–63: 40..360
+            else                target = 360 + (tier - 63) * 30;         // 1 год = 360, далее +30
+
+            // ── Награды ──
+            if (tier < 30)      reward = 5000 + tier * 50;                // 5000..19500
+            else if (tier < 63) reward = 20000 + (tier - 29) * 250;       // 22500..102500
+            else                reward = 1500000 + (tier - 63) * 1000;     // 1500000, 1600000...
+
+            // 🎁 Джекпот каждый год: уровень 64 (1 год), 76 (2 года), 88 (3 года)...
+            if (tier === 63 || (tier > 63 && (tier - 63) % 12 === 0)) reward *= 3;
+
+            const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
+            return {
+                id: `${config.prefix}_${metric}_t${tier}`,
+                tier, target, reward,
+                nameKey: tmpl.key,
+                nameFallback: tmpl.fallback.replace('{N}', tier + 1),
+                metric, metricType: 'cumulative', emoji: cfg.emoji
+            };
+        }
+
+        // ══ 1. ТАРГЕТ: фазовая прогрессия (только cumulative / record_max) ══
+        const t49 = cfg.base * Math.pow(cfg.growth, 49);
+
+        if (tier < 50) {
+            target = cfg.base * Math.pow(cfg.growth, tier);
+        } else if (tier < 500) {
+            target = t49 + (tier - 49) * (50 * cfg.base);
+        } else {
+            const t499 = t49 + (499 - 49) * (50 * cfg.base);
+            target = t499 + (tier - 499) * (100 * cfg.base);
+        }
+
+        target = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, Math.round(target * jit(seed, 0.10))));
+
+        // ══ 2. НАГРАДА: увеличена, с фазами ══
+        const r49 = cfg.rewardBase * Math.pow(cfg.rewardGrowth, 49);
+
+        if (tier < 50) {
+            reward = cfg.rewardBase * Math.pow(cfg.rewardGrowth, tier);
+        } else if (tier < 500) {
+            reward = r49 + (tier - 49) * (cfg.rewardBase * 20);
+        } else {
+            const r499 = r49 + (499 - 49) * (cfg.rewardBase * 20);
+            reward = r499 + (tier - 499) * (cfg.rewardBase * 100);
+        }
+
+        // 🎁 Майлстоуны после 50-го: каждые 50 тиров ×10, каждые 10 ×3
+        let milestoneMult = 1;
+        if (tier >= 50) {
+            if (tier % 50 === 0) milestoneMult = 10;
+            else if (tier % 10 === 0) milestoneMult = 3;
+        }
+
+        reward = Math.min(50000000, Math.max(1, Math.round(reward * milestoneMult * jit(seed + ':r', 0.05))));
+
+        const tmpl = nameTemplates[metric] || { key: `ach.${config.id}.${metric}`, fallback: `${metric} {N}` };
+
+        return {
+            id: `${config.prefix}_${metric}_t${tier}`,
+            tier, target, reward,
+            nameKey: tmpl.key,
+            nameFallback: tmpl.fallback.replace('{N}', tier + 1),
+            metric, metricType: cfg.type, emoji: cfg.emoji
+        };
+    }
+    
+    function generateLevels(metric, fromTier, count) {
+        const levels = [];
+        for (let i = 0; i < count; i++) {
+            const level = generateLevel(metric, fromTier + i);
+            if (level) levels.push(level);
+        }
+        return levels;
+    }
+    
+    function isLevelComplete(metric, tier, currentValue) {
+        const level = generateLevel(metric, tier);
+        if (!level) return false;
+        if (level.metricType === 'record_min') return currentValue > 0 && currentValue <= level.target;
+        return currentValue >= level.target;
+    }
+    
+    function getCardProgress(metric, currentValue) {
+        let tier = 0, totalUnlocked = 0;
+        while (true) {
+            if (isLevelComplete(metric, tier, currentValue)) { totalUnlocked++; tier++; }
+            else break;
+            if (tier > 10000) break;
+        }
+        const currentLevel = generateLevel(metric, tier);
+        const prevLevel = tier > 0 ? generateLevel(metric, tier - 1) : null;
+        let percent = 0;
+        if (currentLevel) {
+            const prevTarget = prevLevel ? prevLevel.target : 0;
+            const range = currentLevel.target - prevTarget;
+            const progress = currentValue - prevTarget;
+            percent = Math.min(100, Math.max(0, (progress / range) * 100));
+        } else { percent = 100; }
+        return { currentTier: tier, currentLevel, percent, totalUnlocked };
+    }
+    
+    // 🏆 Мастер-достижение
+    function getMasterAchievement() {
+        const AU_TO_DAMAGE = window.GAME_CONFIG?.AU_TO_DAMAGE || 149597870.691;
+        const masterTarget = Math.round(config.masterAU * AU_TO_DAMAGE * 0.9999);
+        return {
+            id: `${config.prefix}_master`, tier: -1, target: masterTarget, reward: 500000,
+            nameKey: `ach.${config.id}.master`,
+            nameFallback: `${config.emoji} ${config.id.toUpperCase()} покорён!`,
+            metric: 'planetDamage', metricType: 'cumulative', isMaster: true, emoji: '👑'
+        };
+    }
+    
+    // ✅ ИСПРАВЛЕНО: УМНОЕ обновление прогресса (Delta Mode)
+    // mode: 'add' (накопление), 'max' (рекорд), 'min' (анти-рекорд), 'set' (жесткая установка)
+function updateMetric(metric, value, mode = 'add') {
+if (!window.gameState) return;
+// 🔒 ЖЁСТКАЯ ИЗОЛЯЦИЯ 1: Обновляем ТОЛЬКО если это текущая локация
+if (config.id !== window.gameState.currentLocation) return;
+// 🔒 ЖЁСТКАЯ ИЗОЛЯЦИЯ 2: Если планета заморожена (пройдена), метрики не трогаем
+if (window.gameState.achievementsV2?.[config.id]?.frozen) return;
+
+if (!window.gameState.achievementsV2) window.gameState.achievementsV2 = {};
+if (!window.gameState.achievementsV2[config.id]) {
+window.gameState.achievementsV2[config.id] = { rank: 0, totalUnlocked: 0, metrics: {}, masterUnlocked: false, frozen: false };
+}
+    const planet = window.gameState.achievementsV2[config.id];
+    if (!planet.metrics[metric]) planet.metrics[metric] = { level: 0, progress: 0 };
+    const state = planet.metrics[metric];
+    
+    //  ЛОГИКА СОХРАНЕНИЯ БЕЗ ОБНУЛЕНИЯ
+    if (mode === 'add') {
+        state.progress += value;
+    } else if (mode === 'max') {
+        if (value > state.progress) state.progress = value;
+    } else if (mode === 'min') {
+        if (state.progress === 0 || value < state.progress) state.progress = value;
+    } else {
+        state.progress = value;
+    }
+    
+    // ✅ ЗАЩИТА ОТ ЛАВИНЫ: ограничиваем количество разблокировок за один вызов
+    const MAX_UNLOCKS_PER_CALL = 5;
+    let unlockedAny = false;
+    let totalReward = 0;
+    
+    // Считаем сколько тиров нужно разблокировать
+    let tempLevel = state.level;
+    let tiersToUnlock = 0;
+    while (isLevelComplete(metric, tempLevel, state.progress)) {
+        tiersToUnlock++;
+        tempLevel++;
+        if (tiersToUnlock > 1000) break; // Защита от бесконечного цикла
+    }
+    
+    if (tiersToUnlock > MAX_UNLOCKS_PER_CALL) {
+        // ✅ ГИБРИДНЫЙ ПОДХОД: разблокируем только финальный тир с суммарной наградой
+        const finalTier = tempLevel - 1;
+        
+        // Считаем суммарную награду за все пропущенные тиры
+        for (let tier = state.level; tier < finalTier; tier++) {
+            const level = generateLevel(metric, tier);
+            if (level) {
+                totalReward += level.reward;
+            }
+        }
+        
+        // Разблокируем финальный тир
+        state.level = finalTier;
+        planet.totalUnlocked += tiersToUnlock;
+        unlockedAny = true;
+        
+        console.log(`🏆 [ACH-V2] ${config.id}.${metric} tier ${finalTier} unlocked! +${totalReward} 💎 (включая ${tiersToUnlock - 1} пропущенных достижений)`);
+        
+        if (window.EventBus) {
+            window.EventBus.emit('achievement:v2:unlocked', {
+                planet: config.id, metric, tier: finalTier, 
+                level: generateLevel(metric, finalTier), 
+                reward: totalReward,
+                skippedTiers: tiersToUnlock - 1
+            });
+        }
+    } else {
+        // Обычная разблокировка (меньше 5 тиров)
+        while (isLevelComplete(metric, state.level, state.progress)) {
+            const level = generateLevel(metric, state.level);
+            if (!level) break;
+            state.level++;
+            planet.totalUnlocked++;
+            unlockedAny = true;
+            totalReward += level.reward;
+            console.log(`🏆 [ACH-V2] ${config.id}.${metric} tier ${state.level - 1} unlocked! +${level.reward} 💎`);
+            if (window.EventBus) {
+                window.EventBus.emit('achievement:v2:unlocked', {
+                    planet: config.id, metric, tier: state.level - 1, level, reward: level.reward
+                });
+            }
+        }
+    }
+    
+    // ✅ Начисляем кристаллы + обновляем UI
+    if (totalReward > 0) {
+        window.gameState.coins = (window.gameState.coins || 0) + totalReward;
+        if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(totalReward);
+        if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+        if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+        if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
+        if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
+        if (window.telegramHaptic?.success) window.telegramHaptic.success();
+        else if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+        if (typeof window.saveGame === 'function') window.saveGame();
+    }
+    if (unlockedAny) {
+        planet.rank = planet.totalUnlocked;
+        if (window.EventBus) {
+            window.EventBus.emit('achievement:v2:rankChanged', { planet: config.id, rank: planet.rank });
+        }
+    }
+}
+    
+    //  Обёртка для обратной совместимости (если где-то вызывается старое имя)
+    function updateMetricProgress(metric, newValue) {
+        updateMetric(metric, newValue, 'set');
+    }
+    
+ function checkMasterAchievement(currentPlanetDamage) {
+     if (!window.gameState?.achievementsV2?.[config.id]) return;
+     // 🔒 ЖЁСТКАЯ ИЗОЛЯЦИЯ: Мастер-ачивка только для текущей и не замороженной планеты
+     if (config.id !== window.gameState.currentLocation) return;
+     if (window.gameState.achievementsV2[config.id].frozen) return;
+     
+     const planet = window.gameState.achievementsV2[config.id];
+     if (planet.masterUnlocked) return;
+        
+        // ✅ КРИТИЧЕСКАЯ ЗАЩИТА: не разблокируем мастер-достижение при нулевом прогрессе
+        if (!currentPlanetDamage || currentPlanetDamage <= 0) return;
+        
+        const master = getMasterAchievement();
+        if (currentPlanetDamage >= master.target) {
+            planet.masterUnlocked = true;
+            planet.totalUnlocked++;
+            planet.rank = planet.totalUnlocked;
+            
+            window.gameState.coins = (window.gameState.coins || 0) + master.reward;
+            if (window.achievementsSystem?.incrementCoinsEarned) window.achievementsSystem.incrementCoinsEarned(master.reward);
+            
+            // ✅ ИСПРАВЛЕНО: Обновляем ВСЕ компоненты UI, а не только HUD
+            if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD();
+            if (window.GAME_UI?.updateUpgradeButtons) window.GAME_UI.updateUpgradeButtons();
+            if (window.shopSystem?.updateShopDisplay) window.shopSystem.updateShopDisplay();
+            
+            if (window.GAME_CORE?.playSound) window.GAME_CORE.playSound('upgradeSound');
+            if (window.telegramHaptic?.success) window.telegramHaptic.success();
+            if (typeof window.saveGame === 'function') window.saveGame();
+            
+            console.log(`👑 [ACH-V2] MASTER: ${master.nameFallback}! +${master.reward} 💎`);
+            if (window.EventBus) {
+                window.EventBus.emit('achievement:v2:masterUnlocked', { planet: config.id, achievement: master });
+            }
+        }
+    }
+    
+    function getMetricDefinitions() {
+        return Object.entries(config.metrics).map(([id, cfg]) => ({
+            id, emoji: cfg.emoji,
+            nameKey: nameTemplates[id]?.key || `ach.metric.${id}`,
+            fallback: nameTemplates[id]?.fallback || id,
+            type: cfg.type
+        }));
+    }
+    
+    // ── Возвращаем готовый модуль ──
+    return {
+        config,
+        generateLevel, generateLevels, getMasterAchievement, getMetricDefinitions,
+        isLevelComplete, getCardProgress, calculateRank,
+        updateMetric,            // ✅ НОВОЕ
+        updateMetricProgress,    // ✅ ОСТАВЛЯЕМ для обратной совместимости
+        checkMasterAchievement,
+        getPlanetInfo: function() {
+            return {
+                id: config.id, emoji: config.emoji,
+                nameKey: config.nameKey, descKey: config.descKey,
+                scale: config.scale, masterAU: config.masterAU,
+                metricCount: Object.keys(config.metrics).length
+            };
+        }
+    };
+}
+
+// ─────────────────────────────────────────────────────
+// 🌐 РЕЕСТР ПЛАНЕТ + ПУБЛИЧНЫЙ API
+// ─────────────────────────────────────────────────────
+const planets = {};
+
+window.AchievementsV2 = window.AchievementsV2 || {};
+window.AchievementsV2.PlanetFactory = {
+    create: function(config, nameTemplates) {
+        const module = createPlanetModule(config, nameTemplates);
+        planets[config.id] = module;
+        // Экспортируем как AchievementsV2.Mercury, AchievementsV2.Venus и т.д.
+        const capitalizedName = config.id.charAt(0).toUpperCase() + config.id.slice(1);
+        window.AchievementsV2[capitalizedName] = module;
+        console.log(`🪐 [ACH-V2] Planet "${config.id}" registered via Factory`);
+        return module;
+    },
+    get: function(planetId) {
+        return planets[planetId] || null;
+    },
+    getAll: function() {
+        return planets;
+    }
+};
+
+console.log('🏭 [ACH-V2] Planet Factory v2.1 initialized (Delta Mode)');
+})();
