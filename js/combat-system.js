@@ -1,4 +1,4 @@
- // js/combat-system.js — ЕДИНСТВЕННЫЙ модуль боевой математики (v2.2 — без дублей)
+// js/combat-system.js — ЕДИНСТВЕННЫЙ модуль боевой математики (v2.2 — без дублей)
 // ИСТОЧНИКИ НАГРАДЫ: только здесь.
 //   · урон/криты/HP          → calculateHit / calculateBlockHealth
 //   · награда за блок        → calculateDestroyReward (чистый oracle, без побочных эффектов)
