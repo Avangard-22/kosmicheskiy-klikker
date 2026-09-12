@@ -1,5 +1,5 @@
 // js/hardcore.js — 🎮 ХАРДКОР-РАЗНООБРАЗИЕ (v1.0)
-//  Фича 1 «Цепная реакция» — серия без промаха → множитель 💎 + BoC на вехах + «Кровавая луна»
+//  Фича 1 «Цепная реакция» — серия без промаха → множитель 💎 + BoC на вехах (1 раз за ран; Луна — до 2)
 //  Фича 2 «Хроно-блоки»    — блок с таймером: добил кликом = ×3 + заряд времени; прозевал = адреналин
 //
 //  Принцип: НИЧЕГО не переписываем в боевой математике. Только обёртки:
@@ -52,8 +52,13 @@ function st() {
         chronoIn: CFG_HC.chrono.every, chronoKilled: 0, chronoEscaped: 0,
         charges: 0, slowUntil: 0, bloodMoonUntil: 0, adrenaline: 0
     };
-    if (typeof gs.hc.chronoIn !== 'number' || gs.hc.chronoIn <= 0) gs.hc.chronoIn = CFG_HC.chrono.every;
-    return gs.hc;
+    const s = gs.hc;
+    if (typeof s.chronoIn !== 'number' || s.chronoIn <= 0) s.chronoIn = CFG_HC.chrono.every;
+    // 🆕 BoC-вехи: 25/75/150 — 1 раз за ран; 300 («Луна») — до BLOOD_MOON_BOC_MAX за ран
+    if (!Array.isArray(s.bocClaimed)) s.bocClaimed = [false, false, false];
+    if (typeof s.bocRunNumber !== 'number') s.bocRunNumber = 0;
+    if (typeof s.bloodMoonBocClaims !== 'number') s.bloodMoonBocClaims = 0;
+    return s;
 }
 
 // ═══════════════════ ФИЧА 1: ЦЕПНАЯ РЕАКЦИЯ ═══════════════════
@@ -63,18 +68,44 @@ function streakMult(s) {
     return m;
 }
 
+// 🌙 предел BoC-выплат за «Кровавую луну» в одном ране
+const BLOOD_MOON_BOC_MAX = 2;
+
 function bumpStreak(s) {
     const tiers = CFG_HC.chain.tiers;
+    const gs = window.gameState;
+
+    // 🔁 Новый ран → вехи 25/75/150 доступны заново, лимит Луны сброшен.
+    //    Сброс серии (промах) BoC НЕ возвращает — только множители 💎.
+    if (gs && s.bocRunNumber !== gs.runNumber) {
+        s.bocRunNumber = gs.runNumber;
+        s.bocClaimed = [false, false, false];
+        s.bloodMoonBocClaims = 0;
+    }
+
     s.streak = (s.streak || 0) + 1;
     if (s.streak > (s.best || 0)) s.best = s.streak;
+
     let unlocked = s.tier || 0;
     while (unlocked < tiers.length && s.streak >= tiers[unlocked].at) {
+        const idx = unlocked;
         const t = tiers[unlocked++];
-        const gs = window.gameState;
-        if (gs) gs.bocLiquid = (gs.bocLiquid || 0) + t.boc;      // скилл капает BoC-кэшбэком
-        const last = (unlocked === tiers.length);
-        if (last) s.bloodMoonUntil = Date.now() + CFG_HC.chain.bloodMoonMs;
-        toast(`🔥 ${t.label} — серия ${s.streak} · ×${t.mult} 💎 (+${t.boc} BoC)${last ? ' · 🌙 луна' : ''}`, '#FFD700');
+        const isMoon = (idx === tiers.length - 1);
+
+        // 💰 BoC: 25/75/150 — только при ПЕРВОМ достижении за ран.
+        //    300 (Луна) — до BLOOD_MOON_BOC_MAX раз за ран (нужна свежая серия 300).
+        let payBoc = false;
+        if (isMoon) {
+            if (s.bloodMoonBocClaims < BLOOD_MOON_BOC_MAX) { s.bloodMoonBocClaims++; payBoc = true; }
+        } else if (!s.bocClaimed[idx]) {
+            s.bocClaimed[idx] = true; payBoc = true;
+        }
+
+        if (payBoc && gs) gs.bocLiquid = (gs.bocLiquid || 0) + t.boc;   // скилл капает BoC-кэшбэком
+        if (isMoon) s.bloodMoonUntil = Date.now() + CFG_HC.chain.bloodMoonMs;
+
+        const bocTxt = payBoc ? ` (+${t.boc} BoC)` : '';
+        toast(`🔥 ${t.label} — серия ${s.streak} · ×${t.mult} 💎${bocTxt}${isMoon ? ' · 🌙 луна' : ''}`, '#FFD700');
         if (window.telegramHaptic?.success) window.telegramHaptic.success();
     }
     s.tier = unlocked;
@@ -223,7 +254,8 @@ function install() {
         finally { HC._inGameDestroy = false; }
 
         const s = st();
-        if (s && CFG_HC.chain.enabled) bumpStreak(s);
+        // 🆕 серия — только за ручные добивания (иначе Bobo/авто набивают её и Луна = AFK-кран)
+        if (s && CFG_HC.chain.enabled && !isAuto) bumpStreak(s);
         if (wasChrono) {
             if (!isAuto && s) { s.chronoKilled++; addCharge(s); }
             hideBadge();
