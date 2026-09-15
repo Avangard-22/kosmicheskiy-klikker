@@ -202,6 +202,7 @@ function giveCrystals(n) {
 function ensurePanel() {
   if (panel) return;
   injectStyles();
+  injectMobileStyles();   // 🆕 v2.4
   panel = document.createElement('div');
   panel.id = 'obPanel';
   panel.style.zIndex = CFG.z;
@@ -445,7 +446,29 @@ function tryBindEventBus() {
   });
   console.log('🚀 [ONBOARDING] ✅ EventBus подписан на', CFG.newGameEvents.length, 'событий');
 }
-
+  
+// ═══════════ 🆕 v2.4: МОБИЛЬНЫЕ СТИЛИ (панель не перекрывает кнопки справа) ═══════════
+function injectMobileStyles() {
+  if (document.getElementById('ob-mobile')) return;
+  const st = document.createElement('style');
+  st.id = 'ob-mobile';
+  st.textContent = `
+  @media (max-width: 640px){
+    #obPanel{ left:8px !important; right:78px !important; width:auto !important; transform:none !important; bottom:8px !important; }
+    .ob-bar{ width:auto; display:inline-block; padding:6px 12px; font-size:.85em; }
+    .ob-card{ padding:8px 10px; }
+    .ob-head{ gap:6px; }
+    .ob-min{ width:20px; height:20px; font-size:.8em; }
+    .ob-title{ font-size:.72em; }
+    .ob-task{ font-size:.8em; }
+    .ob-reward{ font-size:.9em; }
+    .ob-hint{ font-size:.68em; margin-bottom:6px; }
+    .ob-btn{ padding:6px 10px; font-size:.7em; }
+    .ob-dots i{ width:6px; height:6px; }
+  }`;
+  document.head.appendChild(st);
+}
+  
 // ═══════════ BOOT ═══════════
 function boot() {
   ensurePanel();
