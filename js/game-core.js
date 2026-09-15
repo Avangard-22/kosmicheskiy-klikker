@@ -630,8 +630,8 @@ showRollbackCard: function(percent, amount, currentRollback, maxRollbacks) {
         let t = { left: window.innerWidth / 2, top: window.innerHeight / 2 };
         if (this.currentBlock) t = this.currentBlock.getBoundingClientRect();
         for (let i = 0; i < 20; i++) {
-            const rx = Math.random() * (window.innerWidth - 60) + 30,
-                  ry = Math.random() * (window.innerHeight - 120) + 60;
+        const rx = Math.min(Math.max(10, Math.random() * (window.innerWidth - 60) + 30), Math.max(10, window.innerWidth - 200)),
+              ry = Math.min(Math.max(70, Math.random() * (window.innerHeight - 120) + 60), Math.max(70, window.innerHeight - 170));
             const dist = Math.sqrt(Math.pow(rx - (t.left + t.width / 2), 2) + Math.pow(ry - (t.top + t.height / 2), 2));
             if (dist > 150 && rx > 60 && rx < window.innerWidth - 60 && ry > 100 && ry < window.innerHeight - 60) {
                 this.helperPosition = { x: rx, y: ry };
