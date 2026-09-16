@@ -110,36 +110,31 @@ function restartOnboarding(src) {
   }, 600);
 }
 
-// ═══════════ 🆕 v2.3: ОБЁРТКА GAME_CORE.startGame / resetGame ═══════════
+// ═══════════ 🆕 v2.5: ОБЁРТКА startGame С РАЗЛИЧИЕМ reset/continue ═══════════
 function bindStartGame() {
-    if (startGameBound) return;
-    const G = window.GAME_CORE || window.gameCore;
-    if (!G) return;
-    for (const method of ['startGame', 'resetGame', 'newGame', 'startNewGame']) {
-        const fn = G[method];
-        if (typeof fn === 'function' && !fn.__obRestart) {
-            fn.__obRestart = true;
-            G[method] = function (...args) {
-                const r = fn.apply(this, args);
-                
-                // ✅ ИСПРАВЛЕНО: перезапускаем онбординг ТОЛЬКО если это "Новая игра"
-                // startGame(true) — Новая игра (кнопка 5 сек)
-                // startGame(false) — Продолжить (continueGame)
-                const isReset = (method === 'startGame') ? (args[0] === true) : true;
-                
-                if (isReset) {
-                    console.log('🚀 [ONBOARDING] перехвачен GAME_CORE.' + method + '(reset=true)');
-                    setTimeout(() => restartOnboarding('GAME_CORE.' + method), 800);
-                } else {
-                    console.log('🚀 [ONBOARDING] пропуск перезапуска (continueGame / reset=false)');
-                }
-                return r;
-            };
-            startGameBound = true;
-            console.log('🚀 [ONBOARDING] ✅ обёрнут GAME_CORE.' + method);
-            return;
-        }
-    }
+if (startGameBound) return;
+const G = window.GAME_CORE || window.gameCore;
+if (!G) return;
+for (const method of ['startGame', 'resetGame', 'newGame', 'startNewGame']) {
+const fn = G[method];
+if (typeof fn === 'function' && !fn.__obRestart) {
+fn.__obRestart = true;
+G[method] = function (...args) {
+// 🆕 v2.5: перезапуск ТОЛЬКО при настоящем сбросе:
+// startGame(true) / resetGame / newGame / startNewGame.
+// startGame(false) — это «Продолжить»: онбординг НЕ трогаем.
+const isReset = (method === 'startGame') ? (args[0] === true) : true;
+console.log('🚀 [ONBOARDING] перехвачен GAME_CORE.' + method + '(' + args.join(',') + ') isReset=' + isReset);
+const r = fn.apply(this, args);
+if (isReset) setTimeout(() => restartOnboarding('GAME_CORE.' + method), 800);
+else console.log('🚀 [ONBOARDING] continue (reset=false) — онбординг не трогаем');
+return r;
+};
+startGameBound = true;
+console.log('🚀 [ONBOARDING] ✅ обёрнут GAME_CORE.' + method + ' (reset-aware)');
+return;
+}
+}
 }
 
 // ═══════════ АКТИВАЦИЯ ═══════════
@@ -173,38 +168,45 @@ function watchActivation() {
   }
 }
 
-// 🆕 v2.3: Наблюдатель за сбросом gameState (признак "Новой игры")
+// 🆕 v2.5: наблюдатель за сбросом gameState — ТОЛЬКО настоящий сброс (New Game)
 let lastBlocksDestroyed = null;
 
 function watchGameStateReset() {
     const gs = window.gameState;
-    const gm = window.gameMetrics;
-    if (!gs && !gm) return;
+    if (!gs) return;
     
-    // ✅ ИСПРАВЛЕНО: Счётчик блоков находится в gameMetrics, а не в gameState
-    const blocks = gm?.blocksDestroyed ?? gs?.stats?.blocksDestroyed ?? gs?.blocksDestroyed ?? null;
+    // 🆕 v2.5: счётчик живёт в gameMetrics (gs.stats.blocksDestroyed не существует)
+    const blocks = window.gameMetrics?.blocksDestroyed ?? gs?.stats?.blocksDestroyed ?? gs?.blocksDestroyed ?? null;
     
-    // Сценарий 1: blocksDestroyed сбросился до 0 (признак New Game)
+    // Единственный признак настоящего сброса: счётчик был >0 и стал 0.
+    // Покупки/траты кристаллов его НЕ обнуляют → ложных срабатываний больше нет.
+    // 🆕 v2.5: завершённый маршрут наблюдателем НЕ сбрасывается (только если это 
+    // не подтверждённый New Game, когда blocksDestroyed переходит из >0 в 0).
+    
     if (lastBlocksDestroyed !== null && lastBlocksDestroyed > 0 && blocks === 0) {
-        console.log('🚀 [ONBOARDING] обнаружен сброс blocksDestroyed:', lastBlocksDestroyed, '→', blocks);
-        restartOnboarding('сброс blocksDestroyed');
+        console.log('🚀 [ONBOARDING] 🔄 обнаружен сброс blocksDestroyed:', lastBlocksDestroyed, '→', blocks);
+        restartOnboarding('сброс blocksDestroyed (New Game)');
     }
     
-    // ❌ УДАЛЕНО: Проверка coins (lastCoins > 1000 && coins < 500)
-    // Она вызывала ложные срабатывания, когда игрок просто тратил кристаллы 
-    // на улучшения или в магазине, что приводило к перезапуску онбординга посреди сессии!
-    
+    // Запоминаем текущее значение для следующей итерации
     lastBlocksDestroyed = blocks;
 }
 
 function giveCrystals(n) {
-  try {
-    if (window.GameEconomy?.addCrystals) return window.GameEconomy.addCrystals(n, 'onboarding');
-    if (window.gameEconomy?.addCrystals) return window.gameEconomy.addCrystals(n, 'onboarding');
-    if (typeof window.gameState?.coins === 'number') { window.gameState.coins += n; if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD(); return true; }
-    if (typeof window.gameState?.crystals === 'number') { window.gameState.crystals += n; return true; }
-  } catch (e) {}
-  return false;
+    try {
+        if (window.GameEconomy?.addCrystals) return window.GameEconomy.addCrystals(n, 'onboarding');
+        if (window.gameEconomy?.addCrystals) return window.gameEconomy.addCrystals(n, 'onboarding');
+        if (typeof window.gameState?.coins === 'number') { 
+            window.gameState.coins += n; 
+            if (window.GAME_UI?.updateHUD) window.GAME_UI.updateHUD(); 
+            return true; 
+        }
+        if (typeof window.gameState?.crystals === 'number') { 
+            window.gameState.crystals += n; 
+            return true; 
+        }
+    } catch (e) {}
+    return false;
 }
 
 // ═══════════ ПАНЕЛЬ ═══════════
