@@ -31,21 +31,24 @@ const CFG = {
 };
 
 const STEPS = [
-  { id: 'daily',   goal: 1, reward: 150, target: 'daily',
-    ru: 'Активируй Ежедневный бонус', ruHint: '🎁 раз в ~23 ч: кристаллы, бустер или уровни улучшений — сильно ускоряет старт',
-    en: 'Claim the daily bonus',      enHint: '🎁 once per ~23 h: crystals, a booster or upgrade levels' },
-  { id: 'boost',   goal: 2, reward: 200, target: 'shop', items: ['powerSurge', 'crystalBoost'],
-    ru: 'Купи бонус в Магазине',       ruHint: '«🛒 Магазин»: купи «⚡ Скачок силы» и «💰 Усилитель кристаллов» — окупятся сразу',
-    en: 'Buy a shop boost',           enHint: '"🛒 Shop": buy "⚡ Power Surge" and "💰 Crystal Boost" — pays off instantly' },
-    { id: 'upgrade', goal: 5, reward: 300, target: 'upgrades',
-    ru: 'Купи улучшение «Сила удара» 5 раз', ruHint: '«⚡ Улучшения» → «Сила удара»: купи 5 уровней подряд — каждый усиливает клик',
-    en: 'Buy Click Power 5 times',           enHint: '"⚡ Upgrades" → "Click Power": buy 5 levels in a row' },
+  { id: 'block',   goal: 1, reward: 50,
+    ru: 'Нажми на блок!',              ruHint: 'Кликни по поднимающемуся блоку — за него дают 💎',
+    en: 'Tap the block!',              enHint: 'Click the rising block — it gives 💎' },
+  { id: 'upgrade', goal: 1, reward: 100, target: 'upgrades',
+    ru: 'Улучши силу клика',           ruHint: '«⚡ Улучшения» → «Сила удара»: теперь блоки ломаются быстрее',
+    en: 'Upgrade click power',         enHint: '"⚡ Upgrades" → "Click Power": blocks break faster' },
+  { id: 'block',   goal: 2, reward: 100,
+    ru: 'Разбей ещё 2 блока',          ruHint: 'Чувствуешь силу? Добей ещё два блока!',
+    en: 'Destroy 2 more blocks',       enHint: 'Feel the power? Finish two more!' },
+  { id: 'shoplook',goal: 1, reward: 100, target: 'shop',
+    ru: 'Загляни в Магазин',           ruHint: '«🛒 Магазин»: посмотри, что там есть — покупки позже',
+    en: 'Peek into the Shop',          enHint: '"🛒 Shop": look around — purchases come later' },
   { id: 'bobo',    goal: 1, reward: 250, target: 'bobo',
     ru: 'Включи Bobo или авто-кликер', ruHint: 'Помощник бьёт блоки за тебя: меньше промахов, больше дохода',
-    en: 'Activate Bobo or Auto-Clicker', enHint: 'A helper attacks blocks for you: fewer misses, more income' },
-  { id: 'block',   goal: 5, reward: 150,
-    ru: 'Разбей 5 блоков',        ruHint: 'Любым способом: кликами, Bobo или авто-кликером — главное, чтобы 5 блоков пало',
-    en: 'Destroy 5 blocks',       enHint: 'Any method counts: clicks, Bobo or auto-clicker — 5 blocks must fall' },
+    en: 'Activate Bobo or Auto-Clicker', enHint: 'A helper attacks blocks for you' },
+  { id: 'daily',   goal: 1, reward: 150, target: 'daily',
+    ru: 'Забери Ежедневный бонус',     ruHint: '🎁 раз в ~23 ч: кристаллы, бустер или уровни улучшений',
+    en: 'Claim the daily bonus',       enHint: '🎁 once per ~23 h: crystals, a booster or upgrade levels' }
 ];
 
 const L = () => (window.currentLanguage === 'en' ? 'en' : 'ru');
@@ -224,16 +227,20 @@ function hidePanel(reason) {
     }
   }
 }
-
+function setLayer(n) {
+  MOUNT.classList.remove('ob-layer-1', 'ob-layer-2', 'ob-layer-3');
+  MOUNT.classList.add('ob-layer-' + n);
+}
 function render() {
   if (!panel) return;
   if (!MOUNT.contains(panel)) MOUNT.appendChild(panel);
 
-  if (S.completed) return hidePanel('обучение завершено');
+   if (S.completed) { setLayer(3); return hidePanel('обучение завершено'); }
   const done = S.done.length;
-  if (!S.enabled) return hidePanel('не активирован (enabled=false)');
+  if (!S.enabled) { setLayer(3); return hidePanel('не активирован (enabled=false)'); }
   if (!inGame()) return hidePanel('не в игре (gameActive=false и welcome виден)');
-  if (done >= STEPS.length) return hidePanel('маршрут уже пройден (done=' + done + '/5)');
+  if (done >= STEPS.length) { setLayer(3); return hidePanel('маршрут уже пройден (done=' + done + '/6)'); }
+  setLayer(S.step <= 2 ? 1 : (S.step <= 4 ? 2 : 3));   // 🆕 слои раскрытия
 
   if (!shownLogged) { shownLogged = true; lastHideReason = ''; console.log('🚀 [ONBOARDING] панель ПОКАЗАНА'); }
   panel.style.display = 'block';
@@ -430,7 +437,7 @@ function injectStyles() {
   if (document.getElementById('ob-styles')) return;
   const st = document.createElement('style');
   st.id = 'ob-styles';
-  st.textContent = `#obPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;width:min(94vw,420px);font-family:'Orbitron',system-ui,sans-serif;pointer-events:auto} .ob-bar{width:100%;background:rgba(0,0,0,.6);color:#FFD700;border:1px solid rgba(255,215,0,.5);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer} .ob-card{background:rgba(12,10,24,.95);border:2px solid rgba(255,215,0,.35);border-radius:14px;padding:10px 12px;color:#e8e8f0;box-shadow:0 8px 30px rgba(0,0,0,.6)} .ob-head{display:flex;align-items:center;gap:8px}.ob-min{background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer} .ob-title{color:#FFD700;font-weight:700;font-size:.8em} .ob-task{margin:6px 0 2px;font-size:.85em;font-weight:700}.ob-reward{color:#4CAF50} .ob-hint{font-size:.72em;color:#9aa;margin-bottom:8px} .ob-row{display:flex;align-items:center;gap:8px;justify-content:space-between} .ob-dots{display:flex;gap:4px}.ob-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)} .ob-dots i.ok{background:#4CAF50}.ob-dots i.now{background:#FFD700;transform:scale(1.25)} .ob-btn{background:linear-gradient(135deg,#4CAF50,#388E3C);border:none;color:#fff;border-radius:10px;padding:7px 12px;font-family:inherit;font-weight:700;font-size:.75em;cursor:pointer} .ob-hl{outline:3px solid #FFD700 !important;outline-offset:3px;animation:obPulse 1s infinite} @keyframes obPulse{50%{outline-color:rgba(255,215,0,.35)}} .ob-badge::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:obPulse 1.2s infinite} .ob-badge{position:relative} .ob-toast{position:fixed;left:50%;bottom:180px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.35s;background:rgba(12,10,24,.97);border:2px solid rgba(76,175,80,.6);color:#e8e8f0;border-radius:12px;padding:10px 16px;font-family:'Orbitron',system-ui,sans-serif;font-size:.85em;max-width:92vw;text-align:center;pointer-events:none} .ob-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}`;
+  st.textContent = `#obPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;width:min(94vw,420px);font-family:'Orbitron',system-ui,sans-serif;pointer-events:auto} .ob-bar{width:100%;background:rgba(0,0,0,.6);color:#FFD700;border:1px solid rgba(255,215,0,.5);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer} .ob-card{background:rgba(12,10,24,.95);border:2px solid rgba(255,215,0,.35);border-radius:14px;padding:10px 12px;color:#e8e8f0;box-shadow:0 8px 30px rgba(0,0,0,.6)} .ob-head{display:flex;align-items:center;gap:8px}.ob-min{background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer} .ob-title{color:#FFD700;font-weight:700;font-size:.8em} .ob-task{margin:6px 0 2px;font-size:.85em;font-weight:700}.ob-reward{color:#4CAF50} .ob-hint{font-size:.72em;color:#9aa;margin-bottom:8px} .ob-row{display:flex;align-items:center;gap:8px;justify-content:space-between} .ob-dots{display:flex;gap:4px}.ob-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)} .ob-dots i.ok{background:#4CAF50}.ob-dots i.now{background:#FFD700;transform:scale(1.25)} .ob-btn{background:linear-gradient(135deg,#4CAF50,#388E3C);border:none;color:#fff;border-radius:10px;padding:7px 12px;font-family:inherit;font-weight:700;font-size:.75em;cursor:pointer} .ob-hl{outline:3px solid #FFD700 !important;outline-offset:3px;animation:obPulse 1s infinite} @keyframes obPulse{50%{outline-color:rgba(255,215,0,.35)}} .ob-badge::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:obPulse 1.2s infinite} .ob-badge{position:relative} .ob-toast{position:fixed;left:50%;bottom:180px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.35s;background:rgba(12,10,24,.97);border:2px solid rgba(76,175,80,.6);color:#e8e8f0;border-radius:12px;padding:10px 16px;font-family:'Orbitron',system-ui,sans-serif;font-size:.85em;max-width:92vw;text-align:center;pointer-events:none} .ob-toast.show{opacity:1;transform:translateX(-50%) translateY(0)} html.ob-layer-1 #hud-boc,html.ob-layer-1 #leaderboardBtn,html.ob-layer-1 #achievementsBtn,html.ob-layer-2 #hud-boc,html.ob-layer-2 #leaderboardBtn,html.ob-layer-2 #achievementsBtn{display:none!important} @media (max-width:640px){#obPanel{left:8px!important;right:78px!important;width:auto!important;transform:none!important;bottom:8px!important}.ob-bar{width:auto;display:inline-block;padding:6px 12px;font-size:.85em}.ob-card{padding:8px 10px}.ob-title{font-size:.72em}.ob-task{font-size:.8em}.ob-hint{font-size:.68em;margin-bottom:6px}.ob-btn{padding:6px 10px;font-size:.7em}}`;
   document.head.appendChild(st);
 }
 
