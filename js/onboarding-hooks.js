@@ -91,6 +91,7 @@ function wire() {
   const U = window.UpgradesPanel || window.upgradesPanel || window.upgradeSystem || window.upgrades;
   const F = window.GAME_FEATURES || window.gameFeatures;
   const D = window.dailySystem || window.dailyBonusSystem || window.DailyBonus || window.DailySystem || window.dailyBonus;
+  const SH = window.shopSystem || window.ShopSystem;
 
   wrap(G, ['destroyBlock', 'onBlockDestroyed', 'blockDestroyed', 'killBlock'], 'block', blockOk);
   wrap(U, ['buy', 'buyUpgrade', 'purchase', 'purchaseUpgrade', 'upgrade', 'buyLevel'], 'upgrade', upgradeOk);
@@ -98,6 +99,7 @@ function wire() {
   wrap(D, ['claim', 'claimDaily', 'claimBonus', 'claimDailyBonus', 'collect', 'getDaily', 'activate', 'activateBonus'], 'daily', notFalse);
   wrap(G, ['activateBobo', 'startBobo', 'useBobo'], 'bobo', boboOk);
   wrap(U, ['activateBobo', 'startBobo'], 'bobo', boboOk);
+  wrap(SH, ['openShop'], 'shoplook', notFalse);   // 🆕 шаг «загляни в магазин»
 }
 
 // ═══════════ ШПИОН EventBus ═══════════
