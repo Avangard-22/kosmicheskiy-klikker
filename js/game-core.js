@@ -93,6 +93,9 @@ getCurrentSpeed: function() {
     if (!window.gameState) return this.blockSpeed;
     const planet = window.gameState.currentLocation || 'mercury';
     let speed = this.blockSpeed * (CFG.planetOrder.indexOf(planet) < 1 ? 0.85 : 1);
+     // 🐣 FTUE: первые 3 блока забега летят медленнее — даём время на реакцию
+    const bd = window.gameMetrics?.blocksDestroyed ?? 0;
+    if (bd < 3) speed *= 0.6;
     // ✅ ЗЕРКАЛО СИМУЛЯТОРА: HP-рампа замедляет полёт блока с тем же коэффициентом,
     // иначе на поздних планетах killTime > flyTime на каждом блоке → стена пропусков
     const prof = (CFG.balanceConfig?.hpProfiles || {})[planet] || {};
@@ -146,6 +149,13 @@ createMovingBlock: function() {
      }
      
      this.currentBlockHealth = this.calculateBlockHealth();
+     // 🐣 FTUE: рампа первых блоков — первые блоки забега почти гарантированно убиваемы
+    const bd0 = window.gameMetrics?.blocksDestroyed ?? 0;
+    const hpRamp = [0.10, 0.25, 0.50, 0.75][bd0];
+    if (hpRamp) {
+        this.currentBlockHealth = Math.max(1, Math.round(this.currentBlockHealth * hpRamp));
+        console.log('🐣 [FTUE] блок #' + (bd0 + 1) + ': HP ×' + hpRamp);
+    }
         const block = document.createElement('div');
         block.className = 'moving-block';
         const size = (window.innerWidth < 768 ? 80 : 60);
@@ -270,61 +280,53 @@ animateBlock: function(block) {
         block.style.bottom = pos + 'px';
 
         // 4. Блок достиг уровня прогресс-бара → штраф + новый блок
-        if (pos > escapePos) {
-            if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
-            if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
-
-            const gs = window.gameState;
-            if (gs) {
-                const planet = gs.currentLocation || 'mercury';
-                const planetDamage = gs.planetDamageDealt || 0;
-                const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU ||
-                                 CFG.astronomicalUnits?.[planet] || 0.38710;
-                const targetDamage = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
-                const progressPercent = targetDamage > 0 ? (planetDamage / targetDamage) * 100 : 0;
-
-                if (!gs.skipPenaltyState) {
-                    gs.skipPenaltyState = {
-                        activated: false, skipCount: 0, rollbackCount: 0,
-                        activationDistance: 0, totalRolledBack: 0
-                    };
-                }
-                const state = gs.skipPenaltyState;
-
-                if (!state.activated && progressPercent >= 30) {
-                    state.activated = true;
-                    state.activationDistance = planetDamage;
-                }
-
-                if (state.activated) {
-                    state.skipCount++;
-                    if (state.skipCount >= 6) {
-                        const MAX_ROLLBACKS = 10;
-                        const MAX_ROLLBACK_PERCENT = 0.5;
-                        if (state.rollbackCount < MAX_ROLLBACKS) {
-                            const maxRollback = state.activationDistance * MAX_ROLLBACK_PERCENT;
-                            const remainingRollback = maxRollback - state.totalRolledBack;
-                            if (remainingRollback > 0) {
-                                const rollbackPercent = 5 + Math.random() * 10;
-                                let rollbackAmount = planetDamage * (rollbackPercent / 100);
-                                rollbackAmount = Math.min(rollbackAmount, remainingRollback);
-                                gs.planetDamageDealt = Math.max(0, planetDamage - rollbackAmount);
-                                state.totalRolledBack += rollbackAmount;
-                                state.rollbackCount++;
-                                if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
-                                this.showRollbackCard(rollbackPercent, rollbackAmount, state.rollbackCount, MAX_ROLLBACKS);
-                            }
-                        }
-                        state.skipCount = 0;
-                    }
-                }
-            }
-
-            if (window.gameState?.gameActive) {
-                setTimeout(() => this.createMovingBlock(), 500);
-            }
-            return; // ← НЕ вызываем requestAnimationFrame — новый блок создаст свою цепочку
-        }
+     if (pos > escapePos) {
+         // 🐣 FTUE: первые 3 промаха забега — без штрафа и без skip-счётчика
+         const bd = window.gameMetrics?.blocksDestroyed ?? 0;
+         if (bd < 3) {
+             console.log('🐣 [FTUE] промах #' + (bd + 1) + ' — без штрафа');
+         } else {
+             if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
+             if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
+             const gs = window.gameState;
+             if (gs) {
+                 const planet = gs.currentLocation || 'mercury';
+                 const planetDamage = gs.planetDamageDealt || 0;
+                 const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU ||
+                                  CFG.astronomicalUnits?.[planet] || 0.38710;
+                 const targetDamage = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
+                 const progressPercent = targetDamage > 0 ? (planetDamage / targetDamage) * 100 : 0;
+                 if (!gs.skipPenaltyState) {
+                     gs.skipPenaltyState = { activated: false, skipCount: 0, rollbackCount: 0, activationDistance: 0, totalRolledBack: 0 };
+                 }
+                 const state = gs.skipPenaltyState;
+                 if (!state.activated && progressPercent >= 30) { state.activated = true; state.activationDistance = planetDamage; }
+                 if (state.activated) {
+                     state.skipCount++;
+                     if (state.skipCount >= 6) {
+                         const MAX_ROLLBACKS = 10, MAX_ROLLBACK_PERCENT = 0.5;
+                         if (state.rollbackCount < MAX_ROLLBACKS) {
+                             const maxRollback = state.activationDistance * MAX_ROLLBACK_PERCENT;
+                             const remainingRollback = maxRollback - state.totalRolledBack;
+                             if (remainingRollback > 0) {
+                                 const rollbackPercent = 5 + Math.random() * 10;
+                                 let rollbackAmount = planetDamage * (rollbackPercent / 100);
+                                 rollbackAmount = Math.min(rollbackAmount, remainingRollback);
+                                 gs.planetDamageDealt = Math.max(0, planetDamage - rollbackAmount);
+                                 state.totalRolledBack += rollbackAmount;
+                                 state.rollbackCount++;
+                                 if (window.GAME_UI?.updateProgressBar) window.GAME_UI.updateProgressBar();
+                                 this.showRollbackCard(rollbackPercent, rollbackAmount, state.rollbackCount, MAX_ROLLBACKS);
+                             }
+                         }
+                         state.skipCount = 0;
+                     }
+                 }
+             }
+         }
+         if (window.gameState?.gameActive) { setTimeout(() => this.createMovingBlock(), 500); }
+         return;
+     }
 
         // 5. Продолжаем анимацию
         requestAnimationFrame(move);
