@@ -110,28 +110,36 @@ function restartOnboarding(src) {
   }, 600);
 }
 
-// ═══════════ 🆕 v2.2: ОБЁРТКА GAME_CORE.startGame / resetGame ═══════════
+// ═══════════ 🆕 v2.3: ОБЁРТКА GAME_CORE.startGame / resetGame ═══════════
 function bindStartGame() {
-  if (startGameBound) return;
-  const G = window.GAME_CORE || window.gameCore;
-  if (!G) return;
-  
-  for (const method of ['startGame', 'resetGame', 'newGame', 'startNewGame']) {
-    const fn = G[method];
-    if (typeof fn === 'function' && !fn.__obRestart) {
-      fn.__obRestart = true;
-      G[method] = function (...args) {
-        console.log('🚀 [ONBOARDING] перехвачен GAME_CORE.' + method + '()');
-        const r = fn.apply(this, args);
-        // 🆕 v2.2: отложенный перезапуск (даём gameState инициализироваться)
-        setTimeout(() => restartOnboarding('GAME_CORE.' + method), 800);
-        return r;
-      };
-      startGameBound = true;
-      console.log('🚀 [ONBOARDING] ✅ обёрнут GAME_CORE.' + method);
-      return;
+    if (startGameBound) return;
+    const G = window.GAME_CORE || window.gameCore;
+    if (!G) return;
+    for (const method of ['startGame', 'resetGame', 'newGame', 'startNewGame']) {
+        const fn = G[method];
+        if (typeof fn === 'function' && !fn.__obRestart) {
+            fn.__obRestart = true;
+            G[method] = function (...args) {
+                const r = fn.apply(this, args);
+                
+                // ✅ ИСПРАВЛЕНО: перезапускаем онбординг ТОЛЬКО если это "Новая игра"
+                // startGame(true) — Новая игра (кнопка 5 сек)
+                // startGame(false) — Продолжить (continueGame)
+                const isReset = (method === 'startGame') ? (args[0] === true) : true;
+                
+                if (isReset) {
+                    console.log('🚀 [ONBOARDING] перехвачен GAME_CORE.' + method + '(reset=true)');
+                    setTimeout(() => restartOnboarding('GAME_CORE.' + method), 800);
+                } else {
+                    console.log('🚀 [ONBOARDING] пропуск перезапуска (continueGame / reset=false)');
+                }
+                return r;
+            };
+            startGameBound = true;
+            console.log('🚀 [ONBOARDING] ✅ обёрнут GAME_CORE.' + method);
+            return;
+        }
     }
-  }
 }
 
 // ═══════════ АКТИВАЦИЯ ═══════════
@@ -165,30 +173,28 @@ function watchActivation() {
   }
 }
 
-// 🆕 v2.2: Наблюдатель за сбросом gameState (признак "Новой игры")
+// 🆕 v2.3: Наблюдатель за сбросом gameState (признак "Новой игры")
 let lastBlocksDestroyed = null;
-let lastCoins = null;
+
 function watchGameStateReset() {
-  const gs = window.gameState;
-  if (!gs) return;
-  
-  const blocks = gs.stats?.blocksDestroyed ?? gs.blocksDestroyed ?? null;
-  const coins = gs.coins ?? null;
-  
-  // Сценарий 1: blocksDestroyed сбросился до 0 (или стал null)
-  if (lastBlocksDestroyed !== null && lastBlocksDestroyed > 0 && blocks === 0) {
-    console.log('🚀 [ONBOARDING] обнаружен сброс blocksDestroyed:', lastBlocksDestroyed, '→', blocks);
-    restartOnboarding('сброс blocksDestroyed');
-  }
-  
-  // Сценарий 2: coins сбросились до 0, потом выросли до малого числа (ежедневный бонус)
-  if (lastCoins !== null && lastCoins > 1000 && coins < 500 && coins > 0) {
-    console.log('🚀 [ONBOARDING] обнаружен сброс coins + бонус:', lastCoins, '→', coins);
-    restartOnboarding('сброс coins + бонус');
-  }
-  
-  lastBlocksDestroyed = blocks;
-  lastCoins = coins;
+    const gs = window.gameState;
+    const gm = window.gameMetrics;
+    if (!gs && !gm) return;
+    
+    // ✅ ИСПРАВЛЕНО: Счётчик блоков находится в gameMetrics, а не в gameState
+    const blocks = gm?.blocksDestroyed ?? gs?.stats?.blocksDestroyed ?? gs?.blocksDestroyed ?? null;
+    
+    // Сценарий 1: blocksDestroyed сбросился до 0 (признак New Game)
+    if (lastBlocksDestroyed !== null && lastBlocksDestroyed > 0 && blocks === 0) {
+        console.log('🚀 [ONBOARDING] обнаружен сброс blocksDestroyed:', lastBlocksDestroyed, '→', blocks);
+        restartOnboarding('сброс blocksDestroyed');
+    }
+    
+    // ❌ УДАЛЕНО: Проверка coins (lastCoins > 1000 && coins < 500)
+    // Она вызывала ложные срабатывания, когда игрок просто тратил кристаллы 
+    // на улучшения или в магазине, что приводило к перезапуску онбординга посреди сессии!
+    
+    lastBlocksDestroyed = blocks;
 }
 
 function giveCrystals(n) {
