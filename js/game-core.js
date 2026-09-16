@@ -1392,17 +1392,7 @@ window.GAME_CORE.initEventHandlers();
     if (window.gameState?.currentLocation) window.GAME_CORE.setLocation(window.gameState.currentLocation);
     if (window.updateLanguageFlag) window.updateLanguageFlag();
     if (window.updateContinueButton) window.updateContinueButton();
-     // 🐣 FTUE: нет сейва → одна кнопка «▶ Начать игру», «Новая игра» скрыта
-    try {
-        const cont = document.getElementById('continueBtn');
-        const start = document.getElementById('startBtn');
-        if (cont && start && cont.classList.contains('no-save')) {
-            cont.classList.remove('no-save');
-            cont.textContent = (window.currentLanguage === 'en') ? '▶ Start game' : '▶ Начать игру';
-            start.style.display = 'none';
-        }
-    } catch (e) {}
-    
+
     // ✅ Сигнализируем другим модулям о готовности
     if (window.EventBus) {
         window.EventBus.emit('core:ready');
