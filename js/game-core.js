@@ -1182,75 +1182,73 @@ gs._farmRunsOnPlanet = (gs._farmRunsOnPlanet || 0) + 1; // 🏭 истощени
         }
 
         // ✅ БЕЗОПАСНАЯ КНОПКА "НОВАЯ ИГРА" (Долгое нажатие 5 секунд)
-        const startBtn = document.getElementById('startBtn');
-        if (startBtn) {
-            let holdTimer = null;
-            let animationFrame = null;
-            let holdStartTime = 0;
-            const HOLD_DURATION = 5000; // 5 секунд
-            const originalText = startBtn.innerText || startBtn.textContent;
-            const originalBg = startBtn.style.backgroundColor || '';
-
-            const startHold = (e) => {
-                if (e.type === 'touchstart') e.preventDefault();
-                holdStartTime = Date.now();
-                startBtn.classList.add('holding-reset');
-                if (window.telegramHaptic) window.telegramHaptic.light();
-
-                holdTimer = setTimeout(() => {
-                    startBtn.innerText = 'Сброс...';
-                    if (window.telegramHaptic) window.telegramHaptic.heavy();
-                    
-                    // Выполняем сброс игры
-                    const ws = document.getElementById('welcomeScreen');
-                    if (ws) ws.style.display = "none";
-                    this.startGame(true);
-                    
-                    cancelHold(); // Очищаем таймеры после успешного сброса
-                }, HOLD_DURATION);
-
-                updateCountdown();
-            };
-
-            const cancelHold = () => {
-                if (holdTimer) {
-                    clearTimeout(holdTimer);
-                    holdTimer = null;
-                }
-                if (animationFrame) {
-                    cancelAnimationFrame(animationFrame);
-                }
-                startBtn.classList.remove('holding-reset');
-                startBtn.innerText = originalText;
-                startBtn.style.backgroundColor = originalBg;
-            };
-
-            const updateCountdown = () => {
-                if (!holdTimer) return;
-                const elapsed = Date.now() - holdStartTime;
-                const remaining = Math.ceil((HOLD_DURATION - elapsed) / 1000);
-                
-                if (remaining > 0 && remaining <= 5) {
-                    startBtn.innerText = `Уверены? Держите ${remaining}с...`;
-                    // Вибрация на последних 3-х секундах для тактильного отсчета
-                    if (remaining <= 3 && window.telegramHaptic) {
-                        window.telegramHaptic.medium();
-                    }
-                }
-                
-                if (holdTimer) {
-                    animationFrame = requestAnimationFrame(updateCountdown);
-                }
-            };
-
-            // Привязываем события для мыши и тач-экранов
-            startBtn.addEventListener('mousedown', startHold);
-            startBtn.addEventListener('touchstart', startHold, { passive: false });
-            startBtn.addEventListener('mouseup', cancelHold);
-            startBtn.addEventListener('mouseleave', cancelHold);
-            startBtn.addEventListener('touchend', cancelHold);
-            startBtn.addEventListener('touchcancel', cancelHold);
-        }
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+        let holdTimer = null;
+        let animationFrame = null;
+        let holdStartTime = 0;
+        let tapFired = 0;
+        const HOLD_DURATION = 5000; // 5 секунд
+        const originalText = startBtn.innerText || startBtn.textContent;
+        const originalBg = startBtn.style.backgroundColor || '';
+        // 🆕 P0: есть ли сохранение? (класс no-save выставляет updateContinueButton)
+        const hasSave = () => {
+            const cb = document.getElementById('continueBtn');
+            return !!(cb && !cb.classList.contains('no-save'));
+        };
+        // 🆕 P0: НЕТ сейва → один тап сразу начинает новую игру
+        const tapStart = (e) => {
+            if (hasSave()) return;                 // есть сейв → только долгое удержание
+            if (Date.now() - tapFired < 600) return;
+            tapFired = Date.now();
+            if (e && e.preventDefault) e.preventDefault();
+            const ws = document.getElementById('welcomeScreen');
+            if (ws) ws.style.display = "none";
+            this.startGame(true);
+        };
+        const startHold = (e) => {
+            if (e.type === 'touchstart') e.preventDefault();
+            if (!hasSave()) return;                // нет сейва → холд не нужен, тап сам всё сделает
+            holdStartTime = Date.now();
+            startBtn.classList.add('holding-reset');
+            if (window.telegramHaptic) window.telegramHaptic.light();
+            holdTimer = setTimeout(() => {
+                startBtn.innerText = 'Сброс...';
+                if (window.telegramHaptic) window.telegramHaptic.heavy();
+                const ws = document.getElementById('welcomeScreen');
+                if (ws) ws.style.display = "none";
+                this.startGame(true);
+                cancelHold();
+            }, HOLD_DURATION);
+            updateCountdown();
+        };
+        const cancelHold = () => {
+            if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+            if (animationFrame) { cancelAnimationFrame(animationFrame); }
+            startBtn.classList.remove('holding-reset');
+            startBtn.innerText = originalText;
+            startBtn.style.backgroundColor = originalBg;
+        };
+        const updateCountdown = () => {
+            if (!holdTimer) return;
+            const elapsed = Date.now() - holdStartTime;
+            const remaining = Math.ceil((HOLD_DURATION - elapsed) / 1000);
+            if (remaining > 0 && remaining <= 5) {
+                startBtn.innerText = `Уверены? Держите ${remaining}с...`;
+                if (remaining <= 3 && window.telegramHaptic) window.telegramHaptic.medium();
+            }
+            if (holdTimer) animationFrame = requestAnimationFrame(updateCountdown);
+        };
+        startBtn.addEventListener('mousedown', startHold);
+        startBtn.addEventListener('touchstart', startHold, { passive: false });
+        startBtn.addEventListener('mouseup', cancelHold);
+        startBtn.addEventListener('mouseleave', cancelHold);
+        startBtn.addEventListener('touchend', (e) => { cancelHold(); tapStart(e); }, { passive: false });
+        startBtn.addEventListener('touchcancel', cancelHold);
+        startBtn.addEventListener('click', tapStart);
+        // 🆕 подсказка на кнопке, когда сейва нет
+        setTimeout(() => { if (!hasSave()) startBtn.innerText = (originalText || 'Новая игра') + ' (тап)'; }, 150);
+    }
 
         const contBtn = document.getElementById('continueBtn');
         if (contBtn) {
