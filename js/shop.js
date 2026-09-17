@@ -244,8 +244,10 @@ function toggleShop() {
 }
 
 function openShop() {
-    const panel = document.getElementById('shopPanel');
-    if (!panel) return;
+  const panel = document.getElementById('shopPanel');
+  if (!panel) return;
+  document.body.classList.add('modal-open');
+  if (window.UIManager?.hideBobo) window.UIManager.hideBobo('открыт магазин');
 
     panel.style.display = 'flex';
     shopPanelVisible = true;
@@ -272,7 +274,9 @@ function closeShop() {
     const panel = document.getElementById('shopPanel');
     if (!panel) return;
     panel.style.display = 'none';
-    shopPanelVisible = false;
+  shopPanelVisible = false;
+  document.body.classList.remove('modal-open');
+  if (window.UIManager?.showBobo) window.UIManager.showBobo();
     
     // ✅ НОВОЕ: Сбрасываем состояние подтверждения
     if (typeof resetPendingPurchase === 'function') {

@@ -384,13 +384,15 @@ function togglePanel() {
 }
 
 function showPanel() {
-const panel = document.getElementById('achievementsPanel');
-if (!panel) return;
-viewPlanetId = null; // открываемся на текущей планете
-panel.style.display = 'flex';
+    const panel = document.getElementById('achievementsPanel');
+    if (!panel) return;
+    viewPlanetId = null; // открываемся на текущей планете
+    panel.style.display = 'flex';
     panelVisible = true;
+    // 🆕 P3: модалка открыта → скрываем Bobo, чтобы не перекрывал список
+    document.body.classList.add('modal-open');
+    if (window.UIManager?.hideBobo) window.UIManager.hideBobo('открыты достижения');
     renderGridView();
-    
     // ✅ Закрываем магазин если открыт
     if (window.shopSystem && window.shopSystem.closeShop) {
         window.shopSystem.closeShop();
@@ -413,22 +415,22 @@ panel.style.display = 'flex';
 function hidePanel() {
     const panel = document.getElementById('achievementsPanel');
     if (!panel) return;
-    
     panel.style.display = 'none';
     panelVisible = false;
     currentView = 'grid';
-    
-    // ✅ Проверяем, не открыт ли магазин
+    // 🆕 P3: возвращаем Bobo, если магазин и улучшения закрыты
     var shopPanel = document.getElementById('shopPanel');
-var upgPanel = document.getElementById('upgradesPanel');  
-  var isShopOpen = shopPanel && shopPanel.style.display === 'flex';
-     var isUpgOpen = upgPanel && upgPanel.style.display === 'flex';
-   
+    var upgPanel = document.getElementById('upgradesPanel');
+    var isShopOpen = shopPanel && shopPanel.style.display === 'flex';
+    var isUpgOpen = upgPanel && upgPanel.style.display === 'flex';
+    if (!isShopOpen && !isUpgOpen) {
+        document.body.classList.remove('modal-open');
+        if (window.UIManager?.showBobo) window.UIManager.showBobo();
+    }
     // ✅ Возобновляем игру (как в старом achievements.js)
-    if (!isShopOpen && window.GAME_CORE && window.GAME_CORE.resumeGame) {
+    if (!isShopOpen && !isUpgOpen && window.GAME_CORE && window.GAME_CORE.resumeGame) {
         window.GAME_CORE.resumeGame();
     }
-    
     // ✅ Обновляем кнопку достижений при закрытии
     updateAchievementsButton();
 }
@@ -532,6 +534,46 @@ function lookupMetricDef(data) {
     } catch (e) {}
     return null;
 }
+// ═══════════ 🆕 v2.4: ГЕЙТ ВИЗУАЛА АЧИВОК (FTUE + очередь + серии) ═══════════
+const _achOrigMakeToast = makeToast;   // оригинальный рендерер стека
+let _achBatch = [], _achBatchTimer = null;
+
+function _achFtueMuted() {
+    const S = window.Onboarding?.state?.();
+    return !!(S && S.enabled && !S.completed && S.step < 3); // первые 3 шага — тишина
+}
+window.AchVisualMuted = _achFtueMuted;          // для мастер-карточки и внешних проверок
+window.AchDirectToast = _achOrigMakeToast;      // прямой показ мимо батчинга
+
+function _achFlushBatch() {
+    _achBatchTimer = null;
+    if (!_achBatch.length) return;
+    const items = _achBatch; _achBatch = [];
+    let html, color;
+    if (items.length === 1) {
+        html = items[0].html; color = items[0].color;
+    } else {
+        // 🏆 Серия: одно сводное окно вместо N одинаковых
+        html = '<div style="text-align:center;"><div style="font-size:1.6em;">🏆</div>' +
+               '<div style="font-weight:bold;">Серия достижений: ' + items.length + '!</div>' +
+               '<div style="font-size:0.75em;color:#aaa;">Награды уже зачислены на баланс</div></div>';
+        color = '#FFD700';
+    }
+    if (window.NotificationQueue) {
+        window.NotificationQueue.push('ACHIEVEMENT', '', { html: html, borderColor: color, duration: 3000 });
+    } else {
+        _achOrigMakeToast(html, color);   // фолбэк: старый стек
+    }
+}
+
+// Перехват: все карточки ачивок проходят через гейт и батчинг
+makeToast = function (html, color) {
+    if (_achFtueMuted()) { console.log('🏆 [ACH-V2] визуал приглушён (FTUE)'); return; }
+    _achBatch.push({ html: html, color: color });
+    if (_achBatchTimer) clearTimeout(_achBatchTimer);
+    _achBatchTimer = setTimeout(_achFlushBatch, 900); // окно серии 900мс
+};
+// ═══════════════════════════════════════════════════════════════════════════
 
 function showAchievementCard(data) {
     const d = data || {};
@@ -563,7 +605,8 @@ function showMasterAchievementCard(data) {
     } catch (e) {}
     const name = trName(a.nameKey, a.nameFallback || a.name || '');
     const reward = Number(a.reward ?? d.reward ?? 0);
-    makeToast(
+    if (window.AchVisualMuted && window.AchVisualMuted()) return; // 🆕 FTUE: мастер тоже молчит
+    (window.AchDirectToast || makeToast)(
         `<div style="display:flex;align-items:center;gap:10px;text-align:left;">` +
         `<div style="font-size:2em;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">${planetEmoji}</div>` +
         `<div style="flex:1;min-width:0;">` +

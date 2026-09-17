@@ -1,21 +1,22 @@
-// js/onboarding-hooks.js — 🔌 АВТО-подключение онбординга (v2.1)
-// 🆕 v2.1: ОДНА обёртка на владельца на тип (алиасы destroyBlock/onBlockDestroyed/…
-//          больше не дают ×4–5 на один блок) + дедупликация 120мс для block.
-//          Флаг COUNT_AUTO_KILLS: true = считаем и Bobo/авто-кликер, false = только ручные.
+// js/onboarding-hooks.js — 🔌 АВТО-подключение онбординга к событиям игры (v2.2)
+// 🆕 v2.2: шаг 4 (boost) закрывает ТОЛЬКО покупка «Скачок силы»;
+//          открытие магазина НЕ закрывает шаг — только подсвечивает карточку;
+//          watchCoins проверяет id текущего шага (daily), а не индекс 0.
 (function () {
 'use strict';
-const VER = '2.1';
-const COUNT_AUTO_KILLS = true; // 🆕 поставь false, если шаг 5 должен считать ТОЛЬКО ручные клики
+const VER = '2.2';
+const COUNT_AUTO_KILLS = true; // true = блоки считаем и от авто-кликера/Bobo
 const notFalse = r => r !== false;
 
 let lastUpgradeReportTs = 0, lastBoboReportTs = 0, lastBlockReportTs = 0;
 let lastUpgradeWrapTs = 0, lastBoostReportTs = 0;
 
-// ═══════════ активен ли помощник (для режима COUNT_AUTO_KILLS=false) ═══════════
+// ═══════════ активен ли помощник ═══════════
 function helperActive() {
   try {
     if (window.shopSystem?.hasAutoClick?.()) return true;
-    const gs = window.gameState; if (!gs) return false;
+    const gs = window.gameState;
+    if (!gs) return false;
     const now = Date.now();
     if (gs.bobo?.until && now < gs.bobo.until) return true;
     if (gs.boboUntil && now < gs.boboUntil) return true;
@@ -29,8 +30,8 @@ function helperActive() {
 // ═══════════ ОБЁРТКИ: одна на владельца на тип ═══════════
 function wrap(owner, names, type, ok) {
   if (!owner) return false;
-  const key = '__obwired_' + type;
-  if (owner[key]) return true;              // 🆕 уже обёрнуто — алиасы не трогаем
+  const key = '_obwired' + type;
+  if (owner[key]) return true; // уже обёрнуто — алиасы не трогаем
   for (const n of names) {
     const fn = owner[n];
     if (typeof fn === 'function' && !fn.__ob) {
@@ -66,10 +67,9 @@ function upgradeOk(r, args) {
   return r !== false;
 }
 
-// 🆕 v2.1: один блок = один счёт (алиас-всплеск схлопывается дедупликацией)
 function blockOk() {
   const now = Date.now();
-  if (now - lastBlockReportTs < 120) return false;
+  if (now - lastBlockReportTs < 120) return false; // алиас-всплеск схлопывается
   if (!COUNT_AUTO_KILLS && helperActive()) return false;
   lastBlockReportTs = now;
   console.log('🔌 [COUNT] block +1');
@@ -78,28 +78,26 @@ function blockOk() {
 
 function boboOk() {
   const now = Date.now();
-  if (now - lastBoboReportTs > 400) {
-    lastBoboReportTs = now;
-    console.log('🔌 [COUNT] bobo +1');
-    return true;
-  }
-  return false;
+  if (now - lastBoboReportTs < 400) return false;
+  lastBoboReportTs = now;
+  console.log('🔌 [COUNT] bobo +1');
+  return true;
 }
 
 function wire() {
-  const G = window.GAME_CORE || window.gameCore;
-  const U = window.UpgradesPanel || window.upgradesPanel || window.upgradeSystem || window.upgrades;
-  const F = window.GAME_FEATURES || window.gameFeatures;
-  const D = window.dailySystem || window.dailyBonusSystem || window.DailyBonus || window.DailySystem || window.dailyBonus;
+  const G  = window.GAME_CORE || window.gameCore;
+  const U  = window.UpgradesPanel || window.upgradesPanel || window.upgradeSystem || window.upgrades;
+  const F  = window.GAME_FEATURES || window.gameFeatures;
+  const D  = window.dailySystem || window.dailyBonusSystem || window.DailyBonus || window.DailySystem || window.dailyBonus;
   const SH = window.shopSystem || window.ShopSystem;
-
   wrap(G, ['destroyBlock', 'onBlockDestroyed', 'blockDestroyed', 'killBlock'], 'block', blockOk);
   wrap(U, ['buy', 'buyUpgrade', 'purchase', 'purchaseUpgrade', 'upgrade', 'buyLevel'], 'upgrade', upgradeOk);
   wrap(F, ['buyUpgrade', 'purchaseUpgrade', 'upgrade', 'buy'], 'upgrade', upgradeOk);
   wrap(D, ['claim', 'claimDaily', 'claimBonus', 'claimDailyBonus', 'collect', 'getDaily', 'activate', 'activateBonus'], 'daily', notFalse);
   wrap(G, ['activateBobo', 'startBobo', 'useBobo'], 'bobo', boboOk);
   wrap(U, ['activateBobo', 'startBobo'], 'bobo', boboOk);
-  wrap(SH, ['openShop'], 'shoplook', notFalse);   // 🆕 шаг «загляни в магазин»
+  // 🆕 v2.2: открытие магазина НЕ закрывает шаг — только подсвечивает цель
+  wrap(SH, ['openShop'], 'shopopen', () => { window.Onboarding?.pulseShopTarget?.(); return false; });
 }
 
 // ═══════════ ШПИОН EventBus ═══════════
@@ -114,8 +112,13 @@ function spyEventBus() {
         const now = Date.now();
         if (now - lastBoostReportTs > 400) {
           lastBoostReportTs = now;
-          console.log('🔌 [COUNT]', id === 'autoClicker' ? 'bobo +1 (авто-кликер)' : 'boost +1 (магазин)');
-          window.Onboarding?.report(id === 'autoClicker' ? 'bobo' : 'boost');
+          // 🆕 v2.2: шаг 4 закрывает ТОЛЬКО покупка «Скачок силы»
+          if (id === 'powerSurge') {
+            console.log('🔌 [COUNT] boost +1 (Скачок силы)');
+            window.Onboarding?.report('boost');
+          } else {
+            console.log('🔌 [COUNT] покупка', id, '— не шаг онбординга');
+          }
         }
       }
     } catch (e) {}
@@ -163,7 +166,8 @@ function watchCoins() {
     const now = Date.now();
     if (now - coinsCooldown > 10000) {
       coinsCooldown = now;
-      if (S.step === 0 && coins - lastCoins >= 50) {
+      // 🆕 v2.2 (пункт 3c): проверяем id текущего шага, а не индекс (daily теперь шаг 6)
+      if (window.Onboarding?.currentId?.() === 'daily' && coins - lastCoins >= 50) {
         console.log('🔌 [WATCH] coins +50 и шаг=daily → report(daily)');
         window.Onboarding?.report('daily');
       }
@@ -218,5 +222,5 @@ setInterval(watchUpgrades, 1000);
 setInterval(watchCoins, 1000);
 let tries = 0;
 const iv = setInterval(() => { spyEventBus(); wire(); if (++tries > 15) clearInterval(iv); }, 1000);
-console.log('🔌 [HOOKS] v' + VER + ' готов (single-wrap + dedupe; COUNT_AUTO_KILLS=' + COUNT_AUTO_KILLS + ')');
+console.log('🔌 [HOOKS] v' + VER + ' готов (powerSurge-gate + pulseShopTarget)');
 })();

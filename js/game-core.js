@@ -71,7 +71,13 @@ window.GAME_CORE = {
         return pct < 25;
     },
 
- pauseGame: function() {
+    // 🛡️ FTUE-фильтр: первые 3 шага онбординга = тишина (без комбо/наград/взрывов)
+    isFtueActive: function() {
+        const S = window.Onboarding?.state?.();
+        return !!(S && S.enabled && !S.completed && S.step < 3);
+    },
+
+    pauseGame: function() {
      this.isGamePaused = true;
      if (window.gameState) window.gameState.gamePaused = true;
      const shopPanel = document.getElementById('shopPanel');
@@ -481,21 +487,19 @@ destroyBlock: function(block, isAuto = false) {
     }
     const destroyResult = window.CombatSystem.applyDestroy(block, isAuto);
     if (!destroyResult) return;
-
+    const ftueMuted = this.isFtueActive();   // 🛡️ FTUE: флаг тишины
     // ── UX: Комбо-текст (только если было комбо > 1) ──
-    if (destroyResult.comboCount > 1 && destroyResult.comboBonus > 0) {
+    if (destroyResult.comboCount > 1 && destroyResult.comboBonus > 0 && !ftueMuted) {
         this.showComboText(destroyResult.comboCount, destroyResult.comboBonus, block);
         this.playSound('comboSound');
     }
-    
-  // ── UX: Обновление интерфейса ──
-UI.updateHUD();
-UI.updateUpgradeButtons();
-this.playSound('breakSound');
-
-    this.showRewardText(destroyResult.reward || 0, block);
+    // ── UX: Обновление интерфейса ──
+    UI.updateHUD();
+    UI.updateUpgradeButtons();
+    this.playSound('breakSound');
+    if (!ftueMuted) this.showRewardText(destroyResult.reward || 0, block);    // 🛡️ FTUE
     // ✅ БЕЗОПАСНЫЙ ВЫЗОВ: предотвращает TypeError
-    if (getFeat().createExplosion) getFeat().createExplosion(block);
+    if (getFeat().createExplosion && !ftueMuted) getFeat().createExplosion(block); // 🛡️ FTUE
     
     // ─ Очистка блока из DOM ──
     const ga = document.getElementById('gameArea');

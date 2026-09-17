@@ -646,3 +646,25 @@ html{overflow:hidden;height:100%}body{font-family:'Orbitron','Segoe UI',sans-ser
 /* 🧹 P3: пульс раскрытия BoC после порога 25% */
 .ftue-reveal{animation:ftuePulse 1s ease-in-out 3}
 @keyframes ftuePulse{50%{filter:drop-shadow(0 0 12px rgba(79,195,247,.9));transform:scale(1.06)}}
+/* 🤖 Bobo скрывается при открытых модалках */
+.achievements-panel[style*="flex"] ~ #boboContainer,
+.shop-panel[style*="flex"] ~ #boboContainer,
+.transition-modal ~ #boboContainer,
+.modal-open #bobo-container,
+.modal-open .helper {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Fallback: если Bobo всё же виден, делаем его прозрачным */
+.achievements-panel[style*="flex"] ~ .helper,
+.shop-panel[style*="flex"] ~ .helper {
+    opacity: 0 !important;
+    z-index: -1 !important;
+}
+/* 🤖 Bobo скрывается при открытых модалках */
+.modal-open #boboContainer,
+.modal-open .helper {
+  display: none !important;
+  pointer-events: none !important;
+}
