@@ -56,6 +56,20 @@ window.GAME_CORE = {
         const s = document.getElementById(id);
         if (s) { s.currentTime = 0; s.play().catch(() => {}); }
     },
+    // 🛡️ P2/P3: FTUE-щит — Меркурий, Ран 1, прогресс < 25%
+    isFtueShield: function() {
+        const gs = window.gameState;
+        if (!gs) return false;
+        const run = gs.runNumber ?? 1;
+        const planet = gs.currentLocation || 'mercury';
+        if (run !== 1 || planet !== 'mercury') return false;
+        const pd = gs.planetDamageDealt || 0;
+        const targetAU = CFG.PROGRESSION_CONFIG?.[planet]?.targetAU ||
+                         CFG.astronomicalUnits?.[planet] || 0.38710;
+        const target = targetAU * (CFG.AU_TO_DAMAGE || 149597870.691);
+        const pct = target > 0 ? (pd / target) * 100 : 0;
+        return pct < 25;
+    },
 
  pauseGame: function() {
      this.isGamePaused = true;
@@ -65,13 +79,19 @@ window.GAME_CORE = {
      // ✅ НОВОЕ: Эмитируем событие паузы для random-events
      if (window.EventBus) window.EventBus.emit('game:paused');
  },
- resumeGame: function() {
-     this.isGamePaused = false;
-     if (window.gameState) window.gameState.gamePaused = false;
-     // ✅ НОВОЕ: Эмитируем событие возобновления для random-events
-     if (window.EventBus) window.EventBus.emit('game:resumed');
- },
-
+resumeGame: function() {
+    this.isGamePaused = false;
+    if (window.gameState) window.gameState.gamePaused = false;
+    
+    // ✅ НОВОЕ: Эмитируем событие возобновления для random-events
+    if (window.EventBus) window.EventBus.emit('game:resumed');
+    
+    // 🆕 P1: после снятия паузы, если текущего блока нет — запускаем спавн заново
+    // (иначе после закрытия магазина/апгрейдов игра зависает без блоков)
+    if (window.gameState?.gameActive && !this.currentBlock) {
+        setTimeout(() => this.createMovingBlock(), 300);
+    }
+},
 // ✅ ИСПРАВЛЕНО: Ступенчатая прогрессия силы удара
 // lvl 0:       1          (базовый урон)
 // lvl 1-25:    +2 за уровень  (1 → 51)
@@ -134,6 +154,27 @@ calculateBlockHealth: function() {
     return 80;
 },
 
+    // 🐣 P0: FTUE-множители первых 20 блоков (Меркурий, первый забег).
+    // 0–9 блоки: HP и скорость ×0.5; 10–19: плавный выход к 1.0; ≥20: обычная игра.
+    getFtueMults() {
+        const F = { blocks: 20, hpMult: 0.5, speedMult: 0.5, taperFrom: 10 };
+        const gs = window.gameState;
+        const spawned = gs?.ftueSpawned ?? 0;
+        const run = gs?.runNumber ?? 1;
+        const planet = gs?.currentLocation || 'mercury';
+        if (run !== 1 || planet !== 'mercury' || spawned >= F.blocks) {
+            return { active: false, hp: 1, speed: 1, spawned };
+        }
+        let t = 0;
+        if (spawned >= F.taperFrom) t = (spawned - F.taperFrom) / (F.blocks - F.taperFrom);
+        return {
+            active: true,
+            hp: +((F.hpMult + (1 - F.hpMult) * t).toFixed(2)),
+            speed: +((F.speedMult + (1 - F.speedMult) * t).toFixed(2)),
+            spawned
+        };
+    },
+
 createMovingBlock: function() {
      if (!window.gameState || !window.gameState.gameActive || this.isGamePaused) return;
      const gameArea = document.getElementById('gameArea');
@@ -149,12 +190,11 @@ createMovingBlock: function() {
      }
      
      this.currentBlockHealth = this.calculateBlockHealth();
-     // 🐣 FTUE: рампа первых блоков — первые блоки забега почти гарантированно убиваемы
-    const bd0 = window.gameMetrics?.blocksDestroyed ?? 0;
-    const hpRamp = [0.10, 0.25, 0.50, 0.75][bd0];
-    if (hpRamp) {
-        this.currentBlockHealth = Math.max(1, Math.round(this.currentBlockHealth * hpRamp));
-        console.log('🐣 [FTUE] блок #' + (bd0 + 1) + ': HP ×' + hpRamp);
+    // 🐣 P0: рампа HP применяется ДО записи maxHealth/textContent — цифра и трещины честные
+    const ftue = this.getFtueMults();
+    if (ftue.active) {
+        this.currentBlockHealth = Math.max(1, Math.round(this.currentBlockHealth * ftue.hp));
+        console.log('🐣 [FTUE] блок #' + (ftue.spawned + 1) + ': HP ×' + ftue.hp + ' → ' + this.currentBlockHealth + ', скорость ×' + ftue.speed);
     }
         const block = document.createElement('div');
         block.className = 'moving-block';
@@ -163,6 +203,8 @@ createMovingBlock: function() {
         block.style.height = size + 'px';
         block.style.bottom = '0px';
         block.dataset.maxHealth = this.currentBlockHealth;
+    block.dataset.ftueSpeed = ftue.speed;                                   // 🐣 P0: личная скорость блока
+    if (window.gameState) window.gameState.ftueSpawned = (window.gameState.ftueSpawned || 0) + 1;  // счётчик живёт в сейве
 
         const theme = CFG.locations[window.gameState.currentLocation];
         const rareType = this.getRareBlockType();
@@ -270,7 +312,7 @@ animateBlock: function(block) {
         const dt = Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
 
-        const speed = this.getCurrentSpeed() || 0;
+            const speed = (this.getCurrentSpeed() || 0) * parseFloat(block.dataset.ftueSpeed || 1);
         // 🆕 v11.1: Гравитация — замедление в зоне чуть ниже прогресс-бара (−10%/ур., кап 3)
         const gLvl = Number(window.gameState?.gravityLevel) || 0;
         const effSpeed = (gLvl > 0 && pos > zoneStart)
@@ -280,12 +322,23 @@ animateBlock: function(block) {
         block.style.bottom = pos + 'px';
 
         // 4. Блок достиг уровня прогресс-бара → штраф + новый блок
-     if (pos > escapePos) {
-         // 🐣 FTUE: первые 3 промаха забега — без штрафа и без skip-счётчика
-         const bd = window.gameMetrics?.blocksDestroyed ?? 0;
-         if (bd < 3) {
-             console.log('🐣 [FTUE] промах #' + (bd + 1) + ' — без штрафа');
-         } else {
+  if (pos > escapePos) {
+    // 🛡️ P2 + 🐣 FTUE: щит — (Меркурий, Ран 1, прогресс <25%) ИЛИ первые 3 промаха
+    const bd = window.gameMetrics?.blocksDestroyed ?? 0;
+    const shield = this.isFtueShield();
+    if (shield || bd < 3) {
+        console.log('🛡️ [FTUE-P2] промах #' + (bd + 1) + ' — щит активен, без наказания');
+        if (shield && window.gameState && !window.gameState._ftueShieldToastShown) {
+            window.gameState._ftueShieldToastShown = true;
+            const msg = '🛡️ До 25% прогресса промахи безопасны';
+            if (window.Onboarding?.toast) window.Onboarding.toast(msg);
+            else if (window.showNotification) window.showNotification(msg, '#4CAF50');
+        }
+        // метрика промахов для ачивок продолжает считаться (если метод существует)
+        const AS = window.achievementsSystem;
+        (AS?.incrementPlanetMisses || AS?.updatePlanetMisses || AS?.incrementMisses)
+            ?.call(AS, window.gameState?.currentLocation || 'mercury', 1);
+    } else {
              if (getFeat().applyUpgradePenalty) getFeat().applyUpgradePenalty();
              if (window.gameMetrics) window.gameMetrics.currentCritStreak = 0;
              const gs = window.gameState;
@@ -945,17 +998,19 @@ window.gameState._tpStacks[loc] = [];
         window.gameState.comboCount = 0;
         window.gameState.lastDestroyTime = 0;
 
-        if (reset) {
-            window.gameMetrics.startTime = Date.now();
-            window.gameMetrics.blocksDestroyed = 0;
-            window.gameMetrics.upgradesBought = 0;
-            window.gameMetrics.totalClicks = 0;
-            window.gameMetrics.totalCrits = 0;
-            window.gameMetrics.totalCoinsEarned = 0;
-            window.gameMetrics.helpersBought = 0;
-            window.gameMetrics.boostersUsed = 0;
-            window.gameMetrics.maxCombo = 0;
-        } else {
+       if (reset) {
+    window.gameMetrics.startTime = Date.now();
+    window.gameMetrics.blocksDestroyed = 0;
+    window.gameState.ftueSpawned = 0;   // 🐣 P0: сброс рампы при «Новой игре»
+    window.gameMetrics.upgradesBought = 0;
+    window.gameMetrics.totalClicks = 0;
+    window.gameMetrics.totalCrits = 0;
+    window.gameMetrics.totalCoinsEarned = 0;
+    window.gameMetrics.helpersBought = 0;
+    window.gameMetrics.boostersUsed = 0;
+    window.gameMetrics.maxCombo = 0;
+}
+ else {
             window.gameMetrics.startTime = Date.now();
         }
 

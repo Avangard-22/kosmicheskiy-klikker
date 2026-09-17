@@ -1,11 +1,11 @@
-// js/onboarding.js — 🚀 ОНБОРДИНГ НОВИЧКА (v2.2)
-// 🆕 v2.2: ТРОЙНАЯ ЗАЩИТА перезапуска при "Новой игре":
+// js/onboarding.js — 🚀 ОНБОРДИНГ НОВИЧКА (v2.6)
+// 🆕 v2.6: ТРОЙНАЯ ЗАЩИТА перезапуска при "Новой игре":
 //          1) Обёртка GAME_CORE.startGame/resetGame
 //          2) Наблюдатель за сбросом gameState.stats.blocksDestroyed
 //          3) Наблюдатель за переходом gameState.coins: 0 → малое число
 (function () {
 'use strict';
-const VER = '2.2';
+const VER = '2.6';
 const CFG = {
   lsKey: 'cosmic_onboarding_v1',
   z: 9990,
@@ -32,7 +32,7 @@ const CFG = {
 
 const STEPS = [
   { id: 'block',   goal: 1, reward: 50,
-    ru: 'Нажми на блок!',              ruHint: 'Кликни по поднимающемуся блоку — за него дают 💎',
+    ru: 'Унижтожь блок!',              ruHint: 'Кликай по поднимающемуся блоку — за него дают 💎',
     en: 'Tap the block!',              enHint: 'Click the rising block — it gives 💎' },
   { id: 'upgrade', goal: 1, reward: 100, target: 'upgrades',
     ru: 'Улучши силу клика',           ruHint: '«⚡ Улучшения» → «Сила удара»: теперь блоки ломаются быстрее',
@@ -44,7 +44,7 @@ const STEPS = [
     ru: 'Загляни в Магазин',           ruHint: '«🛒 Магазин»: посмотри, что там есть — покупки позже',
     en: 'Peek into the Shop',          enHint: '"🛒 Shop": look around — purchases come later' },
   { id: 'bobo',    goal: 1, reward: 250, target: 'bobo',
-    ru: 'Включи Bobo или авто-кликер', ruHint: 'Помощник бьёт блоки за тебя: меньше промахов, больше дохода',
+    ru: 'Купи Bobo или авто-кликер', ruHint: 'Помощник бьёт блоки за тебя: меньше промахов, больше дохода',
     en: 'Activate Bobo or Auto-Clicker', enHint: 'A helper attacks blocks for you' },
   { id: 'daily',   goal: 1, reward: 150, target: 'daily',
     ru: 'Забери Ежедневный бонус',     ruHint: '🎁 раз в ~23 ч: кристаллы, бустер или уровни улучшений',
@@ -154,6 +154,8 @@ function activate(src) {
     if (inGame()) toast(L() === 'ru' ? '🚀 Задачи новичка включены — награда за каждый шаг!' : '🚀 Starter tasks on — reward for every step!');
   }
   render();
+  const s0 = cur();                                       // 🆕 P1: первый шаг тоже объясняем на паузе
+  if (s0 && inGame() && !S.completed) setTimeout(() => showStepPause(s0), 600);
 }
 
 function watchActivation() {
@@ -239,22 +241,85 @@ function setLayer(n) {
   MOUNT.classList.remove('ob-layer-1', 'ob-layer-2', 'ob-layer-3');
   MOUNT.classList.add('ob-layer-' + n);
 }
+
+// ═══════════ 🆕 P0: «УМНЫЙ» ЗАЧЁТ ДЕЙЛИКА (последний шаг) ═══════════
+function dailyStatus() {
+  const gs = window.gameState;
+  const d = gs?.daily || gs?.dailyBonus;
+  const last = d?.lastClaimDate ?? d?.lastClaim ?? gs?.lastDailyClaimDate ?? null;
+  const today = new Date().toDateString();
+  const iso = new Date().toISOString().slice(0, 10);
+  const claimedToday = (typeof last === 'number') ? new Date(last).toDateString() === today
+    : (typeof last === 'string' && (last === today || last === iso));
+  const avail = window.dailySystem?.isAvailable?.() ?? window.dailyBonusSystem?.isAvailable?.() ?? window.DailyBonus?.isAvailable?.() ?? null;
+  if (claimedToday) return 'claimed';
+  if (avail === false) return 'charging';
+  if (avail === true) return 'ready';
+  return 'unknown';
+}
+
+function autoCompleteCurrent(msg) {
+  const s = cur();
+  if (!s || S.completed || !S.enabled) return;
+  S.prog[s.id] = s.goal;
+  S.done.push(s.id); S.step++;
+  giveCrystals(s.reward);
+  toast(msg + ' +' + s.reward + '💎');
+  if (S.done.length === STEPS.length) {
+    S.completed = true; save();
+    if (!completionToastShown) {
+      completionToastShown = true;
+      toast(L() === 'ru' ? '🏆 Обучение завершено. Удачной игры!' : '🏆 Tutorial complete. Good luck!');
+      window.GameEconomy?.giveCoupon?.() || window.gameEconomy?.giveCoupon?.();
+    }
+    render(); return;
+  }
+  save(); render();
+}
+
+function checkDailySmart() {
+  const s = cur();
+  if (!s || s.id !== 'daily' || S.completed || !S.enabled || !inGame()) return;
+  if ((S.prog.daily || 0) > 0) return;
+
+  const st = dailyStatus();
+  if (st !== 'claimed' && st !== 'charging') return;
+
+  // 🆕 ИСПРАВЛЕНО: защита от повторного вызова в одном рендере
+  if (checkDailySmart._running) return;
+  checkDailySmart._running = true;
+
+  const ru = L() === 'ru';
+  const msg = st === 'claimed'
+    ? (ru ? '🎁 Дейлик уже собран сегодня — шаг выполнен. Новый через ~23 ч!' : '🎁 Daily already claimed today — step done. New one in ~23 h!')
+    : (ru ? '🎁 Дейлик перезаряжается — шаг выполнен. Загляни завтра!' : '🎁 Daily is recharging — step done. Come back tomorrow!');
+
+  console.log('🚀 [DAILY-SMART] авто-завершение:', st);
+  autoCompleteCurrent(msg);
+
+  setTimeout(() => { checkDailySmart._running = false; }, 100);
+}
+
 function render() {
   if (!panel) return;
   if (!MOUNT.contains(panel)) MOUNT.appendChild(panel);
 
-   if (S.completed) { setLayer(3); return hidePanel('обучение завершено'); }
+  if (S.completed) { setLayer(3); return hidePanel('обучение завершено'); }
   const done = S.done.length;
   if (!S.enabled) { setLayer(3); return hidePanel('не активирован (enabled=false)'); }
   if (!inGame()) return hidePanel('не в игре (gameActive=false и welcome виден)');
   if (done >= STEPS.length) { setLayer(3); return hidePanel('маршрут уже пройден (done=' + done + '/6)'); }
-  setLayer(S.step <= 2 ? 1 : (S.step <= 4 ? 2 : 3));   // 🆕 слои раскрытия
+  setLayer(S.step <= 2 ? 1 : (S.step <= 4 ? 2 : 3));
 
-  if (!shownLogged) { shownLogged = true; lastHideReason = ''; console.log('🚀 [ONBOARDING] панель ПОКАЗАНА'); }
+  if (!shownLogged) { shownLogged = true; lastHideReason = ''; }
   panel.style.display = 'block';
 
   const s = cur();
   if (!s) return hidePanel('текущий шаг не определён (cur()==null)');
+
+  // 🆕 ИСПРАВЛЕНО: checkDailySmart() вызывается ПОСЛЕ показа панели, чтобы тост не перекрывался
+  checkDailySmart();
+  if (S.completed || S.done.length >= STEPS.length) return;   // защита: если daily закрылся — выходим
 
   const ru = L() === 'ru';
   const prog = Math.min(S.prog[s.id] || 0, s.goal);
@@ -295,6 +360,7 @@ function showWhere(s) {
   const el = find(s.target);
   if (!el) { toast(L() === 'ru' ? cur().ruHint : cur().enHint); return; }
   CFG.openers[s.target]?.();
+  setTimeout(() => drawBeam(s.target), 500);              // 🆕 P1: луч при «Показать где»
   setTimeout(() => {
     highlight(el);
     if (s.items && s.items.length > 0) {
@@ -344,6 +410,8 @@ function report(type, n = 1) {
   if (S.prog[type] >= s.goal) {
     S.done.push(type);
     S.step++;
+    const ns = cur();                                     // 🆕 P1: пауза-объяснение следующего шага
+    if (ns && inGame()) setTimeout(() => showStepPause(ns), 350);
     giveCrystals(s.reward);
     toast((L() === 'ru' ? '✅ Задача выполнена! +' : '✅ Task done! +') + s.reward + '💎');
 
@@ -415,7 +483,95 @@ function badge(key, on) {
   const el = find(key);
   if (el) el.classList.toggle('ob-badge', !!on);
 }
+// ═══════════ 🆕 v2.7: ПАУЗА-ПОДСКАЗКА ПРИ СМЕНЕ ШАГА ═══════════
+let ownsPause = false;
+function gamePause() {
+  const P = window.GAME_CORE || window.gameCore;
+  // Если игра уже на паузе от магазина/ачивок — не перехватываем
+  if (window.gameState?.gamePaused || P?.isGamePaused) {
+    console.log('🚀 [PAUSE] игра уже на паузе — не перехватываем (это магазин/ачивки)');
+    return;
+  }
+  if (P?.pauseGame) {
+    try { P.pauseGame.call(P); } catch (e) { console.error('pauseGame error:', e); }
+  }
+  // 🆕 v2.7: принудительно ставим оба флага (страхуем от рассинхрона внутри GAME_CORE)
+  if (P) P.isGamePaused = true;
+  if (window.gameState) window.gameState.gamePaused = true;
+  ownsPause = true;
+  console.log('🚀 [PAUSE] игра поставлена на паузу (ownsPause=true)');
+}
 
+function gameResume() {
+  if (!ownsPause) {
+    console.log('🚀 [PAUSE] пропуск resume (ownsPause=false) — пауза не наша, просто убираем оверлей');
+    return;
+  }
+  const P = window.GAME_CORE || window.gameCore;
+  if (P) P.isGamePaused = false;
+  if (window.gameState) window.gameState.gamePaused = false;
+  if (P?.resumeGame) {
+    try { P.resumeGame.call(P); } catch (e) { console.error('resumeGame error:', e); }
+  }
+  // 🆕 P1: страховка — принудительно перезапускаем спавн блока после resume
+  if (P?.createMovingBlock && window.gameState?.gameActive && !P.currentBlock) {
+    setTimeout(() => P.createMovingBlock.call(P), 350);
+    console.log('🚀 [PAUSE] перезапуск спавна блока (currentBlock был null)');
+  }
+  if (window.EventBus) {
+    try { window.EventBus.emit('game:resumed'); } catch (e) {}
+  }
+  console.log('🚀 [PAUSE] флаги сброшены + resumeGame() + спавн перезапущен');
+  ownsPause = false;
+}
+
+function showStepPause(s) {
+  if (!s || !inGame() || S.completed || document.getElementById('obPause')) return;
+  const ru = L() === 'ru';
+  gamePause();
+  const ov = document.createElement('div');
+  ov.id = 'obPause';
+  ov.innerHTML = `<div class="ob-pause-card">
+      <div class="ob-pause-title">🚀 ${ru ? 'Задача' : 'Task'} ${S.step + 1}/${STEPS.length}</div>
+      <div class="ob-pause-task">${ru ? s.ru : s.en}</div>
+      <div class="ob-pause-hint">${ru ? s.ruHint : s.enHint}</div>
+      <button class="ob-pause-btn">${ru ? '▶ Понятно, продолжить' : '▶ Got it, continue'}</button>
+    </div>`;
+  MOUNT.appendChild(ov);
+  ov.querySelector('.ob-pause-btn').onclick = () => {
+    ov.remove();
+    gameResume();
+    if (s.target) setTimeout(() => drawBeam(s.target), 250);   // луч к цели сразу после паузы
+  };
+}
+
+// ═══════════ 🆕 P1: ТРЕК-ЛУЧ «ПАНЕЛЬ → ЦЕЛЬ» ═══════════
+let beamTimer = null, beamIv = null;
+function drawBeam(targetKey) {
+  const target = find(targetKey);
+  if (!target || !panel) return;
+  removeBeam();
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'obBeamSvg';
+  svg.setAttribute('class', 'ob-beam');
+  svg.style.zIndex = CFG.z - 1;
+  MOUNT.appendChild(svg);
+  const paint = () => {
+    const a = panel.getBoundingClientRect();
+    const b = target.getBoundingClientRect();
+    svg.setAttribute('viewBox', `0 0 ${innerWidth} ${innerHeight}`);
+    svg.innerHTML = `<line x1="${a.left + a.width / 2}" y1="${a.top}" x2="${b.left + b.width / 2}" y2="${b.top + b.height / 2}"/>`;
+  };
+  paint();
+  target.classList.add('ob-hl');
+  beamIv = setInterval(paint, 200);                       // луч догоняет цель, если UI сдвинулся
+  beamTimer = setTimeout(() => { clearInterval(beamIv); removeBeam(); }, CFG.highlightMs);
+}
+function removeBeam() {
+  if (beamTimer) { clearTimeout(beamTimer); beamTimer = null; }
+  if (beamIv) { clearInterval(beamIv); beamIv = null; }
+  document.getElementById('obBeamSvg')?.remove();
+}
 // ═══════════ САМОДИАГНОСТИКА ═══════════
 function debug() {
   const r = panel ? panel.getBoundingClientRect() : null;
@@ -445,7 +601,7 @@ function injectStyles() {
   if (document.getElementById('ob-styles')) return;
   const st = document.createElement('style');
   st.id = 'ob-styles';
-  st.textContent = `#obPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;width:min(94vw,420px);font-family:'Orbitron',system-ui,sans-serif;pointer-events:auto} .ob-bar{width:100%;background:rgba(0,0,0,.6);color:#FFD700;border:1px solid rgba(255,215,0,.5);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer} .ob-card{background:rgba(12,10,24,.95);border:2px solid rgba(255,215,0,.35);border-radius:14px;padding:10px 12px;color:#e8e8f0;box-shadow:0 8px 30px rgba(0,0,0,.6)} .ob-head{display:flex;align-items:center;gap:8px}.ob-min{background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer} .ob-title{color:#FFD700;font-weight:700;font-size:.8em} .ob-task{margin:6px 0 2px;font-size:.85em;font-weight:700}.ob-reward{color:#4CAF50} .ob-hint{font-size:.72em;color:#9aa;margin-bottom:8px} .ob-row{display:flex;align-items:center;gap:8px;justify-content:space-between} .ob-dots{display:flex;gap:4px}.ob-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)} .ob-dots i.ok{background:#4CAF50}.ob-dots i.now{background:#FFD700;transform:scale(1.25)} .ob-btn{background:linear-gradient(135deg,#4CAF50,#388E3C);border:none;color:#fff;border-radius:10px;padding:7px 12px;font-family:inherit;font-weight:700;font-size:.75em;cursor:pointer} .ob-hl{outline:3px solid #FFD700 !important;outline-offset:3px;animation:obPulse 1s infinite} @keyframes obPulse{50%{outline-color:rgba(255,215,0,.35)}} .ob-badge::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:obPulse 1.2s infinite} .ob-badge{position:relative} .ob-toast{position:fixed;left:50%;bottom:180px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.35s;background:rgba(12,10,24,.97);border:2px solid rgba(76,175,80,.6);color:#e8e8f0;border-radius:12px;padding:10px 16px;font-family:'Orbitron',system-ui,sans-serif;font-size:.85em;max-width:92vw;text-align:center;pointer-events:none} .ob-toast.show{opacity:1;transform:translateX(-50%) translateY(0)} html.ob-layer-1 #hud-boc,html.ob-layer-1 #leaderboardBtn,html.ob-layer-1 #achievementsBtn,html.ob-layer-2 #hud-boc,html.ob-layer-2 #leaderboardBtn,html.ob-layer-2 #achievementsBtn{display:none!important} @media (max-width:640px){#obPanel{left:8px!important;right:78px!important;width:auto!important;transform:none!important;bottom:8px!important}.ob-bar{width:auto;display:inline-block;padding:6px 12px;font-size:.85em}.ob-card{padding:8px 10px}.ob-title{font-size:.72em}.ob-task{font-size:.8em}.ob-hint{font-size:.68em;margin-bottom:6px}.ob-btn{padding:6px 10px;font-size:.7em}}`;
+  st.textContent = `#obPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;width:min(94vw,420px);font-family:'Orbitron',system-ui,sans-serif;pointer-events:auto} .ob-bar{width:100%;background:rgba(0,0,0,.6);color:#FFD700;border:1px solid rgba(255,215,0,.5);border-radius:12px;padding:8px 14px;font-weight:700;cursor:pointer} .ob-card{background:rgba(12,10,24,.95);border:2px solid rgba(255,215,0,.35);border-radius:14px;padding:10px 12px;color:#e8e8f0;box-shadow:0 8px 30px rgba(0,0,0,.6)} .ob-head{display:flex;align-items:center;gap:8px}.ob-min{background:none;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:6px;width:24px;height:24px;cursor:pointer} .ob-title{color:#FFD700;font-weight:700;font-size:.8em} .ob-task{margin:6px 0 2px;font-size:.85em;font-weight:700}.ob-reward{color:#4CAF50} .ob-hint{font-size:.72em;color:#9aa;margin-bottom:8px} .ob-row{display:flex;align-items:center;gap:8px;justify-content:space-between} .ob-dots{display:flex;gap:4px}.ob-dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2)} .ob-dots i.ok{background:#4CAF50}.ob-dots i.now{background:#FFD700;transform:scale(1.25)} .ob-btn{background:linear-gradient(135deg,#4CAF50,#388E3C);border:none;color:#fff;border-radius:10px;padding:7px 12px;font-family:inherit;font-weight:700;font-size:.75em;cursor:pointer} .ob-hl{outline:3px solid #FFD700 !important;outline-offset:3px;animation:obPulse 1s infinite} @keyframes obPulse{50%{outline-color:rgba(255,215,0,.35)}} .ob-badge::after{content:'';position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:obPulse 1.2s infinite} .ob-badge{position:relative} .ob-toast{position:fixed;left:50%;bottom:180px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.35s;background:rgba(12,10,24,.97);border:2px solid rgba(76,175,80,.6);color:#e8e8f0;border-radius:12px;padding:10px 16px;font-family:'Orbitron',system-ui,sans-serif;font-size:.85em;max-width:92vw;text-align:center;pointer-events:none} .ob-toast.show{opacity:1;transform:translateX(-50%) translateY(0)} html.ob-layer-1 #hud-boc,html.ob-layer-1 #leaderboardBtn,html.ob-layer-1 #achievementsBtn,html.ob-layer-2 #hud-boc,html.ob-layer-2 #leaderboardBtn,html.ob-layer-2 #achievementsBtn{display:none!important} @media (max-width:640px){#obPanel{left:8px!important;right:78px!important;width:auto!important;transform:none!important;bottom:8px!important}.ob-bar{width:auto;display:inline-block;padding:6px 12px;font-size:.85em}.ob-card{padding:8px 10px}.ob-title{font-size:.72em}.ob-task{font-size:.8em}.ob-hint{font-size:.68em;margin-bottom:6px}.ob-btn{padding:6px 10px;font-size:.7em}} #obPause{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9995;display:flex;align-items:center;justify-content:center} .ob-pause-card{background:rgba(12,10,24,.97);border:2px solid rgba(255,215,0,.5);border-radius:16px;padding:18px 20px;max-width:min(92vw,420px);text-align:center;color:#e8e8f0;font-family:'Orbitron',system-ui,sans-serif} .ob-pause-title{color:#FFD700;font-weight:700;font-size:.85em;margin-bottom:8px} .ob-pause-task{font-weight:700;font-size:1.05em;margin-bottom:6px} .ob-pause-hint{font-size:.8em;color:#9aa;margin-bottom:12px} .ob-pause-btn{background:linear-gradient(135deg,#4CAF50,#388E3C);border:none;color:#fff;border-radius:12px;padding:10px 18px;font-family:inherit;font-weight:700;cursor:pointer} .ob-beam{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none} .ob-beam line{stroke:#FFD700;stroke-width:3;stroke-dasharray:10 8;animation:obBeam 1s linear infinite;filter:drop-shadow(0 0 6px rgba(255,215,0,.8))} @keyframes obBeam{to{stroke-dashoffset:-18}}`;
   document.head.appendChild(st);
 }
 
