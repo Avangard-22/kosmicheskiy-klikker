@@ -32,14 +32,14 @@ const CFG = {
 
 const STEPS = [
   { id: 'block',   goal: 1, reward: 50,
-    ru: 'Унижтожь блок!',              ruHint: 'Кликай по поднимающемуся блоку — за него дают 💎',
+    ru: 'Уничтожь блок!',              ruHint: 'Кликай по поднимающемуся блоку — за него дают 💎',
     en: 'Tap the block!',              enHint: 'Click the rising block — it gives 💎' },
   { id: 'upgrade', goal: 1, reward: 100, target: 'upgrades',
     ru: 'Улучши силу клика',           ruHint: '«⚡ Улучшения» → «Сила удара»: теперь блоки ломаются быстрее',
     en: 'Upgrade click power',         enHint: '"⚡ Upgrades" → "Click Power": blocks break faster' },
   { id: 'block',   goal: 2, reward: 100,
-    ru: 'Разбей ещё 2 блока',          ruHint: 'Чувствуешь силу? Добей ещё два блока!',
-    en: 'Destroy 2 more blocks',       enHint: 'Feel the power? Finish two more!' },
+    ru: 'Разбей ещё 1 блок',          ruHint: 'Чувствуешь силу? Добей ещё один блок!',
+    en: 'Destroy 1 more blocks',       enHint: 'Feel the power? Finish one more!' },
   { id: 'shoplook',goal: 1, reward: 100, target: 'shop',
     ru: 'Загляни в Магазин',           ruHint: '«🛒 Магазин»: посмотри, что там есть — покупки позже',
     en: 'Peek into the Shop',          enHint: '"🛒 Shop": look around — purchases come later' },
